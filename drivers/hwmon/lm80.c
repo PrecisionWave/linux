@@ -391,6 +391,7 @@ static ssize_t set_fan_div(struct device *dev, struct device_attribute *attr,
 	}
 
 	reg = (lm80_read_value(client, LM80_REG_FANDIV) &
+	       ~(1 << nr) &  // set input to fan count mode
 	       ~(3 << (2 * (nr + 1)))) | (data->fan_div[nr] << (2 * (nr + 1)));
 	lm80_write_value(client, LM80_REG_FANDIV, reg);
 
