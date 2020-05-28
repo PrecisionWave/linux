@@ -385,7 +385,8 @@ static ssize_t fan_div_store(struct device *dev,
 		mutex_unlock(&data->update_lock);
 		return rv;
 	}
-	reg = (rv & ~(3 << (2 * (nr + 1))))
+	reg = (rv & ~(1 << nr) &  // set input to fan count mode
+		~(3 << (2 * (nr + 1))))
 	    | (data->fan_div[nr] << (2 * (nr + 1)));
 	lm80_write_value(client, LM80_REG_FANDIV, reg);
 
