@@ -423,9 +423,9 @@ static int mcp4725_probe(struct i2c_client *client,
 	}
 
 	if (data->id == MCP4725 && pdata->use_vref) {
-		dev_err(&client->dev,
-			"external reference is unavailable on MCP4725");
-		return -EINVAL;
+		//dev_err(&client->dev,
+		//	"external reference is unavailable on MCP4725");
+		//return -EINVAL;
 	}
 
 	if (!pdata->use_vref && pdata->vref_buffered) {
