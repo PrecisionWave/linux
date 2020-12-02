@@ -29,6 +29,13 @@
 #include <dt-bindings/iio/adc/adi,ad9208.h>
 
 #define CHIPID_AD9208			0xDF
+#define CHIPID_AD6684			0xDC
+#define CHIPID_AD6688			0xE2
+#define CHIPID_AD9689			0xE2
+#define CHIPID_AD9694			0xDB
+#define CHIPID_AD9695			0xDE
+#define CHIPID_AD9697			0xDE
+
 #define CHIPID_MASK			0xFF
 #define ID_DUAL				BIT(31)
 
@@ -1346,6 +1353,10 @@ static int ad9208_probe(struct spi_device *spi)
 
 	switch (conv->id) {
 	case CHIPID_AD9208:
+	case CHIPID_AD6684:
+	case CHIPID_AD9689:
+	case CHIPID_AD9694:
+	case CHIPID_AD9695:
 		ret = ad9208_setup_chip_info_tbl(phy, (spi_id & ID_DUAL) ?
 						 ID_AD9208_X2 : ID_AD9208);
 		if (ret)
@@ -1413,6 +1424,12 @@ static int ad9208_remove(struct spi_device *spi)
 static const struct spi_device_id ad9208_id[] = {
 	{ "ad9208", CHIPID_AD9208 },
 	{ "ad9208x2", CHIPID_AD9208 | ID_DUAL},
+	{ "ad6684", CHIPID_AD6684 },
+	{ "ad6688", CHIPID_AD6688 },
+	{ "ad9689", CHIPID_AD9689 },
+	{ "ad9694", CHIPID_AD9694 },
+	{ "ad9695", CHIPID_AD9695 },
+	{ "ad9697", CHIPID_AD9697 },
 	{}
 };
 MODULE_DEVICE_TABLE(spi, ad9208_id);
@@ -1420,6 +1437,12 @@ MODULE_DEVICE_TABLE(spi, ad9208_id);
 static const struct of_device_id ad9208_of_match[] = {
 	{ .compatible = "adi,ad9208" },
 	{ .compatible = "adi,ad9208x2" },
+	{ .compatible = "adi,ad6684" },
+	{ .compatible = "adi,ad6688" },
+	{ .compatible = "adi,ad9689" },
+	{ .compatible = "adi,ad9694" },
+	{ .compatible = "adi,ad9695" },
+	{ .compatible = "adi,ad9697" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, ad9208_of_match);
