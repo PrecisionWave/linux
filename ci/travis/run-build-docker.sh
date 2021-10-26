@@ -22,3 +22,10 @@ else
 	prepare_docker_image
 	run_docker_script run-build.sh
 fi
+
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo $(ls /home/vsts/work/1/s/arch/arm/boot/bootp)
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo $(ls /home/vsts/work/1/s/arch/arm/boot/compressed)
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+
