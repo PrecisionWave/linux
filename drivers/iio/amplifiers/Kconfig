@@ -45,4 +45,14 @@ config HMC425
 	  To compile this driver as a module, choose M here: the
 	  module will be called hmc425a.
 
+config PE4312
+	tristate "Peregrine Semiconductor PE4312 Attenuator"
+	depends on SPI
+	help
+	  Say yes here to build support for Peregrine Semiconductor PE4312
+	  Attenuator.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called pe4312.
+
 endmenu
