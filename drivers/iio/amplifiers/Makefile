@@ -10,3 +10,4 @@ obj-$(CONFIG_AD916X_AMP) += ad916x_amp.o
 obj-$(CONFIG_ADL5580) += adl5580.o
 obj-$(CONFIG_HMC425) += hmc425a.o
 obj-$(CONFIG_PE4312) += pe4312.o
+obj-$(CONFIG_PE43711) += pe43711.o
