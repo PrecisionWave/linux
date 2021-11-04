@@ -34,11 +34,13 @@ static const unsigned char ad9122_reg_defaults[][2] = {
 	{AD9122_REG_COMM, AD9122_COMM_RESET},
 	{AD9122_REG_COMM, 0x00},
 	{AD9122_REG_POWER_CTRL, 0x00},
-	{AD9122_REG_DATA_FORMAT, AD9122_DATA_FORMAT_BINARY},
+	{AD9122_REG_DATA_FORMAT},
 	{AD9122_REG_INTERRUPT_EN_1, 0x00},
 	{AD9122_REG_INTERRUPT_EN_2, 0x00},
 	{AD9122_REG_CLK_REC_CTRL, AD9122_CLK_REC_CTRL_DACCLK_CROSS_CORRECTION |
 				  AD9122_CLK_REC_CTRL_REFCLK_CROSS_CORRECTION |
+				  AD9122_CLK_REC_CTRL_DACCLK_DUTY_CORRECTION |
+				  AD9122_CLK_REC_CTRL_REFCLK_DUTY_CORRECTION |
 				  0xF},
 	{AD9122_REG_PLL_CTRL_1, AD9122_PLL_CTRL_1_PLL_MANUAL_EN},
 	{AD9122_REG_PLL_CTRL_2, AD9122_PLL_CTRL_2_PLL_LOOP_BANDWIDTH(3) |
@@ -74,12 +76,12 @@ static const unsigned char ad9122_reg_defaults[][2] = {
 	{AD9122_REG_I_DAC_OFFSET_MSB, 0x00},
 	{AD9122_REG_Q_DAC_OFFSET_LSB, 0x00},
 	{AD9122_REG_Q_DAC_OFFSET_MSB, 0x00},
-	{AD9122_REG_I_DAC_FS_ADJ, 0xF9},
-	{AD9122_REG_I_DAC_CTRL, 0x01},
+	{AD9122_REG_I_DAC_FS_ADJ, 0xFF},
+	{AD9122_REG_I_DAC_CTRL, 0x0},
 	{AD9122_REG_I_AUX_DAC_DATA, 0x00},
 	{AD9122_REG_I_AUX_DAC_CTRL, 0x00},
-	{AD9122_REG_Q_DAC_FS_ADJ, 0xF9},
-	{AD9122_REG_Q_DAC_CTRL, 0x01},
+	{AD9122_REG_Q_DAC_FS_ADJ, 0xFF},
+	{AD9122_REG_Q_DAC_CTRL, 0x0},
 	{AD9122_REG_Q_AUX_DAC_DATA, 0x00},
 	{AD9122_REG_Q_AUX_DAC_CTRL, 0x00},
 	{AD9122_REG_DIE_TEMP_RANGE_CTRL, AD9122_DIE_TEMP_RANGE_CTRL_REF_CURRENT(1)},
@@ -215,6 +217,20 @@ static int ad9122_tune_dci(struct cf_axi_converter *conv)
 	int i = 0, dci;
 	unsigned long err_bfield = 0;
 
+	if (conv->dci != 4){
+		dci = conv->dci;
+
+		if (dci < 0) {
+			dev_err(&conv->spi->dev, "Failed DCI calibration");
+			ad9122_write(conv->spi, AD9122_REG_DCI_DELAY, 0);
+		}  else {
+			ad9122_write(conv->spi, AD9122_REG_DCI_DELAY, dci);
+		}
+		ad9122_write(conv->spi, AD9122_REG_SED_CTRL, 0);
+
+		return dci;
+	}
+
 	if (!conv->pcore_set_sed_pattern)
 		return -ENODEV;
 
@@ -320,10 +336,7 @@ static int ad9122_sync(struct cf_axi_converter *conv)
 	} while (timeout-- && !(ret & AD9122_FIFO_STATUS_1_FIFO_SOFT_ALIGN_ACK));
 
 	ad9122_write(spi, AD9122_REG_FIFO_STATUS_1, 0x0);
-	ad9122_write(spi, AD9122_REG_SYNC_CTRL_1,
-		     AD9122_SYNC_CTRL_1_SYNC_EN |
-		     AD9122_SYNC_CTRL_1_DATA_FIFO_RATE_TOGGLE |
-		     AD9122_SYNC_CTRL_1_RISING_EDGE_SYNC);
+	ad9122_write(spi, AD9122_REG_SYNC_CTRL_1, 0x00);
 
 	timeout = 255;
 	do {
@@ -895,6 +908,8 @@ static int ad9122_write_raw(struct iio_dev *indio_dev,
 	return 0;
 }
 
+extern int ad9122_reset_done;
+
 static int ad9122_probe(struct spi_device *spi)
 {
 	struct device_node *np = spi->dev.of_node;
@@ -903,6 +918,12 @@ static int ad9122_probe(struct spi_device *spi)
 	int ret, conf;
 	bool spi3wire = of_property_read_bool(
 			spi->dev.of_node, "adi,spi-3wire-enable");
+
+	ret = 0;
+	if(!ad9122_reset_done){
+		dev_err(&spi->dev, "ad9122: waiting for sync_reset_done\n");
+		goto out;
+	}
 
 	conv = devm_kzalloc(&spi->dev, sizeof(*conv), GFP_KERNEL);
 	if (conv == NULL)
@@ -943,6 +964,10 @@ static int ad9122_probe(struct spi_device *spi)
 	if (ret < 0) {
 		dev_err(&spi->dev, "Failed to setup device\n");
 		goto out;
+	}
+
+	if(of_property_read_u32(np, "dci", &conv->dci)){
+		conv->dci = 4;
 	}
 
 	of_property_read_u32(np, "dac-interp-factor", &conv->interp_factor);
