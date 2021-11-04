@@ -80,19 +80,22 @@ enum ad5686_supported_device_ids {
 	ID_AD5695R,
 	ID_AD5696,
 	ID_AD5696R,
+	ID_AD5680,
 };
 
 enum ad5686_regmap_type {
 	AD5310_REGMAP,
 	AD5683_REGMAP,
 	AD5686_REGMAP,
-	AD5693_REGMAP
+	AD5693_REGMAP,
+	AD5680_REGMAP
 };
 
 struct ad5686_state;
 
+
 typedef int (*ad5686_write_func)(struct ad5686_state *st,
-				 u8 cmd, u8 addr, u16 val);
+				 u8 cmd, u8 addr, u32 val);
 
 typedef int (*ad5686_read_func)(struct ad5686_state *st, u8 addr);
 

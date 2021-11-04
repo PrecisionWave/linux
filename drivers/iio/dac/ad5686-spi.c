@@ -14,7 +14,7 @@
 #include <linux/spi/spi.h>
 
 static int ad5686_spi_write(struct ad5686_state *st,
-			    u8 cmd, u8 addr, u16 val)
+			    u8 cmd, u8 addr, u32 val)
 {
 	struct spi_device *spi = to_spi_device(st->dev);
 	u8 tx_len, *buf;
@@ -36,6 +36,11 @@ static int ad5686_spi_write(struct ad5686_state *st,
 		st->data[0].d32 = cpu_to_be32(AD5686_CMD(cmd) |
 					      AD5686_ADDR(addr) |
 					      val);
+		buf = &st->data[0].d8[1];
+		tx_len = 3;
+		break;
+	case AD5680_REGMAP:
+		st->data[0].d32 = cpu_to_be32(val);
 		buf = &st->data[0].d8[1];
 		tx_len = 3;
 		break;
@@ -72,6 +77,8 @@ static int ad5686_spi_read(struct ad5686_state *st, u8 addr)
 	case AD5686_REGMAP:
 		cmd = AD5686_CMD_READBACK_ENABLE;
 		break;
+	case AD5680_REGMAP:
+		return -ENOTSUPP;
 	default:
 		return -EINVAL;
 	}
@@ -117,6 +124,7 @@ static const struct spi_device_id ad5686_spi_id[] = {
 	{"ad5685r", ID_AD5685R},
 	{"ad5686", ID_AD5686},
 	{"ad5686r", ID_AD5686R},
+	{"ad5680", ID_AD5680},
 	{}
 };
 MODULE_DEVICE_TABLE(spi, ad5686_spi_id);

@@ -263,6 +263,22 @@ static const struct iio_chan_spec_ext_info ad5686_ext_info[] = {
 		.ext_info = ad5686_ext_info,			\
 }
 
+#define AD5860_CHANNEL(chan, addr, bits, _shift) {		\
+		.type = IIO_VOLTAGE,				\
+		.indexed = 1,					\
+		.output = 1,					\
+		.channel = chan,				\
+		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),	\
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),\
+		.address = addr,				\
+		.scan_type = {					\
+			.sign = 'u',				\
+			.realbits = (bits),			\
+			.storagebits = 24,			\
+			.shift = (_shift),			\
+		},						\
+}
+
 #define DECLARE_AD5693_CHANNELS(name, bits, _shift)		\
 static struct iio_chan_spec name[] = {				\
 		AD5868_CHANNEL(0, 0, bits, _shift),		\
@@ -308,6 +324,11 @@ static struct iio_chan_spec name[] = {				\
 		AD5868_CHANNEL(15, 15, bits, _shift),		\
 }
 
+#define DECLARE_AD5680_CHANNELS(name, bits, _shift)		\
+static struct iio_chan_spec name[] = {				\
+		AD5860_CHANNEL(0, 0, bits, _shift),		\
+}
+
 DECLARE_AD5693_CHANNELS(ad5310r_channels, 10, 2);
 DECLARE_AD5693_CHANNELS(ad5311r_channels, 10, 6);
 DECLARE_AD5676_CHANNELS(ad5672_channels, 12, 4);
@@ -320,6 +341,7 @@ DECLARE_AD5686_CHANNELS(ad5686_channels, 16, 0);
 DECLARE_AD5693_CHANNELS(ad5693_channels, 16, 0);
 DECLARE_AD5693_CHANNELS(ad5692r_channels, 14, 2);
 DECLARE_AD5693_CHANNELS(ad5691r_channels, 12, 4);
+DECLARE_AD5680_CHANNELS(ad5680_channels, 18, 2);
 
 static const struct ad5686_chip_info ad5686_chip_info_tbl[] = {
 	[ID_AD5310R] = {
@@ -482,6 +504,12 @@ static const struct ad5686_chip_info ad5686_chip_info_tbl[] = {
 		.int_vref_mv = 2500,
 		.num_channels = 4,
 		.regmap_type = AD5686_REGMAP,
+	},
+	[ID_AD5680] = {
+		.channels = ad5680_channels,
+		.int_vref_mv = 2500,
+		.num_channels = 1,
+		.regmap_type = AD5680_REGMAP,
 	},
 };
 
@@ -646,6 +674,11 @@ int ad5686_probe(struct device *dev,
 	case AD5693_REGMAP:
 		cmd = AD5686_CMD_CONTROL_REG;
 		ref_bit_msk = AD5693_REF_BIT_MSK;
+		st->use_internal_vref = !voltage_uv;
+		break;
+	case AD5680_REGMAP:
+		cmd = 0;
+		ref_bit_msk = AD5310_REF_BIT_MSK;
 		st->use_internal_vref = !voltage_uv;
 		break;
 	default:
