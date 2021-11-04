@@ -34,6 +34,7 @@
 enum ad8366_type {
 	ID_AD8366,
 	ID_ADA4961,
+	ID_ADL5205,
 	ID_ADL5240,
 	ID_ADRF5720,
 	ID_ADRF5730,
@@ -74,6 +75,10 @@ static struct ad8366_info ad8366_infos[] = {
 	[ID_ADA4961] = {
 		.gain_min = -6000,
 		.gain_max = 15000,
+	},
+	[ID_ADL5205] = {
+		.gain_min = -9000,
+		.gain_max = 26000,
 	},
 	[ID_ADL5240] = {
 		.gain_min = -11500,
@@ -130,6 +135,13 @@ static int ad8366_write(struct iio_dev *indio_dev,
 	case ID_ADA4961:
 		st->data[0] = ch_a & 0x1F;
 		break;
+	case ID_ADL5205:
+		st->data[1] = ch_a & 0x3F;
+		st->data[0] = 0;
+		ret = spi_write(st->spi, st->data, 2);
+		if (ret < 0)
+			dev_err(&indio_dev->dev, "write failed (%d)", ret);
+		return ret;
 	case ID_ADL5240:
 	case ID_ADRF5720:
 	case ID_ADRF5730:
@@ -175,6 +187,9 @@ static int ad8366_read_raw(struct iio_dev *indio_dev,
 			break;
 		case ID_ADA4961:
 			gain = 15000 - code * 1000;
+			break;
+		case ID_ADL5205:
+			gain = 26000 - code * 1000;
 			break;
 		case ID_ADL5240:
 			gain = 20000 - 31500 + code * 500;
@@ -241,6 +256,11 @@ static int ad8366_write_raw(struct iio_dev *indio_dev,
 		break;
 	case ID_ADA4961:
 		code = (15000 - gain) / 1000;
+		break;
+	case ID_ADL5205:
+		if (gain > 26000 || gain < -9000)
+			return -EINVAL;
+		code = (26000 - gain) / 1000;
 		break;
 	case ID_ADL5240:
 		code = ((gain - 500 - 20000) / 500) & 0x3F;
@@ -375,6 +395,10 @@ static int ad8366_probe(struct spi_device *spi)
 		indio_dev->channels = ada4961_channels;
 		indio_dev->num_channels = ARRAY_SIZE(ada4961_channels);
 		break;
+	case ID_ADL5205:
+		indio_dev->channels = ada4961_channels;
+		indio_dev->num_channels = ARRAY_SIZE(ada4961_channels);
+		break;
 	default:
 		dev_err(&spi->dev, "Invalid device ID\n");
 		ret = -EINVAL;
@@ -421,6 +445,7 @@ static const struct spi_device_id ad8366_id[] = {
 	{"adrf5720", ID_ADRF5720},
 	{"adrf5730", ID_ADRF5730},
 	{"adrf5731", ID_ADRF5731},
+	{"adl5205", ID_ADL5205},
 	{"adl5240", ID_ADL5240},
 	{"hmc271", ID_HMC271},
 	{"hmc792a", ID_HMC792},
