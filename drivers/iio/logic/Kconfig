@@ -11,4 +11,9 @@ config M2K_LOGIC_ANALYZER
 	  Support for the Logic Analyzer module on the Analog Devices
 	  ADALM-2000 (M2k) platform.
 
+config GENERIC_SHIFT_REGISTER
+	tristate "generic shift register"
+	help
+	  generic driver for shift register ICs working on SPI
+	  
 endmenu
