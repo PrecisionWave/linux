@@ -31,3 +31,4 @@ obj-$(CONFIG_DDC_DUC) += ddc_duc.o
 obj-$(CONFIG_VBI_FM_DSP) += vbi_fm_dsp.o
 obj-$(CONFIG_VBI_FSK_DSP) += vbi_fsk_dsp.o
 obj-$(CONFIG_VBI_DAB_DSP) += vbi_dab_dsp.o
+obj-$(CONFIG_VBI_DAB_DSP) += vbi_fembms_dsp.o
