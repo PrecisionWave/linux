@@ -112,6 +112,8 @@ enum dds_data_select {
 
 #define ADI_REG_DAC_GP_CONTROL	0x00BC
 
+#define ADI_REG_DELAY(l)	(0x0800 + (l) * 0x4)
+
 /* DAC CHANNEL */
 
 #define ADI_REG_CHAN_CNTRL_1_IIOCHAN(x)	(0x0400 + ((x) >> 1) * 0x40 + ((x) & 1) * 0x8)
@@ -248,6 +250,7 @@ struct cf_axi_converter {
 	struct gpio_desc			*reset_gpio;
 	struct gpio_desc			*txen_gpio[2];
 	unsigned	id;
+	unsigned	dci;
 	unsigned	interp_factor;
 	unsigned	fcenter_shift;
 	unsigned long	intp_modes[5];
@@ -319,5 +322,11 @@ void dds_master_write(struct cf_axi_dds_state *st,
 		      unsigned int reg, unsigned int val);
 
 bool cf_axi_dds_dma_fifo_en(struct cf_axi_dds_state *st);
+
+static inline void dds_odelay_set(struct cf_axi_dds_state *st,
+				unsigned lane, unsigned val)
+{
+	dds_write(st, ADI_REG_DELAY(lane), val);
+}
 
 #endif /* ADI_AXI_DDS_H_ */
