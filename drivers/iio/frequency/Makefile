@@ -38,3 +38,4 @@ obj-$(CONFIG_PCW_WBRX) += pcw_wbrx.o
 obj-$(CONFIG_ADRF6780) += adrf6780.o
 obj-$(CONFIG_LMX2594) += lmx2594.o
 obj-$(CONFIG_LMK04832) += lmk04832.o
+obj-$(CONFIG_PCW_FMCW_DSP) += pcw_fmcw_dsp.o

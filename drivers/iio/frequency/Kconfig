@@ -238,6 +238,14 @@ config ADRF6780
 	  To compile this driver as a module, choose M here: the
 	  module will be called adrf6780.
 
+config PCW_FMCW_DSP
+	tristate "PCW SDR DSP FPGA-IP driver"
+	help
+	  Say yes here to build support for PCW FMCW DSP FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called directional_finder.
+
 endmenu
 
 #
