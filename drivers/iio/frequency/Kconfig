@@ -179,6 +179,14 @@ config VBI_FSK_DSP
 	  To compile this driver as a module, choose M here: the
 	  module will be called vbi_fsk_dsp.
 
+config VBI_DAB_DSP
+	tristate "DAB Voice break-in (VBI) FPGA-IP driver"
+	help
+	  Say yes here to build support for DAB VBI FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called vbi_dab_dsp.
+
 endmenu
 
 #
