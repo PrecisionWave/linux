@@ -55,4 +55,14 @@ config PE4312
 	  To compile this driver as a module, choose M here: the
 	  module will be called pe4312.
 
+config PE43711
+	tristate "Peregrine Semiconductor PE43711 Attenuator"
+	depends on SPI
+	help
+	  Say yes here to build support for Peregrine Semiconductor PE43711
+	  Attenuator.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called pe43711.
+
 endmenu
