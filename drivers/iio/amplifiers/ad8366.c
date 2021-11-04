@@ -67,6 +67,14 @@ static size_t ad8366_pack_code(const unsigned char *code, size_t num_channels,
 	return sizeof(__be16);
 }
 
+static size_t adl5205_pack_code(const unsigned char *code, size_t num_channels,
+				unsigned char *data)
+{
+	data[0] = 0;
+	data[1] = code[0] & 0x3F;
+	return 2;
+}
+
 static size_t adrf5731_pack_code(const unsigned char *code, size_t num_channels,
 				 unsigned char *data)
 {
@@ -88,6 +96,15 @@ static const struct ad8366_info ad8366_chip_info = {
 	.gain_step = 253,
 	.num_channels = 2,
 	.pack_code = ad8366_pack_code,
+};
+
+static const struct ad8366_info adl5205_chip_info = {
+	.name = "adl5205",
+	.gain_min = -9000,
+	.gain_max = 26000,
+	.gain_step = -1000,
+	.num_channels = 1,
+	.pack_code = adl5205_pack_code,
 };
 
 static const struct ad8366_info ada4961_chip_info = {
@@ -340,6 +357,7 @@ static int ad8366_probe(struct spi_device *spi)
 static const struct spi_device_id ad8366_id[] = {
 	{ "ad8366", (kernel_ulong_t)&ad8366_chip_info },
 	{ "ada4961", (kernel_ulong_t)&ada4961_chip_info },
+	{ "adl5205", (kernel_ulong_t)&adl5205_chip_info },
 	{ "adl5240", (kernel_ulong_t)&adl5240_chip_info },
 	{ "adrf5720", (kernel_ulong_t)&adrf5720_chip_info },
 	{ "adrf5730", (kernel_ulong_t)&adrf5730_chip_info },
@@ -356,6 +374,7 @@ MODULE_DEVICE_TABLE(spi, ad8366_id);
 static const struct of_device_id ad8366_of_match[] = {
 	{ .compatible = "adi,ad8366", .data = &ad8366_chip_info },
 	{ .compatible = "adi,ada4961", .data = &ada4961_chip_info },
+	{ .compatible = "adi,adl5205", .data = &adl5205_chip_info },
 	{ .compatible = "adi,adl5240", .data = &adl5240_chip_info },
 	{ .compatible = "adi,adrf5720", .data = &adrf5720_chip_info },
 	{ .compatible = "adi,adrf5730", .data = &adrf5730_chip_info },
