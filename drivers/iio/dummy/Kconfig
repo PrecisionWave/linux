@@ -41,4 +41,12 @@ config IIO_SIMPLE_DUMMY_BUFFER
 
 endif # IIO_SIMPLE_DUMMY
 
+config XBAND_CONTROLLER
+	tristate "X-Band Controller driver"
+	help
+	  Say yes here to build support for X-Band Controller driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called xband_controller.
+		
 endmenu

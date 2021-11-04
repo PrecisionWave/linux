@@ -9,3 +9,4 @@ iio_dummy-$(CONFIG_IIO_SIMPLE_DUMMY_EVENTS) += iio_simple_dummy_events.o
 iio_dummy-$(CONFIG_IIO_SIMPLE_DUMMY_BUFFER) += iio_simple_dummy_buffer.o
 
 obj-$(CONFIG_IIO_DUMMY_EVGEN) += iio_dummy_evgen.o
+obj-$(CONFIG_XBAND_CONTROLLER) += xband_controller.o
