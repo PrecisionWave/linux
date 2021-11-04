@@ -87,6 +87,17 @@ config LTC6952
 	  To compile this driver as a module, choose M here: the
 	  module will be called ltc6952.
 
+config LMK04805
+        tristate "Texas Instruments LMK04805 12-Output Clock Generator"
+        depends on SPI
+        depends on COMMON_CLK
+        help
+          Say yes here to build support for Texas Instruments LMK04805
+          12-Output Clock Generator.
+
+          To compile this driver as a module, choose M here: the
+          module will be called lmk04805.
+
 endmenu
 
 menu "Direct Digital Synthesis"
