@@ -897,6 +897,8 @@ static const struct of_device_id axiadc_of_match[] = {
 	{ .compatible = "adi,axi-ad9081-rx-1.0", .data = &axi_adc_10_0_a_info },
 	{ .compatible = "adi,axi-adc-10.0.a", .data = &axi_adc_10_0_a_info },
 	{ .compatible = "adi,axi-adrv9002-rx-1.0", .data = &axi_adc_10_1_b_info},
+	{ .compatible = "pcw,axi-ltc2158", .data = &axi_adc_10_0_a_info},
+	{ .compatible = "pcw,axi-ltc2158-dummy", .data = &axi_adc_10_0_a_info},
 	{ /* end of list */ },
 };
 MODULE_DEVICE_TABLE(of, axiadc_of_match);
@@ -921,6 +923,7 @@ static int axiadc_probe(struct platform_device *pdev)
 	struct axiadc_spidev axiadc_spidev;
 	struct axiadc_converter *conv;
 	int ret;
+	bool is_dummy = false;
 
 	dev_dbg(&pdev->dev, "Device Tree Probing \'%s\'\n",
 		 pdev->dev.of_node->name);
@@ -928,6 +931,14 @@ static int axiadc_probe(struct platform_device *pdev)
 	id = of_match_node(axiadc_of_match, pdev->dev.of_node);
 	if (!id)
 		return -ENODEV;
+
+	if ((strcmp(pdev->dev.of_node->properties->name, "compatible") == 0)
+		&& pdev->dev.of_node->properties->value)
+	{
+		if (strcmp((char*)pdev->dev.of_node->properties->value, "pcw,axi-ltc2158-dummy") == 0) {
+			is_dummy = true;
+		}
+	}
 
 	info = id->data;
 
@@ -951,7 +962,10 @@ static int axiadc_probe(struct platform_device *pdev)
 
 	get_device(axiadc_spidev.dev_spi);
 
-	indio_dev = devm_iio_device_alloc(&pdev->dev, sizeof(*st));
+	if (is_dummy)
+		indio_dev = iio_device_alloc(sizeof(*st));
+	else
+		indio_dev = devm_iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (indio_dev == NULL) {
 		ret = -ENOMEM;
 		goto err_put_converter;
@@ -967,7 +981,10 @@ static int axiadc_probe(struct platform_device *pdev)
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	st->regs_size = resource_size(mem);
-	st->regs = devm_ioremap_resource(&pdev->dev, mem);
+	if (is_dummy)
+		st->regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
+	else
+		st->regs = devm_ioremap_resource(&pdev->dev, mem);
 	if (IS_ERR(st->regs))
 		return PTR_ERR(st->regs);
 
@@ -1004,13 +1021,15 @@ static int axiadc_probe(struct platform_device *pdev)
 		"adi,axi-additional-channel-available");
 
 	/* Reset all HDL Cores */
-	axiadc_write(st, ADI_REG_RSTN, 0);
-	mdelay(10);
-	axiadc_write(st, ADI_REG_RSTN, ADI_MMCM_RSTN);
-	mdelay(10);
-	axiadc_write(st, ADI_REG_RSTN, ADI_RSTN | ADI_MMCM_RSTN);
+	if (!is_dummy) {
+		axiadc_write(st, ADI_REG_RSTN, 0);
+		mdelay(10);
+		axiadc_write(st, ADI_REG_RSTN, ADI_MMCM_RSTN);
+		mdelay(10);
+		axiadc_write(st, ADI_REG_RSTN, ADI_RSTN | ADI_MMCM_RSTN);
 
-	st->pcore_version = axiadc_read(st, ADI_AXI_REG_VERSION);
+		st->pcore_version = axiadc_read(st, ADI_AXI_REG_VERSION);
+	}
 
 	if (ADI_AXI_PCORE_VER_MAJOR(st->pcore_version) >
 		ADI_AXI_PCORE_VER_MAJOR(info->version)) {
@@ -1037,7 +1056,7 @@ static int axiadc_probe(struct platform_device *pdev)
 	st->iio_info.attrs = conv->attrs;
 	indio_dev->info = &st->iio_info;
 
-	if (conv->post_setup) {
+	if (conv->post_setup && !is_dummy) {
 		ret = conv->post_setup(indio_dev);
 		if (ret < 0)
 			goto err_put_converter;
