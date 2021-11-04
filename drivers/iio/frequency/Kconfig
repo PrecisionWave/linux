@@ -163,6 +163,14 @@ config DDC_DUC
 	  To compile this driver as a module, choose M here: the
 	  module will be called ddc_duc.
 
+config VBI_FM_DSP
+	tristate "FM Voice break-in (VBI) FPGA-IP driver"
+	help
+	  Say yes here to build support for FM VBI FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called vbi_fm_dsp.
+
 endmenu
 
 #
