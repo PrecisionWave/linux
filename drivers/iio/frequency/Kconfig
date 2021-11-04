@@ -211,6 +211,14 @@ config FMCW_DDC
 	  To compile this driver as a module, choose M here: the
 	  module will be called fmcw_ddc.
 
+config PCW_WBRX
+	tristate "PCW WBRX driver"
+	help
+	  Say yes here to build support for PCW WBRX driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called pcw_wbrx.
+
 endmenu
 
 #

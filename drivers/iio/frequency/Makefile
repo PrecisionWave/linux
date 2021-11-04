@@ -34,3 +34,4 @@ obj-$(CONFIG_VBI_DAB_DSP) += vbi_dab_dsp.o
 obj-$(CONFIG_VBI_DAB_DSP) += vbi_fembms_dsp.o
 obj-$(CONFIG_PCW_SDR_DSP) += pcw_sdr_dsp.o
 obj-$(CONFIG_FMCW_DDC) += fmcw_ddc.o
+obj-$(CONFIG_PCW_WBRX) += pcw_wbrx.o
