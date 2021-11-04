@@ -171,6 +171,14 @@ config VBI_FM_DSP
 	  To compile this driver as a module, choose M here: the
 	  module will be called vbi_fm_dsp.
 
+config VBI_FSK_DSP
+	tristate "FSK 32 CHANNEL RECEIVER FPGA-IP driver"
+	help
+	  Say yes here to build support for FSK 32CH FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called vbi_fsk_dsp.
+
 endmenu
 
 #
