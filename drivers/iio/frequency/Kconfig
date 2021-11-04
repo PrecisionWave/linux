@@ -195,6 +195,14 @@ config VBI_FeMBMS_DSP
 	  To compile this driver as a module, choose M here: the
 	  module will be called vbi_fembms_dsp.
 
+config PCW_SDR_DSP
+	tristate "PCW SDR DSP FPGA-IP driver"
+	help
+	  Say yes here to build support for PCW SDR DSP FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called directional_finder.
+
 endmenu
 
 #
