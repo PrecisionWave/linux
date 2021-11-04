@@ -153,6 +153,16 @@ config M2K_DAC
 	help
 	  Say yes here to build support for Analog Devices M2K platform DAC buffer
 	  output.
+
+config DDC_DUC
+	tristate "Digital Down Converter (DDC) and Digital Up Converter (DUC) FPGA-IP driver"
+	help
+	  Say yes here to build support for Digital Down Converter (DDC)
+	  and Digital Up Converter (DUC) FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ddc_duc.
+
 endmenu
 
 #
