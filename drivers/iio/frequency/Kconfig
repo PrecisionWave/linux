@@ -367,6 +367,13 @@ config ADRF6780
 	  To compile this driver as a module, choose M here: the
 	  module will be called adrf6780.
 
+config LMX2594
+	tristate "Texas Instruments LMX2594 driver"
+	help
+	  Say yes here to build support for LMX2594 driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lmx2594.
 endmenu
 
 #
