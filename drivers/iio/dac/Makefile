@@ -43,3 +43,4 @@ obj-$(CONFIG_STM32_DAC) += stm32-dac.o
 obj-$(CONFIG_TI_DAC082S085) += ti-dac082s085.o
 obj-$(CONFIG_TI_DAC5571) += ti-dac5571.o
 obj-$(CONFIG_VF610_DAC) += vf610_dac.o
+obj-$(CONFIG_AD5601) += ad5601.o

@@ -400,4 +400,13 @@ config VF610_DAC
 	  This driver can also be built as a module. If so, the module will
 	  be called vf610_dac.
 
+config AD5601
+	tristate "AD5601 DAC driver"
+	depends on SPI
+	help
+	  Say yes here to support AD5601 driver.
+
+	  This driver can also be built as a module. If so, the module will
+	  be called ad5601.
+
 endmenu
