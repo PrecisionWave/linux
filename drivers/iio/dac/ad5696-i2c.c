@@ -43,7 +43,7 @@ static int ad5686_i2c_read(struct ad5686_state *st, u8 addr)
 }
 
 static int ad5686_i2c_write(struct ad5686_state *st,
-			    u8 cmd, u8 addr, u16 val)
+			    u8 cmd, u8 addr, u32 val)
 {
 	struct i2c_client *i2c = to_i2c_client(st->dev);
 	int ret;
