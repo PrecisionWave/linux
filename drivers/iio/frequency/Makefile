@@ -39,3 +39,4 @@ obj-$(CONFIG_ADRF6780) += adrf6780.o
 obj-$(CONFIG_LMX2594) += lmx2594.o
 obj-$(CONFIG_LMK04832) += lmk04832.o
 obj-$(CONFIG_PCW_FMCW_DSP) += pcw_fmcw_dsp.o
+obj-$(CONFIG_VBI_BR_DSP) += vbi_br_dsp.o
