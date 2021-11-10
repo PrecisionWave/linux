@@ -29,7 +29,7 @@
 
 
 #define DRIVER_NAME			"vbi-dab-dsp"
-#define NB_OF_BLOCKS			13 
+#define NB_OF_BLOCKS			12 
 #define ADDR_PER_BLOCK			4*16
 #define ADDR_START_BLOCK		4*16
 #define ADDR_START_MONITOR		ADDR_START_BLOCK+ADDR_PER_BLOCK*NB_OF_BLOCKS
@@ -103,8 +103,8 @@
 	CH8_##REG, \
 	CH9_##REG, \
 	CH10_##REG, \
-	CH11_##REG, \
-	CH12_##REG
+	CH11_##REG
+	// CH12_##REG
 	// CH13_##REG, \
 	// CH14_##REG, \
 	// CH15_##REG, \
@@ -149,8 +149,8 @@
 	static IIO_DEVICE_ATTR(ch8_##ATTR, RW, SHOW, STORE, CH8_##REG); \
 	static IIO_DEVICE_ATTR(ch9_##ATTR, RW, SHOW, STORE, CH9_##REG); \
 	static IIO_DEVICE_ATTR(ch10_##ATTR, RW, SHOW, STORE, CH10_##REG); \
-	static IIO_DEVICE_ATTR(ch11_##ATTR, RW, SHOW, STORE, CH11_##REG); \
-	static IIO_DEVICE_ATTR(ch12_##ATTR, RW, SHOW, STORE, CH12_##REG); 
+	static IIO_DEVICE_ATTR(ch11_##ATTR, RW, SHOW, STORE, CH11_##REG);
+	//static IIO_DEVICE_ATTR(ch12_##ATTR, RW, SHOW, STORE, CH12_##REG); 
 	// static IIO_DEVICE_ATTR(ch13_##ATTR, RW, SHOW, STORE, CH13_##REG); \
 	// static IIO_DEVICE_ATTR(ch14_##ATTR, RW, SHOW, STORE, CH14_##REG); \
 	// static IIO_DEVICE_ATTR(ch15_##ATTR, RW, SHOW, STORE, CH15_##REG); \
@@ -195,8 +195,8 @@
 	&iio_dev_attr_ch8_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch9_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch10_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch11_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch12_##ATTR.dev_attr.attr
+	&iio_dev_attr_ch11_##ATTR.dev_attr.attr
+	// &iio_dev_attr_ch12_##ATTR.dev_attr.attr
 	// &iio_dev_attr_ch13_##ATTR.dev_attr.attr, \
 	// &iio_dev_attr_ch14_##ATTR.dev_attr.attr, \
 	// &iio_dev_attr_ch15_##ATTR.dev_attr.attr, \
