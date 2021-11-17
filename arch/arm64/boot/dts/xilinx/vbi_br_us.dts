@@ -742,15 +742,15 @@
 
 		lmk04805_0_c8:channel@8 {
 			reg = <8>;
-			lmk,extended-name = "RX_CLK"; // LMX Clk =  276.48MHz
+			lmk,extended-name = "RX_CLK"; // LMX Clk =  1105.92MHz
 			lmk,out-type = <4>; // LVPECL 1.6Vpp, 150ohm zu GND müssen auf dem Baseboard rein!
-			lmk,clock-divider = <8>;
+			lmk,clock-divider = <2>;
 		};
 
 		lmk04805_0_c9:channel@9 {
 			reg = <9>;
 			lmk,extended-name = "CLKout9";
-			lmk,clock-divider = <8>;
+			lmk,clock-divider = <2>;
 			lmk,out-type = <0>;
 			lmk,powerdown;
 		};
@@ -774,7 +774,7 @@
 	adc_ltc2158: adc-ltc2158@1 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "ad9643";
+		compatible = "pcw,ltc2158";
 		reg = <1>;
 		spi-max-frequency = <100000>;
 //		spi-3wire;
@@ -830,23 +830,26 @@
 		optional,name-bit7 = "";  // this will omit that bit
 	};
 
-	att_input_pe43711: pe43711@2 {
+
+	att_post_lna_pe43711: pe43711@2 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "pe43711";
 		reg = <2>;
 		spi-max-frequency = <10000>;
-		optional,unique-id = "att_input_pe43711";	// without this, the device will be named after the "compatible" entry (pe43711)
+		optional,unique-id = "att_post_lna_pe43711";	// without this, the device will be named after the "compatible" entry (pe43711)
 	};
 
-	att_pre_mixer_pe43711: pe43711@3 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "pe43711";
-		reg = <3>;
-		spi-max-frequency = <10000>;
-		optional,unique-id = "att_pre_mixer_pe43711";	// without this, the device will be named after the "compatible" entry (pe43711)
-	};
+// not on RevB
+//	att_pre_mixer_pe43711: pe43711@3 {
+//		#address-cells = <1>;
+//		#size-cells = <0>;
+//		compatible = "pe43711";
+//		reg = <3>;
+//		spi-max-frequency = <10000>;
+//		optional,unique-id = "att_pre_mixer_pe43711";	// without this, the device will be named after the "compatible" entry (pe43711)
+//	};
+
 
 	lo1_synth: lmx2594@4 {
 		#address-cells = <1>;
