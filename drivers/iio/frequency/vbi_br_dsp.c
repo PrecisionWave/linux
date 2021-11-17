@@ -86,6 +86,7 @@ enum chan_num{
 	REG_ALL_CH(REG_RX_FRAME_LENGTH),
 	REG_ALL_CH(REG_RX_INIT_STREAMING),
 	REG_ALL_CH(REG_RX_ENABLE_HEADER),
+	REG_ALL_CH(REG_RX_SWAP_IQ),
 	REG_ALL_CH(REG_RX_FIR_DECIMATION),
 	REG_ALL_CH(REG_RX_FIR_COEFFICIENTS),
 	REG_ALL_CH(REG_RX_BUFFER_OVERFLOW_SAMPLES),
@@ -94,6 +95,7 @@ enum chan_num{
 	REG_RX_ADC1_PEAK_HOLD_VAL,
 	REG_RX_ADC2_PEAK_HOLD_VAL,
 	REG_RX_ADC_PEAK_HOLD_RESET,
+	REG_RX_LNA_PEAK_DETECT_FLAG,
 	REG_GPO_VALUE,
 	REG_GPI_VALUE,
 	REG_PPS_DIRECTION_OUT_N_IN,
@@ -115,6 +117,7 @@ struct vbi_br_dsp_state {
 
 	uint32_t	fs_adc;
 	bool 		gpsdo_locked;
+	bool 		rx_swap_iq[NB_OF_BLOCKS];
   	uint64_t	rx_frequency[NB_OF_BLOCKS];
   	uint32_t	pps_clk_error_ns;
   	uint32_t	pps_clk_error_hz;
@@ -237,7 +240,7 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 			vbi_br_dsp_write(st, ADDR_RX_INC(ch), (u32)temp64); // write phase increment word
 
 			// swap IQ on even nyquist zones
-			val = st->rx_nyquist_zone[ch] & 1;
+			val = (st->rx_nyquist_zone[ch] & 1) ^ st->rx_swap_iq[ch];
 			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) & ~(1<<1);
 			temp32 += (u32)val << 1;
 			vbi_br_dsp_write(st, ADDR_SETTINGS(ch), temp32);
@@ -289,6 +292,20 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 			}
 			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) & ~(1<<0);
 			temp32 += (u32)val<<0;
+			vbi_br_dsp_write(st, ADDR_SETTINGS(ch), temp32);
+			break;
+		}
+		if((u32)this_attr->address == REG_CH(ch, REG_RX_SWAP_IQ)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			st->rx_swap_iq[ch] = val;
+			// swap IQ on even nyquist zones
+			val = (st->rx_nyquist_zone[ch] & 1) ^ st->rx_swap_iq[ch];
+			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) & ~(1<<1);
+			temp32 += (u32)val << 1;
 			vbi_br_dsp_write(st, ADDR_SETTINGS(ch), temp32);
 			break;
 		}
@@ -365,6 +382,12 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 			temp64 = div64_u64(temp64,20*(u64)st->fs_adc);
 
 			vbi_br_dsp_write(st, ADDR_RX_INC(i), (u32)temp64); // write phase increment word
+
+			// swap IQ on even nyquist zones
+			val = (st->rx_nyquist_zone[i] & 1) ^ st->rx_swap_iq[i];
+			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(i)) & ~(1<<1);
+			temp32 += (u32)val << 1;
+			vbi_br_dsp_write(st, ADDR_SETTINGS(i), temp32);
 		}
     		break;
 
@@ -477,6 +500,11 @@ static ssize_t vbi_br_dsp_show(struct device *dev,
 			val = (vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) >> 0) & 1;
 			break;
 		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_RX_SWAP_IQ)){
+			match = 1;
+			val = st->rx_swap_iq[ch];
+			break;
+		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_PERIOD)){
 			match = 1;
 			val = vbi_br_dsp_read(st, ADDR_RX_PERIOD(ch));
@@ -532,6 +560,9 @@ static ssize_t vbi_br_dsp_show(struct device *dev,
 			break;
 		case REG_RX_ADC2_PEAK_HOLD_VAL:
 			val = (vbi_br_dsp_read(st, ADDR_RX_ADC_PEAK) >> 16);
+			break;
+		case REG_RX_LNA_PEAK_DETECT_FLAG:
+			val = (vbi_br_dsp_read(st, ADDR_GPI) >> 3) & 0x1;
 			break;
 		case REG_PPS_DIRECTION_OUT_N_IN:
 			val = (vbi_br_dsp_read(st, ADDR_PPS_SETTINGS) >>29) & 1;
@@ -611,6 +642,11 @@ IIO_DEVICE_ATTR_ALL_CH(rx_enable_header, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_store,
 			REG_RX_ENABLE_HEADER);
 
+IIO_DEVICE_ATTR_ALL_CH(rx_swap_iq, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_RX_SWAP_IQ);
+
 IIO_DEVICE_ATTR_ALL_CH(rx_period, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_show,
 			vbi_br_dsp_store,
@@ -660,6 +696,11 @@ static IIO_DEVICE_ATTR(rx_adc2_peak_hold_val, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_show,
 			vbi_br_dsp_store,
 			REG_RX_ADC2_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_lna_peak_detect_flag, S_IRUGO,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_RX_LNA_PEAK_DETECT_FLAG);
 
 static IIO_DEVICE_ATTR(gpo_value, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_show,
@@ -729,6 +770,7 @@ static struct attribute *vbi_br_dsp_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_bypass_decimator),
 	IIO_ATTR_ALL_CH(rx_init_streaming),
 	IIO_ATTR_ALL_CH(rx_enable_header),
+	IIO_ATTR_ALL_CH(rx_swap_iq),
 	IIO_ATTR_ALL_CH(rx_period),
 	IIO_ATTR_ALL_CH(rx_frame_length),
 	IIO_ATTR_ALL_CH(rx_fir_decimation),
@@ -739,6 +781,7 @@ static struct attribute *vbi_br_dsp_attributes[] = {
 	&iio_dev_attr_rx_adc_peak_hold_reset.dev_attr.attr,
 	&iio_dev_attr_rx_adc1_peak_hold_val.dev_attr.attr,
 	&iio_dev_attr_rx_adc2_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_lna_peak_detect_flag.dev_attr.attr,
 	&iio_dev_attr_gpo_value.dev_attr.attr,
 	&iio_dev_attr_gpi_value.dev_attr.attr,
 	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,
