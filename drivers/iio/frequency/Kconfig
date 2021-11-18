@@ -312,5 +312,13 @@ config LMX2594
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called lmx2594.
+
+config HMC703
+	tristate "Analog Devices HMC703 driver"
+	help
+	  Say yes here to build support for HMC703 driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called hmc703.
 endmenu
 endmenu
