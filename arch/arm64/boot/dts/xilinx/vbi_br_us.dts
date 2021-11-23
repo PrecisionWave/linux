@@ -459,11 +459,6 @@
 			required,nb-of-blocks = <4>;
 		};
 
-		xband_controller: xband_controller@0 {
-			compatible = "xband_controller";
-			reg = <0x0 0x0>;
-		};
-
 	};
 
 };

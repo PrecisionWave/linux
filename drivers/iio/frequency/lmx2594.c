@@ -153,6 +153,7 @@ static ssize_t lmx2594_store(struct device *dev,
 		st->reg = (u32)val;
 		st->spi_wr_buffer = cpu_to_be32(st->reg << 8);	// we gonna send 24-bits beginning with MSB [31:8]
 		lmx2594_spi_transfer(indio_dev);
+		st->reg = be32_to_cpu(st->spi_rd_buffer) >> 8;
 		break;
 	case DEVICE_NAME:
 		if(st->device_name)
@@ -320,6 +321,7 @@ static const struct attribute_group lmx2594_attribute_group = {
 
 static const struct iio_info lmx2594_info = {
 	.attrs = &lmx2594_attribute_group,
+	.debugfs_reg_access = &lmx2594_reg_access,
 };
 
 static int lmx2594_parse_dt(struct device *dev, struct lmx2594_state *st){

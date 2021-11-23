@@ -96,6 +96,10 @@ enum chan_num{
 	REG_RX_ADC2_PEAK_HOLD_VAL,
 	REG_RX_ADC_PEAK_HOLD_RESET,
 	REG_RX_LNA_PEAK_DETECT_FLAG,
+	REG_RX_LED_GREEN,
+	REG_RX_LED_RED,
+	REG_TX_LED_GREEN,
+	REG_TX_LED_RED,
 	REG_GPO_VALUE,
 	REG_GPI_VALUE,
 	REG_PPS_DIRECTION_OUT_N_IN,
@@ -401,6 +405,46 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 		vbi_br_dsp_write(st, ADDR_PPS_SETTINGS, temp32);
 		break;
 
+	case REG_RX_LED_GREEN:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_br_dsp_read(st, ADDR_GPO) & ~(1<<2);
+		temp32 += (u32)val<<2;
+		vbi_br_dsp_write(st, ADDR_GPO, temp32);
+		break;
+
+	case REG_RX_LED_RED:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_br_dsp_read(st, ADDR_GPO) & ~(1<<3);
+		temp32 += (u32)val<<3;
+		vbi_br_dsp_write(st, ADDR_GPO, temp32);
+		break;
+
+	case REG_TX_LED_GREEN:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_br_dsp_read(st, ADDR_GPO) & ~(1<<1);
+		temp32 += (u32)val<<1;
+		vbi_br_dsp_write(st, ADDR_GPO, temp32);
+		break;
+
+	case REG_TX_LED_RED:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_br_dsp_read(st, ADDR_GPO) & ~(1<<0);
+		temp32 += (u32)val<<0;
+		vbi_br_dsp_write(st, ADDR_GPO, temp32);
+		break;
+
 	case REG_GPO_VALUE:
 		if(val<0 || val>65535){
 			ret = -EINVAL;
@@ -564,6 +608,18 @@ static ssize_t vbi_br_dsp_show(struct device *dev,
 		case REG_RX_LNA_PEAK_DETECT_FLAG:
 			val = (vbi_br_dsp_read(st, ADDR_GPI) >> 3) & 0x1;
 			break;
+		case REG_RX_LED_GREEN:
+			val = (vbi_br_dsp_read(st, ADDR_GPO) >> 2) & 0x1;
+			break;
+		case REG_RX_LED_RED:
+			val = (vbi_br_dsp_read(st, ADDR_GPO) >> 3) & 0x1;
+			break;
+		case REG_TX_LED_GREEN:
+			val = (vbi_br_dsp_read(st, ADDR_GPO) >> 1) & 0x1;
+			break;
+		case REG_TX_LED_RED:
+			val = (vbi_br_dsp_read(st, ADDR_GPO) >> 0) & 0x1;
+			break;
 		case REG_PPS_DIRECTION_OUT_N_IN:
 			val = (vbi_br_dsp_read(st, ADDR_PPS_SETTINGS) >>29) & 1;
 			break;
@@ -702,6 +758,26 @@ static IIO_DEVICE_ATTR(rx_lna_peak_detect_flag, S_IRUGO,
 			vbi_br_dsp_store,
 			REG_RX_LNA_PEAK_DETECT_FLAG);
 
+static IIO_DEVICE_ATTR(rx_led_green, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_RX_LED_GREEN);
+
+static IIO_DEVICE_ATTR(rx_led_red, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_RX_LED_RED);
+
+static IIO_DEVICE_ATTR(tx_led_green, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_TX_LED_GREEN);
+
+static IIO_DEVICE_ATTR(tx_led_red, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_TX_LED_RED);
+
 static IIO_DEVICE_ATTR(gpo_value, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_show,
 			vbi_br_dsp_store,
@@ -782,6 +858,10 @@ static struct attribute *vbi_br_dsp_attributes[] = {
 	&iio_dev_attr_rx_adc1_peak_hold_val.dev_attr.attr,
 	&iio_dev_attr_rx_adc2_peak_hold_val.dev_attr.attr,
 	&iio_dev_attr_rx_lna_peak_detect_flag.dev_attr.attr,
+	&iio_dev_attr_rx_led_green.dev_attr.attr,
+	&iio_dev_attr_rx_led_red.dev_attr.attr,
+	&iio_dev_attr_tx_led_green.dev_attr.attr,
+	&iio_dev_attr_tx_led_red.dev_attr.attr,
 	&iio_dev_attr_gpo_value.dev_attr.attr,
 	&iio_dev_attr_gpi_value.dev_attr.attr,
 	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,

@@ -108,7 +108,8 @@ static int ad9172_setup(struct ad9172_state *st)
 	uint8_t pll_lock_status = 0, dll_lock_stat = 0;
 	int ret, i;
 	u64 dac_rate_Hz;
-	unsigned long dac_clkin_Hz, lane_rate_kHz;
+	u64 dac_clkin_Hz;
+	unsigned long lane_rate_kHz;
 	ad917x_jesd_link_stat_t link_status;
 	ad917x_handle_t *ad917x_h = &st->dac_h;
 	unsigned long pll_mult;
@@ -149,14 +150,14 @@ static int ad9172_setup(struct ad9172_state *st)
 	dev_info(dev, "AD916x Revision: %d.%d.%d\n",
 		 revision[0], revision[1], revision[2]);
 
-	dac_clkin_Hz = clk_get_rate(st->conv.clk[CLK_DAC]);
+	dac_clkin_Hz = clk_get_rate(st->conv.clk[CLK_DAC]) * 12;
 
-	dev_info(dev, "PLL Input rate %lu\n", dac_clkin_Hz);
+	dev_info(dev, "PLL Input rate %llu\n", dac_clkin_Hz);
 
 	pll_mult = DIV_ROUND_CLOSEST(st->dac_rate_khz, dac_clkin_Hz / 1000);
 
 	ret = ad917x_set_dac_clk(ad917x_h, (u64)dac_clkin_Hz * pll_mult,
-				 1, dac_clkin_Hz);
+				 0, dac_clkin_Hz);
 	if (ret != 0) {
 		dev_err(dev, "ad917x_set_dac_clk failed (%d)\n", ret);
 		return ret;
@@ -818,6 +819,10 @@ static int ad9172_parse_dt(struct spi_device *spi, struct ad9172_state *st)
 
 	st->jesd_link_mode = 10;
 	of_property_read_u32(np, "adi,jesd-link-mode", &st->jesd_link_mode);
+
+	st->jesd_dual_link_mode = 1;
+	of_property_read_u32(np, "adi,jesd-dual-link-mode", &st->jesd_dual_link_mode);
+	printk("AD9173: Dual Link Mode=%x\n", st->jesd_dual_link_mode);
 
 	st->jesd_subclass = 0;
 	of_property_read_u32(np, "adi,jesd-subclass", &st->jesd_subclass);
