@@ -154,6 +154,7 @@ int ad917x_jesd_config_datapath(ad917x_handle_t *h, uint8_t dual_en,
 		return API_ERROR_INVALID_PARAM;
 
 	/*Disable Links Prior to configuration*/
+	printk("AD9173: Disable Links Prior to configuration\n");
 	err = ad917x_register_read(h, AD917X_JESD_RX_CTL_REG, &tmp_reg);
 	if (err != API_ERROR_OK)
 		return err;
@@ -168,11 +169,13 @@ int ad917x_jesd_config_datapath(ad917x_handle_t *h, uint8_t dual_en,
 	tmp_reg &= ~(AD917X_JESD_MODE(ALL) | AD917X_LINK_MODE);
 	tmp_reg |= AD917X_JESD_MODE(jesd_mode);
 	tmp_reg |= ((dual_en == 1) ? AD917X_LINK_MODE : 0);
+	printk("AD9173: Configure JESD Mode reg=%x bit=%x\n", tmp_reg, AD917X_LINK_MODE);
 	err = ad917x_register_write(h, AD917X_JESD_MODE_REG, tmp_reg);
 	if (err != API_ERROR_OK)
 		return err;
 
 	/*Configure Interpolation Mode */
+	printk("AD9173: Configure Interpolation Mode\n");
 	tmp_reg = 0x0;
 	tmp_reg |= AD917X_CH_INTERP_MODE(ch_intpl) | AD917X_DP_INTERP_MODE(dp_intpl);
 	err = ad917x_register_write(h, AD917X_INTERP_MODE_REG, tmp_reg);
@@ -180,11 +183,16 @@ int ad917x_jesd_config_datapath(ad917x_handle_t *h, uint8_t dual_en,
 		return err;
 
 	/*Check Readback for Valid Configuration*/
+	printk("AD9173: Check Readback for Valid Configuration\n");
 	err = ad917x_register_read(h, AD917X_JESD_MODE_REG, &tmp_reg);
-	if (err != API_ERROR_OK)
+	if (err != API_ERROR_OK){
+		printk("AD9173 ERROR: Check Readback for Valid Configuration\n");
 		return err;
-	if (tmp_reg & AD917X_JESD_MODE_INVALID)
+	}
+	if (tmp_reg & AD917X_JESD_MODE_INVALID){
+		printk("AD9173 AD917X_JESD_MODE_INVALID: Check Readback for Valid Configuration\n");
 		return API_ERROR_INVALID_PARAM;
+	}
 
 	return API_ERROR_OK;
 }
