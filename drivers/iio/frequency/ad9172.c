@@ -231,7 +231,8 @@ static int ad9172_setup(struct ad9172_state *st)
 		 revision[0], revision[1], revision[2]);
 
 	dac_clkin_Hz = clk_get_rate_scaled(st->conv.clk[CLK_DAC],
-		&st->conv.clkscale[CLK_DAC]);
+		&st->conv.clkscale[CLK_DAC]) * 12;
+	//TODO: instead of fixing it hard, clkscale might be configured in the devicetree ?
 
 	dev_info(dev, "CLK Input rate %llu\n", dac_clkin_Hz);
 
@@ -243,7 +244,8 @@ static int ad9172_setup(struct ad9172_state *st)
 		pll_mult = DIV_ROUND_CLOSEST_ULL(st->dac_rate_khz, tmp);
 
 		ret = ad917x_set_dac_clk(ad917x_h, dac_clkin_Hz * pll_mult,
-			1, dac_clkin_Hz);
+			0, dac_clkin_Hz);
+		// TODO: is this hard fix really necessary, or could we simply use 'adi,direct-clocking-enable' in devicetree ?
 	} else {
 		ret = ad917x_set_dac_clk(ad917x_h, dac_clkin_Hz, 0,
 			dac_clkin_Hz);
