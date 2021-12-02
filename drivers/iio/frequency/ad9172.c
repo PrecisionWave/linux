@@ -150,7 +150,7 @@ static int ad9172_setup(struct ad9172_state *st)
 	dev_info(dev, "AD916x Revision: %d.%d.%d\n",
 		 revision[0], revision[1], revision[2]);
 
-	dac_clkin_Hz = clk_get_rate(st->conv.clk[CLK_DAC]) * 12;
+	dac_clkin_Hz = clk_get_rate(st->conv.clk[CLK_DAC]) * 24;
 
 	dev_info(dev, "PLL Input rate %llu\n", dac_clkin_Hz);
 
@@ -274,6 +274,22 @@ static int ad9172_setup(struct ad9172_state *st)
 	msleep(100);
 
 	ret = ad917x_jesd_get_link_status(ad917x_h, JESD_LINK_0, &link_status);
+	if (ret != 0) {
+		dev_err(dev,
+			"DAC:MODE:JESD: ERROR : Get Link status failed \r\n");
+		return -EIO;
+	}
+
+	dev_info(dev, "code_grp_sync: %x\n", link_status.code_grp_sync_stat);
+	dev_info(dev, "frame_sync_stat: %x\n", link_status.frame_sync_stat);
+	dev_info(dev, "good_checksum_stat: %x\n",
+		 link_status.good_checksum_stat);
+	dev_info(dev, "init_lane_sync_stat: %x\n",
+		 link_status.init_lane_sync_stat);
+	dev_info(dev, "%d lanes @ %lu kBps\n",
+		 st->appJesdConfig.jesd_L, lane_rate_kHz);
+
+	ret = ad917x_jesd_get_link_status(ad917x_h, JESD_LINK_1, &link_status);
 	if (ret != 0) {
 		dev_err(dev,
 			"DAC:MODE:JESD: ERROR : Get Link status failed \r\n");
@@ -822,7 +838,6 @@ static int ad9172_parse_dt(struct spi_device *spi, struct ad9172_state *st)
 
 	st->jesd_dual_link_mode = 1;
 	of_property_read_u32(np, "adi,jesd-dual-link-mode", &st->jesd_dual_link_mode);
-	printk("AD9173: Dual Link Mode=%x\n", st->jesd_dual_link_mode);
 
 	st->jesd_subclass = 0;
 	of_property_read_u32(np, "adi,jesd-subclass", &st->jesd_subclass);
@@ -849,9 +864,12 @@ static int ad9172_parse_dt(struct spi_device *spi, struct ad9172_state *st)
 	else
 		st->sysref_coupling = COUPLING_AC;
 
+	printk("AD9173: channel-interpolation=%d dac-interpolation=%d jesd-subclass=%d jesd-dual-link-mode=%d jesd-link-mode=%d dac-rate-khz=%d\n",st->channel_interpolation, st->dac_interpolation, st->jesd_subclass, st->jesd_dual_link_mode, st->jesd_link_mode, st->dac_rate_khz);
+
 	/*Logic lane configuration*/
 	ret = of_property_read_u8_array(np,"adi,logic-lanes-mapping",
 				      st->logic_lanes, sizeof(st->logic_lanes));
+
 	if (ret)
 		for(i = 0; i < sizeof(st->logic_lanes); i++)
 			st->logic_lanes[i] = i;
@@ -931,7 +949,7 @@ static int ad9172_probe(struct spi_device *spi)
 		conv->attrs = NULL;
 		conv->id = ID_AD9172_M2;
 	} else {
-		switch (st->appJesdConfig.jesd_M) {
+		switch (4) { //st->appJesdConfig.jesd_M
 		case 2:
 			conv->id = ID_AD9172_M2;
 
