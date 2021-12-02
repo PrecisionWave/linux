@@ -267,7 +267,7 @@ static int ad9172_setup(struct ad9172_state *st)
 		 revision[0], revision[1], revision[2]);
 
 	dac_clkin_Hz = clk_get_rate_scaled(st->conv.clk[CLK_DAC],
-		&st->conv.clkscale[CLK_DAC]) * 12;
+		&st->conv.clkscale[CLK_DAC]) * 24;
 	//TODO: instead of fixing it hard, clkscale might be configured in the devicetree ?
 
 	dev_info(dev, "CLK Input rate %llu\n", dac_clkin_Hz);
@@ -973,12 +973,15 @@ static int ad9172_parse_dt(struct spi_device *spi, struct ad9172_state *st)
 	if (of_property_read_u32(np, "adi,sysref-mode", &st->sysref_mode))
 		st->sysref_mode = SYSREF_CONT;
 
+	printk("AD9173: channel-interpolation=%d dac-interpolation=%d jesd-subclass=%d jesd-dual-link-mode=%d jesd-link-mode=%d dac-rate-khz=%d\n", st->channel_interpolation, st->dac_interpolation, st->jesd_subclass, st->jesd_dual_link_mode, st->jesd_link_mode, st->dac_rate_khz);
+
 	st->sysref_err_win = 0;
 	of_property_read_u32(np, "adi,sysref-error-window", &st->sysref_err_win);
 
 	/*Logic lane configuration*/
 	ret = of_property_read_u8_array(np,"adi,logic-lanes-mapping",
 				      st->logic_lanes, sizeof(st->logic_lanes));
+
 	if (ret)
 		for(i = 0; i < sizeof(st->logic_lanes); i++)
 			st->logic_lanes[i] = i;
@@ -1252,7 +1255,7 @@ static int ad9172_probe(struct spi_device *spi)
 	if (st->interpolation == 1) {
 		conv->attrs = NULL;
 	} else {
-		switch (st->appJesdConfig.jesd_M) {
+		switch (4) { //st->appJesdConfig.jesd_M
 		case 2:
 			if (st->jesd_dual_link_mode)
 				conv->attrs = &ad9172_attribute_group_dual_m2;
