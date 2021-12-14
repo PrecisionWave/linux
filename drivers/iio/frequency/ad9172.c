@@ -109,6 +109,7 @@ static int ad9172_setup(struct ad9172_state *st)
 	int ret, i;
 	u64 dac_rate_Hz;
 	u64 dac_clkin_Hz;
+	u64 dac_clkin_kHz;
 	unsigned long lane_rate_kHz;
 	ad917x_jesd_link_stat_t link_status;
 	ad917x_handle_t *ad917x_h = &st->dac_h;
@@ -154,7 +155,11 @@ static int ad9172_setup(struct ad9172_state *st)
 
 	dev_info(dev, "PLL Input rate %llu\n", dac_clkin_Hz);
 
-	pll_mult = DIV_ROUND_CLOSEST(st->dac_rate_khz, dac_clkin_Hz / 1000);
+	dac_clkin_kHz = div_u64(dac_clkin_Hz, 1000);
+	pll_mult = div_u64(
+		st->dac_rate_khz + div_u64( dac_clkin_kHz, 2),
+		dac_clkin_kHz
+		);
 
 	ret = ad917x_set_dac_clk(ad917x_h, (u64)dac_clkin_Hz * pll_mult,
 				 0, dac_clkin_Hz);
