@@ -463,6 +463,13 @@
 
 };
 
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+};
 
 &i2c0 {
 	clock-frequency = <400000>;

@@ -30,35 +30,34 @@
 
 #define DRIVER_NAME				"vbi-fm-dsp"
 #define NB_OF_BLOCKS			8
-#define ADDR_PER_BLOCK			9*4
+#define ADDR_PER_BLOCK			16*4
 
-#define ADDR_PPS_CLKS			(ADDR_PER_BLOCK*NB_OF_BLOCKS)
-#define ADDR_DMA_SOURCE			(ADDR_PER_BLOCK*NB_OF_BLOCKS+1*4)
-#define ADDR_DMA_BURST_PERIOD	(ADDR_PER_BLOCK*NB_OF_BLOCKS+2*4)
-#define ADDR_DMA_BURST_LENGTH	(ADDR_PER_BLOCK*NB_OF_BLOCKS+3*4)
-#define ADDR_DMA_DECIMATION		(ADDR_PER_BLOCK*NB_OF_BLOCKS+4*4)
-#define ADDR_AUDIO_SEL			(ADDR_PER_BLOCK*NB_OF_BLOCKS+5*4)
-#define ADDR_AUDIO_METER		(ADDR_PER_BLOCK*NB_OF_BLOCKS+6*4)
-#define ADDR_GAIN_MOD			(ADDR_PER_BLOCK*NB_OF_BLOCKS+7*4)
-#define ADDR_DMA_SINK			(ADDR_PER_BLOCK*NB_OF_BLOCKS+8*4)
-#define ADDR_MOD_CH_SHIFT		(ADDR_PER_BLOCK*NB_OF_BLOCKS+9*4)
-#define ADDR_MONO_SWP_SOURCE	(ADDR_PER_BLOCK*NB_OF_BLOCKS+10*4)
-#define ADDR_DMA_SOURCE_CHANNEL	(ADDR_PER_BLOCK*NB_OF_BLOCKS+11*4)
-#define ADDR_DSP_VERSION		(ADDR_PER_BLOCK*NB_OF_BLOCKS+12*4)
-#define ADDR_ADC_PEAK			(ADDR_PER_BLOCK*NB_OF_BLOCKS+13*4)
-#define ADDR_ADC_BER_TESTER		(ADDR_PER_BLOCK*NB_OF_BLOCKS+14*4)
-#define ADDR_PPS_CNT		(ADDR_PER_BLOCK*NB_OF_BLOCKS+15*4)
-#define ADDR_PPS_SETTINGS		(ADDR_PER_BLOCK*NB_OF_BLOCKS+17*4)
+#define ADDR_DSP_VERSION		(0*4)
+#define ADDR_ADC_PEAK			(1*4)
+#define ADDR_AUDIO_METER		(2*4)
+#define ADDR_PPS_CLKS			(3*4)
+#define ADDR_PPS_CNT			(4*4)
+#define ADDR_ADC_BER_TESTER		(5*4)
+#define ADDR_DMA_BURST_LENGTH		(6*4)
+#define ADDR_DMA_BURST_PERIOD		(7*4)
+#define ADDR_DMA_DECIMATION		(8*4)
+#define ADDR_DMA_SINK			(9*4)
+#define ADDR_DMA_SOURCE_CHANNEL		(10*4)
+#define ADDR_AUDIO_SEL			(11*4)
+#define ADDR_PPS_SETTINGS		(12*4)
+#define ADDR_GAIN_MOD			(13*4)
+#define ADDR_MONO_SWP_SOURCE		(14*4)
+#define ADDR_MOD_CH_SHIFT		(15*4)
 
-#define ADDR_INC01(x)			(0*4+x*ADDR_PER_BLOCK)
-#define ADDR_INC23(x)			(1*4+x*ADDR_PER_BLOCK)
-#define ADDR_GAIN01_0(x)		(2*4+x*ADDR_PER_BLOCK)
-#define ADDR_GAIN23_0(x)		(3*4+x*ADDR_PER_BLOCK)
-#define ADDR_GAIN01_1(x)		(4*4+x*ADDR_PER_BLOCK)
-#define ADDR_GAIN23_1(x)		(5*4+x*ADDR_PER_BLOCK)
-#define ADDR_RSSI01(x)			(6*4+x*ADDR_PER_BLOCK)
-#define ADDR_RSSI23(x)			(7*4+x*ADDR_PER_BLOCK)
-#define ADDR_ROUTING(x)			(8*4+x*ADDR_PER_BLOCK)
+#define ADDR_ROUTING(x)			(0*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_INC01(x)			(1*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_INC23(x)			(2*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_GAIN01_0(x)		(3*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_GAIN23_0(x)		(4*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_GAIN01_1(x)		(5*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_GAIN23_1(x)		(6*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_RSSI01(x)			(10*4+(x+1)*ADDR_PER_BLOCK)
+#define ADDR_RSSI23(x)			(11*4+(x+1)*ADDR_PER_BLOCK)
 
 #define MIN_GAIN				0x0000
 #define MAX_GAIN				0xFFFF
@@ -581,14 +580,18 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 		}
 		if(val>0)
 			val += 1;
-		vbi_fm_dsp_write(st, ADDR_DMA_SOURCE, (u32)val);
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) & ~(0x3<<3);
+		temp32 += (u32)val << 3;
+		vbi_fm_dsp_write(st, ADDR_DMA_SOURCE_CHANNEL, temp32);
 		break;
 	case REG_DMA_SOURCE_CHANNEL:
 		if(val<0 || val>31){
 			ret = -EINVAL;
 			break;
 		}
-		vbi_fm_dsp_write(st, ADDR_DMA_SOURCE_CHANNEL, (u32)val);
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) & ~(0x1f<<0);
+		temp32 += (u32)val << 0;
+		vbi_fm_dsp_write(st, ADDR_DMA_SOURCE_CHANNEL, temp32);
 		break;
 	case REG_DMA_SINK:
 		if(val<0 || val>2){
@@ -888,12 +891,12 @@ static ssize_t vbi_fm_dsp_show(struct device *dev,
 		val = (vbi_fm_dsp_read(st, ADDR_ADC_BER_TESTER) >> 16);
 		break;
 	case REG_DMA_SOURCE:
-		val = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE);
+		val = (vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) >> 5) & 0x3;
 		if(val>1)
 			val -= 1;
 		break;
 	case REG_DMA_SOURCE_CHANNEL:
-		val = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL);
+		val = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) & 0x1f;
 		break;
 	case REG_DMA_SINK:
 		val = vbi_fm_dsp_read(st, ADDR_DMA_SINK);

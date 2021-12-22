@@ -109,7 +109,7 @@
 			adi,extended-name = "ADC_CLK";
 			adi,driver-mode = <3>;
 			adi,divider-phase = <1>;
-			adi,channel-divider = <1>;
+			adi,channel-divider = <2>;
 //			adi,output-dis;
 		};
 	};
