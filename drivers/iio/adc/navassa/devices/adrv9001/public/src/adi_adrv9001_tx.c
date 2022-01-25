@@ -134,13 +134,15 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_AttenuationMode_Set
                                                                            adi_adrv9001_TxAttenuationControlMode_e mode)
 {
     adi_adrv9001_ChannelState_e state = ADI_ADRV9001_CHANNEL_STANDBY;
+	adi_adrv9001_TxAttenuationControlMode_e txModeRead = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_BYPASS;
 
     ADI_RANGE_CHECK(device, channel, ADI_CHANNEL_1, ADI_CHANNEL_2);
     switch (mode)
     {
     case ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_BYPASS:   /* Falls through */
     case ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_SPI:      /* Falls through */
-    case ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_PIN:
+    case ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_PIN:      /* Falls through */
+    case ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_CLGC:
         break;
     default:
         ADI_ERROR_REPORT(&device->common,
@@ -167,6 +169,18 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_AttenuationMode_Set
                          "Error while attempting to set attenuation mode. Channel must be in STANDBY or CALIBRATED.");
     }
 
+	/* Retrieve attenuation mode */
+	ADI_EXPECT(adi_adrv9001_Tx_AttenuationMode_Get, device, channel, &txModeRead);
+	if (txModeRead == ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_CLGC)
+	{
+		ADI_ERROR_REPORT(&device->common,
+			ADI_COMMON_ERRSRC_API,
+			ADI_COMMON_ERR_API_FAIL,
+			ADI_COMMON_ACT_ERR_CHECK_PARAM,
+			txModeRead,
+			"Invalid TxAttenuation Control Mode. Cannot control when mode CLGC is enabled");
+	}
+
     ADI_API_RETURN(device);
 }
 
@@ -179,6 +193,13 @@ int32_t adi_adrv9001_Tx_AttenuationMode_Set(adi_adrv9001_Device_t *device,
     ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_AttenuationMode_Set_Validate, device, channel, mode);
 
     txChannelBaseAddr = Tx_Addr_Get(channel);
+
+	device->devStateInfo.txAttenMode[channel - 1] = mode;
+
+	if (mode == ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_CLGC)
+	{
+		mode = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_SPI;
+	}
 
     ADI_EXPECT(adrv9001_NvsRegmapTx_TxAttenMode_Set, device, txChannelBaseAddr, (uint8_t)mode);
 
@@ -199,15 +220,19 @@ int32_t adi_adrv9001_Tx_AttenuationMode_Get(adi_adrv9001_Device_t *device,
                                             adi_common_ChannelNumber_e channel,
                                             adi_adrv9001_TxAttenuationControlMode_e *mode)
 {
-    uint8_t regData = 0;
-    adrv9001_BfNvsRegmapTx_e txChannelBaseAddr = ADRV9001_BF_TX1_CORE;
+	adi_adrv9001_ChannelState_e state = ADI_ADRV9001_CHANNEL_STANDBY;
 
-    ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_AttenuationMode_Get_Validate, device, channel, mode);
+	ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_AttenuationMode_Get_Validate, device, channel, mode);
 
-    txChannelBaseAddr = Tx_Addr_Get(channel);
-
-    ADI_EXPECT(adrv9001_NvsRegmapTx_TxAttenMode_Get, device, txChannelBaseAddr, &regData);
-    *mode = (adi_adrv9001_TxAttenuationControlMode_e)regData;
+	ADI_EXPECT(adi_adrv9001_Radio_Channel_State_Get, device, ADI_TX, channel, &state);
+	if (state == ADI_ADRV9001_CHANNEL_PRIMED)
+	{
+		*mode = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_SPI;
+	}
+	else
+	{
+		*mode = (adi_adrv9001_TxAttenuationControlMode_e)device->devStateInfo.txAttenMode[channel - 1];
+	}
 
     ADI_API_RETURN(device);
 }
@@ -321,6 +346,8 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_Attenuation_Set_Val
                                                                        uint16_t attenuation_mdB)
 {
     uint8_t chan_index = 0;
+	adi_adrv9001_TxAttenuationControlMode_e txModeRead = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_BYPASS;
+
     ADI_RANGE_CHECK(device, channel, ADI_CHANNEL_1, ADI_CHANNEL_2);
 
     adi_common_channel_to_index(channel, &chan_index);
@@ -354,6 +381,18 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_Attenuation_Set_Val
                              "Invalid attenuation_mdB value. The resolution of adi_adrv9001_Tx_Attenuation_Set() is only 0.05dB");
         }
     }
+
+	/* Retrieve attenuation mode */
+	ADI_EXPECT(adi_adrv9001_Tx_AttenuationMode_Get, device, channel, &txModeRead);
+	if (txModeRead == ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_CLGC)
+	{
+		ADI_ERROR_REPORT(&device->common,
+			ADI_COMMON_ERRSRC_API,
+			ADI_COMMON_ERR_API_FAIL,
+			ADI_COMMON_ACT_ERR_CHECK_PARAM,
+			txModeRead,
+			"Invalid TxAttenuation Control Mode. Cannot control when mode CLGC is enabled");
+	}
 
     ADI_API_RETURN(device);
 }
@@ -510,8 +549,21 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_OutputPowerBoost_Se
                                                                             adi_common_ChannelNumber_e channel)
 {
     adi_adrv9001_ChannelState_e state = ADI_ADRV9001_CHANNEL_STANDBY;
+	adi_adrv9001_TxAttenuationControlMode_e txModeRead = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_BYPASS;
 
     ADI_EXPECT(adi_adrv9001_Channel_Validate, device, channel);
+
+	/* Retrieve attenuation mode */
+	ADI_EXPECT(adi_adrv9001_Tx_AttenuationMode_Get, device, channel, &txModeRead);
+	if (txModeRead == ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_CLGC)
+	{
+		ADI_ERROR_REPORT(&device->common,
+			ADI_COMMON_ERRSRC_API,
+			ADI_COMMON_ERR_API_FAIL,
+			ADI_COMMON_ACT_ERR_CHECK_PARAM,
+			txModeRead,
+			"Invalid TxAttenuation Control Mode. Cannot control when mode CLGC is enabled");
+	}
 
     ADI_EXPECT(adi_adrv9001_Radio_Channel_State_Get, device, ADI_TX, channel, &state);
     if (state != ADI_ADRV9001_CHANNEL_STANDBY)
@@ -690,6 +742,10 @@ int32_t adi_adrv9001_Tx_AttenuationTable_Write(adi_adrv9001_Device_t *device,
 
     ADI_EXPECT(adrv9001_NvsRegmapTxb_TxAlgArmOrGroup11ClkSel_Set, device, ADRV9001_BF_TXB1_CORE, false);
     ADI_EXPECT(adrv9001_NvsRegmapTxb_TxAlgArmOrGroup11ClkSel_Set, device, ADRV9001_BF_TXB2_CORE, false);
+
+	/* Initialize TX Attenuation Mode */
+	device->devStateInfo.txAttenMode[0] = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_SPI;
+	device->devStateInfo.txAttenMode[1] = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_SPI;
 
     ADI_API_RETURN(device);
 }
@@ -904,9 +960,9 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_InternalToneGenerat
 {
     int32_t txSampleRateDiv2_Hz = 0;
     adi_adrv9001_ChannelState_e state = ADI_ADRV9001_CHANNEL_STANDBY;
-    
+
     ADI_RANGE_CHECK(adrv9001, channel, ADI_CHANNEL_1, ADI_CHANNEL_2);
-    
+
     ADI_NULL_PTR_RETURN(&adrv9001->common, tone);
     if (tone->enable)
     {
@@ -925,7 +981,7 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_InternalToneGenerat
                              "Channel state must be CALIBRATED");
         }
     }
-    
+
     ADI_API_RETURN(adrv9001);
 }
 
@@ -936,7 +992,7 @@ int32_t adi_adrv9001_Tx_InternalToneGeneration_Configure(adi_adrv9001_Device_t *
     uint8_t armData[12] = { 0 };
     uint8_t extData[5] = { 0 };
     uint32_t offset = 0;
-    
+
     ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_InternalToneGeneration_Configure_Validate, adrv9001, channel, tone);
 
     adrv9001_LoadFourBytes(&offset, armData, sizeof(armData) - sizeof(uint32_t));
@@ -944,7 +1000,7 @@ int32_t adi_adrv9001_Tx_InternalToneGeneration_Configure(adi_adrv9001_Device_t *
     armData[offset++] = tone->amplitude;
     offset += 2;
     adrv9001_LoadFourBytes(&offset, armData, tone->frequency_Hz);
-    
+
     extData[0] = adi_adrv9001_Radio_MailboxChannel_Get(ADI_TX, channel);
     extData[1] = OBJID_GS_CONFIG;
     extData[2] = OBJID_CFG_TX_INTERNAL_TONE_GENERATION;
@@ -959,10 +1015,10 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_InternalToneGenerat
                                                                                       adi_adrv9001_TxInternalToneGeneration_t *tone)
 {
     adi_adrv9001_ChannelState_e state = ADI_ADRV9001_CHANNEL_STANDBY;
-    
+
     ADI_RANGE_CHECK(adrv9001, channel, ADI_CHANNEL_1, ADI_CHANNEL_2);
     ADI_NULL_PTR_RETURN(&adrv9001->common, tone);
-    
+
     ADI_EXPECT(adi_adrv9001_Radio_Channel_State_Get, adrv9001, ADI_TX, channel, &state);
     if (ADI_ADRV9001_CHANNEL_STANDBY == state)
     {
@@ -973,7 +1029,7 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_InternalToneGenerat
                          state,
                          "Channel state must be any of CALIBRATED, PRIMED, RF_ENABLED");
     }
-    
+
     ADI_API_RETURN(adrv9001);
 }
 
@@ -984,12 +1040,12 @@ int32_t adi_adrv9001_Tx_InternalToneGeneration_Inspect(adi_adrv9001_Device_t *ad
     uint8_t armReadBack[8] = { 0 };
     uint8_t channelMask = 0;
     uint32_t offset = 0;
-        
+
     ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_InternalToneGeneration_Inspect_Validate, adrv9001, channel, tone);
 
     channelMask = adi_adrv9001_Radio_MailboxChannel_Get(ADI_TX, channel);
     ADI_EXPECT(adi_adrv9001_arm_Config_Read, adrv9001, OBJID_CFG_TX_INTERNAL_TONE_GENERATION, channelMask, offset, armReadBack, sizeof(armReadBack));
-    
+
     tone->enable = (bool)armReadBack[offset++];
     tone->amplitude = (adi_adrv9001_TxInternalToneAmplitude_e)armReadBack[offset++];
     offset += 2;
@@ -1147,7 +1203,7 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_PaRamp_Configure_Va
 	{
 		ADI_RANGE_CHECK(device, paRampCfg->gpioSource, ADI_ADRV9001_GPIO_UNASSIGNED, ADI_ADRV9001_GPIO_DIGITAL_15);
 	}
-    
+
     ADI_RANGE_CHECK(device, paRampCfg->rampClock_kHz, ADRV9001_TX_PA_RAMP_MIN_CLK_KHZ, ADRV9001_TX_PA_RAMP_MAX_CLK_KHZ);
 
     ADI_API_RETURN(device);
@@ -1234,7 +1290,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
     uint32_t refClk_Hz = 0;
 
     ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_PaRamp_Configure_Validate, device, channel, paRampCfg);
-    
+
     // Use Analog RefClkDivRatio, DEVCLKOUT Divider not used here
     ADI_EXPECT(adrv9001_NvsRegmapCore3_RefClkIntDevclkDivideRatio_Get, device, &clkDivRatio);
 
@@ -1242,9 +1298,9 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
     refClk_Hz = KILO_TO_BASE_UNIT(device->devStateInfo.deviceClock_kHz) >> clkDivRatio;
 
     paRampDpClkDiv = DIV_ROUND_CLOSEST(refClk_Hz, KILO_TO_BASE_UNIT(paRampCfg->rampClock_kHz));
-    
+
     ADI_EXPECT(adi_adrv9001_AuxDac_Configure, device, paRampCfg->auxDacChannelSelect, paRampCfg->enable);
-    
+
     switch (paRampCfg->auxDacChannelSelect)
     {
     case ADI_ADRV9001_AUXDAC0:
@@ -1263,7 +1319,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
         ADI_SHOULD_NOT_EXECUTE(device);
         break;
     }
-    
+
     /* crossbar config for AUX DAC 0/1/2/3.
    Bit[0]: xbar 0 select: 1: TX2, 0: TX1
    Bit[1]: xbar 1 select: 1: TX2, 0: TX1
@@ -1326,7 +1382,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
     }
     muxSel = dataConfig;
     ADI_EXPECT(adrv9001_NvsRegmapCore2_AuxdacMuxsel_Set, device, muxSel);
-    
+
     bfValue = (uint8_t) paRampCfg->triggerSelect;
 
     if (channel == ADI_CHANNEL_1)
@@ -1339,14 +1395,14 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampPedTrigStartDelay_Set, device, paRampCfg->triggerDelayRise);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampPedTrigEndDelay_Set, device, paRampCfg->triggerDelayFall);
         // Set Ramp Clock to max for LUTWrite
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, 0x0); 
-        
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, 0x0);
+
         if (paRampCfg->triggerSelect == ADI_ADRV9001_TX_PA_RAMP_TRIGGER_ENABLE_PIN)
-        {	
+        {
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableStartSel_Set, device, 0x1);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableStopSel_Set, device, 0x1);
-            
+
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableTx1EnableStartSel_Set, device, 0x1);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableTx1EnableStopSel_Set, device, 0x1);
@@ -1356,16 +1412,16 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableStartSel_Set, device, bfValue);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableStopSel_Set, device, bfValue);
-            
+
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableTx1EnableStartSel_Set, device, 0x0);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampDelayedEnableTx1EnableStopSel_Set, device, 0x0);
         }
-        
+
         // Hardware bitfield does not have an unassigned value, ADI_ADRV9001_GPIO_DIGITAL_UNASSIGNED is not valid
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampEnableGpioSel_Set, device, (uint8_t)paRampCfg->gpioSource - 1);
-        
-        
+
+
         if (paRampCfg->triggerSelect == ADI_ADRV9001_TX_PA_RAMP_TRIGGER_GPIO)
         {
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampEnableGpioMask_Set, device, 0x0);
@@ -1391,16 +1447,16 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
         /* Configure the delays */
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampPedTrigStartDelay_Set, device, paRampCfg->triggerDelayRise);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampPedTrigEndDelay_Set, device, paRampCfg->triggerDelayFall);
-        
+
         // Set Ramp Clock to max for LUTWrite
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, 0x0); 
-        
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, 0x0);
+
         if (bfValue == 0x2)
         {
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableStartSel_Set, device, 0x1);
 
-            ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableStopSel_Set, device, 0x1); 
-            
+            ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableStopSel_Set, device, 0x1);
+
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableTx2EnableStartSel_Set, device, 0x1);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableTx2EnableStopSel_Set, device, 0x1);
@@ -1410,7 +1466,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableStartSel_Set, device, bfValue);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableStopSel_Set, device, bfValue);
-            
+
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableTx2EnableStartSel_Set, device, 0x0);
 
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampDelayedEnableTx2EnableStopSel_Set, device, 0x0);
@@ -1419,7 +1475,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
 
         // Hardware bitfield does not have an unassigned value, ADI_ADRV9001_GPIO_DIGITAL_UNASSIGNED is not valid
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampEnableGpioSel_Set, device, (uint8_t)paRampCfg->gpioSource - 1);
-        
+
         if (paRampCfg->triggerSelect == ADI_ADRV9001_TX_PA_RAMP_TRIGGER_GPIO)
         {
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampEnableGpioMask_Set, device, 0x0);
@@ -1429,7 +1485,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
         {
             ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampEnableGpioMask_Set, device, 0x1);
         }
-        
+
         /* Enable the clock only after all registers are configured */
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkEn_Set, device, 0x1);
 
@@ -1466,7 +1522,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
     ADI_EXPECT(adrv9001_NvsRegmapCore2_LutRdEnable_Set, device, 0x1);
     /* Read PA LUT data */
     ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampLutRdData_Get, device, &bfValue);
-    
+
 
     if (channel == ADI_CHANNEL_1)
     {
@@ -1477,7 +1533,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx1UpThreshold_Set, device, paRampCfg->upEndIndex);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx1DownThreshold_Set, device, paRampCfg->downEndIndex);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx1Asymmetric_Set, device, (uint8_t)paRampCfg->asymmetricRamp);
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, paRampDpClkDiv); 
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, paRampDpClkDiv);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkEn_Set, device, (uint8_t)paRampCfg->enable);
     }
     else
@@ -1489,10 +1545,10 @@ int32_t adi_adrv9001_Tx_PaRamp_Configure(adi_adrv9001_Device_t *device,
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx2UpThreshold_Set, device, paRampCfg->upEndIndex);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx2DownThreshold_Set, device, paRampCfg->downEndIndex);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx2Asymmetric_Set, device, (uint8_t)paRampCfg->asymmetricRamp);
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkDivValue_Set, device, paRampDpClkDiv); 
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkDivValue_Set, device, paRampDpClkDiv);
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkEn_Set, device, (uint8_t)paRampCfg->enable);
     }
-    
+
     ADI_API_RETURN(device);
 }
 
@@ -1603,14 +1659,14 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
     uint8_t triggerSelectValue = 0;
 
     ADI_PERFORM_VALIDATION(adi_adrv9001_Tx_PaRamp_Inspect_Validate, device, channel, paRampCfg);
-    
+
     // Set all AuxDAC SPI Words to 0x0, Set Mux to 0x0 (all SPI), restore after LUTRead to prevent unwanted output on AuxDACs
     ADI_EXPECT(adrv9001_NvsRegmapCore2_AuxdacMuxsel_Get, device, &muxSelProgrammed);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac0_Get, device, &spiWordProgrammed[0]);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac1_Get, device, &spiWordProgrammed[1]);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac2_Get, device, &spiWordProgrammed[2]);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac3_Get, device, &spiWordProgrammed[3]);
-    
+
     ADI_EXPECT(adrv9001_NvsRegmapCore2_AuxdacMuxsel_Set, device, 0x0);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac0_Set, device, 0x0);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac1_Set, device, 0x0);
@@ -1621,7 +1677,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
     ADI_EXPECT(adrv9001_NvsRegmapCore3_RefClkIntDevclkDivideRatio_Get, device, &clkDivRatio);
 
     refClk_Hz = KILO_TO_BASE_UNIT(device->devStateInfo.deviceClock_kHz) >> clkDivRatio;
-    
+
     // Not possible to return the configured AuxDAC for each channel based on XBAR..._Inspect will always return ADI_ADRV9001_AUXDAC0
     paRampCfg->auxDacChannelSelect = ADI_ADRV9001_AUXDAC0;
 
@@ -1638,7 +1694,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         rampClock_kHz = refClk_Hz / paRampDpClkDiv;
         /* Convert to kHz */
         paRampCfg->rampClock_kHz = rampClock_kHz / 1000;
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, 0x0); 
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, 0x0);
     }
     else
     {
@@ -1653,7 +1709,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         rampClock_kHz = refClk_Hz / paRampDpClkDiv;
         /* Convert to kHz */
         paRampCfg->rampClock_kHz = rampClock_kHz / 1000;
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkDivValue_Set, device, 0x0); 
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkDivValue_Set, device, 0x0);
     }
 
     for (idx = 0; idx < ADRV9001_TX_PA_RAMP_LUT_SIZE; idx++)
@@ -1672,7 +1728,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         /* De-select pa_ramp_tx1_lut_sel bit */
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx1LutSel_Set, device, 0x0);
         // Restore Ramp Clock to configured after read
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, paRampDpClkDiv); 
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkDivValue_Set, device, paRampDpClkDiv);
 
         /* Set PA Ramp up/down threshold for Tx1 */
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx1UpThreshold_Get, device, &(paRampCfg->upEndIndex));
@@ -1685,7 +1741,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         /* De-select pa_ramp_tx2_lut_sel bit */
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx2LutSel_Set, device, 0x0);
         // Restore Ramp Clock to configured after read
-        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkDivValue_Set, device, paRampDpClkDiv); 
+        ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkDivValue_Set, device, paRampDpClkDiv);
 
         /* Set PA Ramp up/down threshold for Tx2 */
         ADI_EXPECT(adrv9001_NvsRegmapCore2_PaRampTx2UpThreshold_Get, device, &(paRampCfg->upEndIndex));
@@ -1708,7 +1764,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         // Hardware bitfield does not have an unassigned value, ADI_ADRV9001_GPIO_DIGITAL_UNASSIGNED is not valid
         bfValue = 0;
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampEnableGpioSel_Get, device, &bfValue);
-        paRampCfg->gpioSource = (adi_adrv9001_GpioPin_e)bfValue + 1; 
+        paRampCfg->gpioSource = (adi_adrv9001_GpioPin_e)bfValue + 1;
 
         bfValue = 0;
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampEnable_Get, device, &bfValue);
@@ -1717,7 +1773,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampPedTrigStartDelay_Get, device, &(paRampCfg->triggerDelayRise));
 
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampPedTrigEndDelay_Get, device, &(paRampCfg->triggerDelayFall));
-        
+
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx1PaRampClkEn_Get, device, &bfValue);
         paRampCfg->enable = (bool)bfValue;
     }
@@ -1735,7 +1791,7 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         // Hardware bitfield does not have an unassigned value, ADI_ADRV9001_GPIO_DIGITAL_UNASSIGNED is not valid
         bfValue = 0;
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampEnableGpioSel_Get, device, &bfValue);
-        paRampCfg->gpioSource = (adi_adrv9001_GpioPin_e)bfValue + 1; 
+        paRampCfg->gpioSource = (adi_adrv9001_GpioPin_e)bfValue + 1;
 
         bfValue = 0;
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampEnable_Get, device, &bfValue);
@@ -1744,11 +1800,11 @@ int32_t adi_adrv9001_Tx_PaRamp_Inspect(adi_adrv9001_Device_t *device,
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampPedTrigStartDelay_Get, device, &(paRampCfg->triggerDelayRise));
 
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampPedTrigEndDelay_Get, device, &(paRampCfg->triggerDelayFall));
-        
+
         ADI_EXPECT(adrv9001_NvsRegmapCore2_Tx2PaRampClkEn_Get, device, &bfValue);
         paRampCfg->enable = (bool)bfValue;
     }
-    
+
     // Restore AuxDAC SPI Words and Mux after LUTRead complete
     ADI_EXPECT(adrv9001_NvsRegmapCore2_AuxdacMuxsel_Set, device, muxSelProgrammed);
     ADI_EXPECT(adrv9001_NvsRegmapCore2_Auxdac0_Set, device, spiWordProgrammed[0]);
@@ -1769,6 +1825,8 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_Attenuation_PinCont
     static const uint16_t TX_ATTEN_STEP_SIZE_MAX = 1550;
 
     adi_adrv9001_ChannelState_e state = ADI_ADRV9001_CHANNEL_STANDBY;
+
+	adi_adrv9001_TxAttenuationControlMode_e txModeRead = ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_BYPASS;
 
     /* Check device pointer and gain pointer are not null */
     ADI_NULL_DEVICE_PTR_RETURN(device);
@@ -1800,6 +1858,18 @@ static __maybe_unused int32_t __maybe_unused adi_adrv9001_Tx_Attenuation_PinCont
             txAttenuationIndex,
             "Tx attenuation pin control configuration is not supported in TX_DIRECT_FM_FSK mode");
     }
+
+	/* Retrieve attenuation mode */
+	ADI_EXPECT(adi_adrv9001_Tx_AttenuationMode_Get, device, channel, &txModeRead);
+	if (txModeRead == ADI_ADRV9001_TX_ATTENUATION_CONTROL_MODE_CLGC)
+	{
+		ADI_ERROR_REPORT(&device->common,
+			ADI_COMMON_ERRSRC_API,
+			ADI_COMMON_ERR_API_FAIL,
+			ADI_COMMON_ACT_ERR_CHECK_PARAM,
+			txModeRead,
+			"Invalid TxAttenuation Control Mode. Cannot control when mode CLGC is enabled");
+	}
 
     ADI_EXPECT(adi_adrv9001_Radio_Channel_State_Get, device, ADI_TX, channel, &state);
     if (state != ADI_ADRV9001_CHANNEL_CALIBRATED)
@@ -1986,7 +2056,7 @@ int32_t adi_adrv9001_Tx_DataPath_Loopback_Set(adi_adrv9001_Device_t *device,
 {
     adrv9001_BfNvsRegmapTx_e baseAddr = ADRV9001_BF_TX1_CORE;
     ADI_RANGE_CHECK(device, channel, ADI_CHANNEL_1, ADI_CHANNEL_2);
-    
+
     if (ADI_CHANNEL_2 == channel)
     {
         baseAddr = ADRV9001_BF_TX2_CORE;
