@@ -213,6 +213,8 @@
 enum chan_num{
 	REG_ALL_CH(REG_GAIN_TX1),	// being expanded for all channels
 	REG_ALL_CH(REG_GAIN_TX2),	// being expanded for all channels
+	REG_ALL_CH(REG_MODULATOR_GAIN_TX1),	// being expanded for all channels
+	REG_ALL_CH(REG_MODULATOR_GAIN_TX2),	// being expanded for all channels
 	REG_ALL_CH(REG_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_SWAP_TX1),	// being expanded for all channels
 	REG_ALL_CH(REG_SWAP_TX2),	// being expanded for all channels
@@ -262,6 +264,12 @@ struct vbi_fm_dsp_state {
   	uint32_t		pps_clk_error_ns;
   	uint32_t		pps_clk_error_hz;
 	uint32_t		nb_of_blocks;
+	uint32_t		gain_tx1;
+	uint32_t		gain_tx2;
+	uint32_t		modulator_gain_tx1;
+	uint32_t		modulator_gain_tx2;
+	uint32_t		vbi_mode_tx1;
+	uint32_t		vbi_mode_tx2;
 };
 
 static void vbi_fm_dsp_write(struct vbi_fm_dsp_state *st, unsigned reg, u32 val)
@@ -354,24 +362,36 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 			}
 			switch(subchannel){
 			case 0:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF0000;
-				temp32 += (u32)val;
-				vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				st->gain_tx1 = (u32)val;
+				if(!st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF0000;
+					temp32 += st->gain_tx1;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				}
 				break;
 			case 1:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF;
-				temp32 += (u32)val << 16;
-				vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				st->gain_tx1 = (u32)val;
+				if(!st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF;
+					temp32 += st->gain_tx1 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				}
 				break;
 			case 2:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF0000;
-				temp32 += (u32)val;
-				vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				st->gain_tx1 = (u32)val;
+				if(!st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF0000;
+					temp32 += st->gain_tx1;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				}
 				break;
 			case 3:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF;
-				temp32 += (u32)val << 16;
-				vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				st->gain_tx1 = (u32)val;
+				if(!st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF;
+					temp32 += st->gain_tx1 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				}
 				break;
 			default:
 				break;
@@ -386,24 +406,124 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 			}
 			switch(subchannel){
 			case 0:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF0000;
-				temp32 += (u32)val;
-				vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				st->gain_tx2 = (u32)val;
+				if(!st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF0000;
+					temp32 += st->gain_tx2;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				}
 				break;
 			case 1:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF;
-				temp32 += (u32)val << 16;
-				vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				st->gain_tx2 = (u32)val;
+				if(!st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF;
+					temp32 += st->gain_tx2 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				}
 				break;
 			case 2:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF0000;
-				temp32 += (u32)val;
-				vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				st->gain_tx2 = (u32)val;
+				if(!st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF0000;
+					temp32 += st->gain_tx2;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				}
 				break;
 			case 3:
-				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF;
-				temp32 += (u32)val << 16;
-				vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				st->gain_tx2 = (u32)val;
+				if(!st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF;
+					temp32 += st->gain_tx2 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+		if((u32)this_attr->address == REG_CH(ch, REG_MODULATOR_GAIN_TX1)){
+			match = 1;
+			if(val<MIN_GAIN || val>MAX_GAIN){
+				ret = -EINVAL;
+				break;
+			}
+			switch(subchannel){
+			case 0:
+				st->modulator_gain_tx1 = (u32)val;
+				if(st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF0000;
+					temp32 += st->modulator_gain_tx1;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				}
+				break;
+			case 1:
+				st->modulator_gain_tx1 = (u32)val;
+				if(st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF;
+					temp32 += st->modulator_gain_tx1 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				}
+				break;
+			case 2:
+				st->modulator_gain_tx1 = (u32)val;
+				if(st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF0000;
+					temp32 += st->modulator_gain_tx1;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				}
+				break;
+			case 3:
+				st->modulator_gain_tx1 = (u32)val;
+				if(st->vbi_mode_tx1){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF;
+					temp32 += st->modulator_gain_tx1 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_MODULATOR_GAIN_TX2)){
+			match = 1;
+			if(val<MIN_GAIN || val>MAX_GAIN){
+				ret = -EINVAL;
+				break;
+			}
+			switch(subchannel){
+			case 0:
+				st->modulator_gain_tx2 = (u32)val;
+				if(st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF0000;
+					temp32 += st->modulator_gain_tx2;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				}
+				break;
+			case 1:
+				st->modulator_gain_tx2 = (u32)val;
+				if(st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF;
+					temp32 += st->modulator_gain_tx2 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				}
+				break;
+			case 2:
+				st->modulator_gain_tx2 = (u32)val;
+				if(st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF0000;
+					temp32 += st->modulator_gain_tx2;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				}
+				break;
+			case 3:
+				st->modulator_gain_tx2 = (u32)val;
+				if(st->vbi_mode_tx2){
+					temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF;
+					temp32 += st->modulator_gain_tx2 << 16;
+					vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				}
 				break;
 			default:
 				break;
@@ -525,9 +645,46 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
+			st->vbi_mode_tx1 = (u32)val;
 			temp32 = vbi_fm_dsp_read(st, ADDR_ROUTING(block_nb)) & ~(1<<(10+subchannel));
-			temp32 += (u32)val << (10+subchannel);
+			temp32 += st->vbi_mode_tx1 << (10+subchannel);
 			vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), temp32);
+			switch(subchannel){
+			case 0:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF0000;
+				if(st->vbi_mode_tx1)
+					temp32 += st->modulator_gain_tx1;
+				else
+					temp32 += st->gain_tx1;
+				vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				break;
+			case 1:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF;
+				if(st->vbi_mode_tx1)
+					temp32 += st->modulator_gain_tx1 << 16;
+				else
+					temp32 += st->gain_tx1 << 16;
+				vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
+				break;
+			case 2:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF0000;
+				if(st->vbi_mode_tx1)
+					temp32 += st->modulator_gain_tx1;
+				else
+					temp32 += st->gain_tx1;
+				vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				break;
+			case 3:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF;
+				if(st->vbi_mode_tx1)
+					temp32 += st->modulator_gain_tx1 << 16;
+				else
+					temp32 += st->gain_tx1 << 16;
+				vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
+				break;
+			default:
+				break;
+			}
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_VBI_MODE_TX2)){
@@ -536,9 +693,46 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
+			st->vbi_mode_tx2 = (u32)val;
 			temp32 = vbi_fm_dsp_read(st, ADDR_ROUTING(block_nb)) & ~(1<<(20+subchannel));
-			temp32 += (u32)val << (20+subchannel);
+			temp32 += st->vbi_mode_tx2 << (20+subchannel);
 			vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), temp32);
+			switch(subchannel){
+			case 0:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF0000;
+				if(st->vbi_mode_tx2)
+					temp32 += st->modulator_gain_tx2;
+				else
+					temp32 += st->gain_tx2;
+				vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				break;
+			case 1:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF;
+				if(st->vbi_mode_tx2)
+					temp32 += st->modulator_gain_tx2 << 16;
+				else
+					temp32 += st->gain_tx2 << 16;
+				vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
+				break;
+			case 2:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF0000;
+				if(st->vbi_mode_tx2)
+					temp32 += st->modulator_gain_tx2;
+				else
+					temp32 += st->gain_tx2;
+				vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				break;
+			case 3:
+				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF;
+				if(st->vbi_mode_tx2)
+					temp32 += st->modulator_gain_tx2 << 16;
+				else
+					temp32 += st->gain_tx2 << 16;
+				vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
+				break;
+			default:
+				break;
+			}
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RF_INPUT_SELECTION)){
@@ -714,42 +908,22 @@ static ssize_t vbi_fm_dsp_show(struct device *dev,
 		block_nb = (ch >> 2);
 		if((u32)this_attr->address == REG_CH(ch, REG_GAIN_TX1)){
 			match = 1;
-			switch (subchannel){
-			case 0:
-				val = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF;
-				break;
-			case 1:
-				val = (vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF0000) >> 16;
-				break;
-			case 2:
-				val = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF;
-				break;
-			case 3:
-				val = (vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF0000) >> 16;
-				break;
-			default:
-				break;
-			}
+			val = st->gain_tx1;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_GAIN_TX2)){
 			match = 1;
-			switch (subchannel){
-			case 0:
-				val = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF;
-				break;
-			case 1:
-				val = (vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF0000) >> 16;
-				break;
-			case 2:
-				val = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF;
-				break;
-			case 3:
-				val = (vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF0000) >> 16;
-				break;
-			default:
-				break;
-			}
+			val = st->gain_tx2;
+			break;
+		}
+		if((u32)this_attr->address == REG_CH(ch, REG_MODULATOR_GAIN_TX1)){
+			match = 1;
+			val = st->modulator_gain_tx1;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_MODULATOR_GAIN_TX2)){
+			match = 1;
+			val = st->modulator_gain_tx2;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
@@ -974,6 +1148,16 @@ IIO_DEVICE_ATTR_ALL_CH(gain_tx2, S_IRUGO | S_IWUSR,
 			vbi_fm_dsp_store,
 			REG_GAIN_TX2);
 
+IIO_DEVICE_ATTR_ALL_CH(modulator_gain_tx1, S_IRUGO | S_IWUSR,
+			vbi_fm_dsp_show,
+			vbi_fm_dsp_store,
+			REG_MODULATOR_GAIN_TX1);
+
+IIO_DEVICE_ATTR_ALL_CH(modulator_gain_tx2, S_IRUGO | S_IWUSR,
+			vbi_fm_dsp_show,
+			vbi_fm_dsp_store,
+			REG_MODULATOR_GAIN_TX2);
+
 IIO_DEVICE_ATTR_ALL_CH(frequency, S_IRUGO | S_IWUSR,
 			vbi_fm_dsp_show,
 			vbi_fm_dsp_store,
@@ -1158,6 +1342,8 @@ static IIO_DEVICE_ATTR(rx_samp_rate_adc, S_IRUGO,
 static struct attribute *vbi_fm_dsp_attributes[] = {
 	IIO_ATTR_ALL_CH(gain_tx1),
 	IIO_ATTR_ALL_CH(gain_tx2),
+	IIO_ATTR_ALL_CH(modulator_gain_tx1),
+	IIO_ATTR_ALL_CH(modulator_gain_tx2),
 	IIO_ATTR_ALL_CH(frequency),
 	IIO_ATTR_ALL_CH(swap_tx1),
 	IIO_ATTR_ALL_CH(swap_tx2),
