@@ -40,4 +40,5 @@ obj-$(CONFIG_LMX2594) += lmx2594.o
 obj-$(CONFIG_HMC703) += hmc703.o
 obj-$(CONFIG_LMK04832) += lmk04832.o
 obj-$(CONFIG_PCW_FMCW_DSP) += pcw_fmcw_dsp.o
+obj-$(CONFIG_ZEBU_FMCW_DSP) += zebu_fmcw_dsp.o
 obj-$(CONFIG_VBI_BR_DSP) += vbi_br_dsp.o

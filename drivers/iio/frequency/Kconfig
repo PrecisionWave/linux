@@ -254,6 +254,14 @@ config PCW_FMCW_DSP
 	  To compile this driver as a module, choose M here: the
 	  module will be called directional_finder.
 
+config ZEBU_FMCW_DSP
+	tristate "ZEBU SDR DSP FPGA-IP driver"
+	help
+	  Say yes here to build support for ZEBU FMCW DSP FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called directional_finder.
+
 endmenu
 
 #
