@@ -37,16 +37,25 @@
 #define ADDR_CHIRP_INC_START0		3*4
 #define ADDR_CHIRP_INC_START1		4*4
 #define ADDR_CHIRP_GAIN01		5*4
+#define ADDR_RX_DDS_INC			6*4
+#define ADDR_RX_DECIMATION		7*4
+#define ADDR_RX_BURST_PERIOD		8*4
+#define ADDR_RX_BURST_LENGTH		9*4
+#define ADDR_RX_OVERFLOWS		10*4
 
 
 enum chan_num{
-	CH_IF_RATE_DAC,
   	CH_TX_CHIRP_LEN_SPS,
   	CH_TX_CHIRP_START_FREQ,
   	CH_TX_CHIRP_STOP_FREQ,
   	CH_TX2_CHIRP_OFFSET_FREQ,
   	CH_TX1_CHIRP_GAIN,
   	CH_TX2_CHIRP_GAIN,
+  	CH_RX_FREQ,
+  	CH_RX_DECIMATION,
+  	CH_RX_BURST_PERIOD,
+  	CH_RX_BURST_LENGTH,
+  	CH_RX_OVERFLOWS,
 	CH_DSP_VERSION
 };
 
@@ -56,6 +65,7 @@ struct zebu_fmcw_dsp_state {
 	struct mutex	lock;
 
 	uint32_t	fs_if_dac;
+	uint32_t	fs_if_adc;
   	int32_t		chirp_start_freq0;
   	int32_t		chirp_start_freq1;
   	int32_t		chirp_stop_freq0;
@@ -198,6 +208,32 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_GAIN01, temp32);
 		break;
 
+	case CH_RX_FREQ:
+    		temp64 = (int64_t)val  << CHIRP_DDS_PHASEWIDTH;
+    		temp32 = (int32_t)div_s64(temp64,st->fs_if_adc);
+		zebu_fmcw_dsp_write(st, ADDR_RX_DDS_INC, temp32);
+		break;
+
+	case CH_RX_DECIMATION:
+		if(val>64)
+			val = 64;
+		val >>= 1;
+		temp32 = 0;
+		while(val>0){ // LOG2
+			val >>= 1;
+			temp32++;
+		}
+		zebu_fmcw_dsp_write(st, ADDR_RX_DECIMATION, temp32);
+		break;
+
+	case CH_RX_BURST_PERIOD:
+		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_PERIOD, val);
+		break;
+
+	case CH_RX_BURST_LENGTH:
+		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_LENGTH, val);
+		break;
+
 	default:
 		ret = -ENODEV;
 	}
@@ -237,11 +273,11 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		break;
 
 	case CH_TX_CHIRP_STOP_FREQ:
-		temp64 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP) * (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
+		temp64 = (int64_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP) * (int64_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
 		temp64 >>= CHIRP_INC_STEP_SHIFT+2;
 		temp64 += zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_START0); // inc stop
 		temp64 = temp64 * st->fs_if_dac;
-		val = temp64 >> CHIRP_DDS_PHASEWIDTH;
+		val = (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
 		break;
 
 	case CH_TX2_CHIRP_OFFSET_FREQ:
@@ -259,6 +295,29 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 
 	case CH_TX2_CHIRP_GAIN:
 		val = (zebu_fmcw_dsp_read(st, ADDR_CHIRP_GAIN01) & 0xFFFF0000) >> 16;
+		break;
+
+	case CH_RX_FREQ:
+		temp64 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_RX_DDS_INC);
+		temp64 = temp64 * st->fs_if_adc;
+		val = (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
+		break;
+
+	case CH_RX_DECIMATION:
+		temps32 = zebu_fmcw_dsp_read(st, ADDR_RX_DECIMATION) & 0x7;
+		val = 1<<temps32;
+		break;
+
+	case CH_RX_BURST_PERIOD:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_PERIOD);
+		break;
+
+	case CH_RX_BURST_LENGTH:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_LENGTH);
+		break;
+
+	case CH_RX_OVERFLOWS:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_OVERFLOWS);
 		break;
 
 	case CH_DSP_VERSION:
@@ -309,6 +368,31 @@ static IIO_DEVICE_ATTR(tx2_chirp_gain, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_store,
 			CH_TX2_CHIRP_GAIN);
 
+static IIO_DEVICE_ATTR(rx_frequency, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_FREQ);
+
+static IIO_DEVICE_ATTR(rx_decimation, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_DECIMATION);
+
+static IIO_DEVICE_ATTR(rx_burst_period, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_BURST_PERIOD);
+
+static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_BURST_LENGTH);
+
+static IIO_DEVICE_ATTR(rx_overflows, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_OVERFLOWS);
+
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -323,6 +407,11 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_tx2_chirp_offset_freq.dev_attr.attr,
 	&iio_dev_attr_tx1_chirp_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_chirp_gain.dev_attr.attr,
+	&iio_dev_attr_rx_frequency.dev_attr.attr,
+	&iio_dev_attr_rx_decimation.dev_attr.attr,
+	&iio_dev_attr_rx_burst_period.dev_attr.attr,
+	&iio_dev_attr_rx_burst_length.dev_attr.attr,
+	&iio_dev_attr_rx_overflows.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	NULL
 };
@@ -401,6 +490,15 @@ static int zebu_fmcw_dsp_probe(struct platform_device *pdev)
 	}
 	if(st->fs_if_dac == 0){
 		printk("ZEBU-FMCW-DSP: ***ERROR! \"required,fs-if-dac\" equal to 0 Hz\n");
+		goto err_iio_device_free;
+	}
+
+	if(of_property_read_u32(np, "required,fs-if-adc", &st->fs_if_adc)){
+		printk("ZEBU-FMCW-DSP: ***ERROR! \"required,fs-if-adc\" missing in devicetree?\n");
+		goto err_iio_device_free;
+	}
+	if(st->fs_if_adc == 0){
+		printk("ZEBU-FMCW-DSP: ***ERROR! \"required,fs-if-adc\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
 	indio_dev->dev.parent = &pdev->dev;
