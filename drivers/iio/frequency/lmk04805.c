@@ -259,7 +259,7 @@ struct lmk04805_platform_data {
 //	uint8_t						PLL1_CP_GAIN;
 //	uint8_t						CLKin1_PreR_DIV;
 //	uint8_t						CLKin0_PreR_DIV;
-//	uint16_t					PLL1_R;
+	uint16_t					PLL1_R;
 //	bool						PLL1_CP_TRI;
 	uint16_t					PLL2_R;
 	uint16_t					PLL1_N;
@@ -1239,6 +1239,8 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
 
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
+	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0xE << 6)) | ((pdata->PLL1_R & 0xE) << 6);
+	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0xE << 6)) | ((pdata->PLL1_N & 0xE) << 6);
 	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0xFFF << 20)) | ((pdata->PLL2_R & 0xFFF) << 20);
 	st->pdata->reg_map[29] = (st->pdata->reg_map[29] & ~(0x3FFFF << 5)) | ((pdata->PLL2_N & 0x3FFFF) << 5);
 	st->pdata->reg_map[30] = (st->pdata->reg_map[30] & ~(0x3FFFF << 5)) | ((pdata->PLL2_N & 0x3FFFF) << 5);
@@ -1329,6 +1331,32 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 	/* VCXO frequency */
 	ret = of_property_read_u32(np, "lmk,vcxo-freq", &pdata->vcxo_freq);
 	if(ret < 0){ printk("lmk04805: error - lmk,vcxo-freq\n"); return ret; }
+
+	/* setting: PLL1_R */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,pll1-r", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,pll1-r=16\n");
+		pdata->PLL1_R = 16;
+	}
+	else{
+		if(attr < 1){ pdata->PLL1_R = 1; printk("lmk04805: lmk,pll1-r=1\n"); }
+		else if(attr > 16383){ pdata->PLL1_R = 16383; printk("lmk04805: lmk,pll1-r=16383\n"); }
+		else{ pdata->PLL1_R = attr; }
+	}
+
+	/* setting: PLL1_N */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,pll1-n", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,pll1-n=64\n");
+		pdata->PLL1_N = 64;
+	}
+	else{
+		if(attr < 1){ pdata->PLL1_N = 1; printk("lmk04805: lmk,pll1-n=1\n"); }
+		else if(attr > 16383){ pdata->PLL1_N = 16383; printk("lmk04805: lmk,pll1-n=16383\n"); }
+		else{ pdata->PLL1_N = attr; }
+	}
 
 	/* setting: EN_PLL2_REF_2X */
 	pdata->EN_PLL2_REF_2X = of_property_read_bool(np, "lmk,en-pll2-ref-2x");
