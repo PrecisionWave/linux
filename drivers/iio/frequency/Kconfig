@@ -262,6 +262,12 @@ config ZEBU_FMCW_DSP
 	  To compile this driver as a module, choose M here: the
 	  module will be called directional_finder.
 
+config AD9957
+        tristate "Analog Devices AD9957 DAC"
+        help
+          Say yes here to build support for Analog Devices AD9957 DAC chip
+          ad9957, provides direct access via sysfs.
+
 endmenu
 
 #
