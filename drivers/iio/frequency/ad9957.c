@@ -19,6 +19,7 @@
  #include <linux/iio/buffer-dmaengine.h>
 
 struct ad9957_state {
+	struct device		*dev;
 	struct spi_device	*spi;
 	struct mutex 		lock;
 	struct clk			*clk;
@@ -30,9 +31,10 @@ struct ad9957_state {
 #define AD9957_CHAN(index)						\
 	{								\
 		.type = IIO_VOLTAGE,					\
-		.address = index,					\
 		.indexed = 1,						\
+		.output = 1,						\
 		.channel = index,					\
+		.address = index,					\
 		.scan_index = index,					\
 		.scan_type = {						\
 			.sign = 's',					\
@@ -50,14 +52,14 @@ static struct iio_chan_spec name[] = {	\
 DECLARE_AD9957_CHANNELS(ad9957_channels);
 
 
-// static int ad9957_read_raw(struct iio_dev *indio_dev,
-// 			   const struct iio_chan_spec *chan,
-// 			   int *val, int *val2, long info)
-// {
-// 	struct ad9957_state *st = iio_priv(indio_dev);
-// 	int ret;
-//
-// 	switch (info) {
+static int ad9957_read_raw(struct iio_dev *indio_dev,
+			   const struct iio_chan_spec *chan,
+			   int *val, int *val2, long info)
+{
+	struct ad9957_state *st = iio_priv(indio_dev);
+	int ret;
+
+	switch (info) {
 // 	case IIO_CHAN_INFO_SCALE:
 // 		ret = regulator_get_voltage(st->vref);
 // 		if (ret < 0)
@@ -69,29 +71,29 @@ DECLARE_AD9957_CHANNELS(ad9957_channels);
 // 	case IIO_CHAN_INFO_SAMP_FREQ:
 // 		*val = st->sampling_freq;
 // 		return IIO_VAL_INT;
-// 	default:
-// 		return -EINVAL;
-// 	}
-// }
-//
-// static int ad9957_write_raw(struct iio_dev *indio_dev,
-// 			    struct iio_chan_spec const *chan,
-// 			    int val, int val2, long mask)
-// {
-// 	struct ad9957_state *st = iio_priv(indio_dev);
-//
-// 	switch (mask) {
+	default:
+		return -EINVAL;
+	}
+}
+
+static int ad9957_write_raw(struct iio_dev *indio_dev,
+			    struct iio_chan_spec const *chan,
+			    int val, int val2, long mask)
+{
+	struct ad9957_state *st = iio_priv(indio_dev);
+
+	switch (mask) {
 // 	case IIO_CHAN_INFO_SAMP_FREQ:
 // 		return ad7768_samp_freq_config(st, val);
-// 	default:
-// 		return -EINVAL;
-// 	}
-// }
-//
-// static const struct iio_info ad9957_info = {
-// 	.read_raw = &aad9957_read_raw,
-// 	.write_raw = &aad9957_write_raw,
-// };
+	default:
+		return -EINVAL;
+	}
+}
+
+static const struct iio_info ad9957_info = {
+	.read_raw = &ad9957_read_raw,
+	.write_raw = &ad9957_write_raw,
+};
 
 
 // static int dds_buffer_submit_block(struct iio_dma_buffer_queue *queue,
@@ -117,15 +119,110 @@ DECLARE_AD9957_CHANNELS(ad9957_channels);
 static int hw_submit_block(struct iio_dma_buffer_queue *queue,
 	struct iio_dma_buffer_block *block)
 {
-	block->block.bytes_used = block->block.size;
-
-	return iio_dmaengine_buffer_submit_block(queue, block, DMA_DEV_TO_MEM);
+	return iio_dmaengine_buffer_submit_block(queue, block, DMA_TO_DEVICE);
 }
 
 static const struct iio_dma_buffer_ops dma_buffer_ops = {
 	.submit = hw_submit_block,
 	.abort = iio_dmaengine_buffer_abort,
 };
+
+static void ad9957_init(struct ad9957_state *st)
+{
+	struct spi_transfer xfer = {};
+	int ret;
+	u8 buffer5[5];
+	u8 buffer9[9];
+
+	// Control Function Register 2 CFR2 (0x01)
+	buffer5[0] = 0x01;
+	buffer5[1] = 0x00;
+	buffer5[2] = 0x40;
+	buffer5[3] = 0x28;
+	buffer5[4] = 0x20;
+
+	mutex_lock(&st->lock);
+
+	xfer.len = sizeof(buffer5);
+	xfer.tx_buf = &buffer5;
+
+	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret) {
+		dev_err(&st->spi->dev, "CFR2 setup failed, status=%d", ret);
+		goto error_ret;
+	}
+
+	// Control Function Register 3 CFR3 (0x02)
+	buffer5[0] = 0x02;
+	buffer5[1] = 0x1e;
+	buffer5[2] = 0x3f;
+	buffer5[3] = 0xc0;
+	buffer5[4] = 0x00;
+
+	xfer.len = sizeof(buffer5);
+	xfer.tx_buf = &buffer5;
+
+	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret) {
+		dev_err(&st->spi->dev, "CFR3 setup failed, status=%d", ret);
+		goto error_ret;
+	}
+
+	// Auxiliary DAC Control Register (0x03)
+	buffer5[0] = 0x03;
+	buffer5[1] = 0x00;
+	buffer5[2] = 0x00;
+	buffer5[3] = 0xff;
+	buffer5[4] = 0x7f;
+
+	xfer.len = sizeof(buffer5);
+	xfer.tx_buf = &buffer5;
+
+	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret) {
+		dev_err(&st->spi->dev, "AuxDac setup failed, status=%d", ret);
+		goto error_ret;
+	}
+
+	// Profile 0 Register - QDUC (0x0E)
+	buffer9[0] = 0x0e;
+	buffer9[1] = 0x0c;
+	buffer9[2] = 0xb0;
+	buffer9[3] = 0x00;
+	buffer9[4] = 0x00;
+	buffer9[5] = 0x35;	// 0x35 55 55 55 = Frequency tuning word for fc=204.8MHz when fdac=983.04 MHz
+	buffer9[6] = 0x55;
+	buffer9[7] = 0x55;
+	buffer9[8] = 0x55;
+
+	xfer.len = sizeof(buffer9);
+	xfer.tx_buf = &buffer9;
+
+	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret) {
+		dev_err(&st->spi->dev, "Profile 0 - QDUC setup failed, status=%d", ret);
+		goto error_ret;
+	}
+
+	// Control Function Register 1 CFR1 (0x00)
+	buffer5[0] = 0x00;
+	buffer5[1] = 0x00;
+	buffer5[2] = 0x00;
+	buffer5[3] = 0x00;
+	buffer5[4] = 0x00;
+
+	xfer.len = sizeof(buffer5);
+	xfer.tx_buf = &buffer5;
+
+	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret) {
+		dev_err(&st->spi->dev, "CFR1 setup failed, status=%d", ret);
+		goto error_ret;
+	}
+
+error_ret:
+	mutex_unlock(&st->lock);
+}
 
 static int ad9957_probe(struct spi_device *spi)
 {
@@ -135,17 +232,22 @@ static int ad9957_probe(struct spi_device *spi)
 	int ret;
 
 	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));		// alloc iio device (contain the spi device and enough space for the private data)
-	if (indio_dev == NULL)
+	if (indio_dev == NULL) {
+		dev_err(&spi->dev, "devm_iio_device_alloc failed");
 		return -ENOMEM;
+	}
 
 	st = iio_priv(indio_dev);										// link pointer to private data
 
 	st->clk = devm_clk_get(&spi->dev, "clk");
-	if (IS_ERR(st->clk))
+	if (IS_ERR(st->clk)) {
+		dev_err(&spi->dev, "devm_clk_get failed");
 		return PTR_ERR(st->clk);
+	}
 
 	spi_set_drvdata(spi, indio_dev);								// do the following:   spi->dev->driver_data = indio_dev
 	st->spi = spi;
+	st->dev = &spi->dev;
 
 	mutex_init(&st->lock);
 
@@ -154,25 +256,35 @@ static int ad9957_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE | INDIO_BUFFER_HARDWARE;
 	indio_dev->channels = ad9957_channels;
 	indio_dev->num_channels = ARRAY_SIZE(ad9957_channels);
-	// indio_dev->info = &ad9957_info;
+	indio_dev->info = &ad9957_info;
 
 	buffer = iio_dmaengine_buffer_alloc(indio_dev->dev.parent, "tx",
 					    &dma_buffer_ops, indio_dev);
-	if (IS_ERR(buffer))
+	if (IS_ERR(buffer)) {
+		dev_err(&spi->dev, "iio_dmaengine_buffer_alloc failed");
 		return PTR_ERR(buffer);
+	}
 
 	iio_device_attach_buffer(indio_dev, buffer);
 
-
 	ret = clk_prepare_enable(st->clk);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(&spi->dev, "clk_prepare_enable failed");
 		goto error_disable_reg;
-
-
+	}
 
 	ret = devm_iio_device_register(&spi->dev, indio_dev);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(&spi->dev, "devm_iio_device_register failed");
 		goto error_disable_clk;
+	}
+/*
+	spi->max_speed_hz = 2000000;
+	spi->bits_per_word = 8;
+	spi->mode = SPI_MODE_3;
+	spi_setup(spi);
+*/
+	ad9957_init(st);
 
 	return 0;
 
