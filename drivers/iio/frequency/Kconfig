@@ -262,6 +262,14 @@ config ZEBU_FMCW_DSP
 	  To compile this driver as a module, choose M here: the
 	  module will be called directional_finder.
 
+config DEXTER_DSP_TX
+	tristate "DEXTER SDR DSP FPGA-IP driver"
+	help
+	  Say yes here to build support for DEXTER DSP TX FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called directional_finder.
+
 config AD9957
         tristate "Analog Devices AD9957 DAC"
         help

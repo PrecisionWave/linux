@@ -42,6 +42,8 @@
 #define ADDR_RX_BURST_PERIOD		8*4
 #define ADDR_RX_BURST_LENGTH		9*4
 #define ADDR_RX_OVERFLOWS		10*4
+#define ADDR_RX_BURST_OFFSET		11*4
+#define ADDR_RX_DDS_RESET_OFFSET	12*4
 
 
 enum chan_num{
@@ -55,6 +57,8 @@ enum chan_num{
   	CH_RX_DECIMATION,
   	CH_RX_BURST_PERIOD,
   	CH_RX_BURST_LENGTH,
+  	CH_RX_BURST_OFFSET,
+  	CH_RX_DDS_RESET_OFFSET,
   	CH_RX_OVERFLOWS,
 	CH_DSP_VERSION
 };
@@ -154,7 +158,7 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 
 	case CH_TX_CHIRP_LEN_SPS:
     		temp64 = (int64_t)st->chirp_stop_inc0 - (int64_t)st->chirp_start_inc0; // inc_stop - inc_start0
-    		temp64 <<= CHIRP_INC_STEP_SHIFT+2;
+    		temp64 <<= CHIRP_INC_STEP_SHIFT;
     		temp64 = div_s64(temp64,val);
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP, (int32_t)temp64);
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_LEN_DAC_SPS, (uint32_t)val);
@@ -167,7 +171,7 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_START0, st->chirp_start_inc0);
 
     		temp64 = (int64_t)st->chirp_stop_inc0 - (int64_t)st->chirp_start_inc0; // inc_step
-    		temp64 <<= CHIRP_INC_STEP_SHIFT+2;
+    		temp64 <<= CHIRP_INC_STEP_SHIFT;
     		temps32 = (int32_t)div_s64(temp64,zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS));
     		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP, temps32);
 
@@ -183,7 +187,7 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		st->chirp_stop_inc0 = (int32_t)div_s64(temp64,st->fs_if_dac);
 
 		temp64 = (int64_t)st->chirp_stop_inc0 - (int64_t)st->chirp_start_inc0; // inc_step
-		temp64 <<= CHIRP_INC_STEP_SHIFT+2;
+		temp64 <<= CHIRP_INC_STEP_SHIFT;
 		temps32 = (int32_t)div_s64(temp64, zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS));
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP, temps32);
 		break;
@@ -198,7 +202,7 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 
 	case CH_TX1_CHIRP_GAIN:
 		temp32 = zebu_fmcw_dsp_read(st, ADDR_CHIRP_GAIN01) & 0xFFFF0000;
-		temp32 += (uint32_t)val;
+		temp32 += (uint32_t)val & 0xFFFF;
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_GAIN01, temp32);
 		break;
 
@@ -232,6 +236,14 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 
 	case CH_RX_BURST_LENGTH:
 		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_LENGTH, val);
+		break;
+
+	case CH_RX_BURST_OFFSET:
+		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_OFFSET, val);
+		break;
+
+	case CH_RX_DDS_RESET_OFFSET:
+		zebu_fmcw_dsp_write(st, ADDR_RX_DDS_RESET_OFFSET, val);
 		break;
 
 	default:
@@ -273,9 +285,10 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		break;
 
 	case CH_TX_CHIRP_STOP_FREQ:
-		temp64 = (int64_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP) * (int64_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
-		temp64 >>= CHIRP_INC_STEP_SHIFT+2;
-		temp64 += zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_START0); // inc stop
+		//temp64 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP) * (uint32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
+		//temp64 >>= CHIRP_INC_STEP_SHIFT;
+		//temp64 += (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_START0); // inc stop
+		temp64 = st->chirp_stop_inc0;
 		temp64 = temp64 * st->fs_if_dac;
 		val = (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
 		break;
@@ -314,6 +327,14 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 
 	case CH_RX_BURST_LENGTH:
 		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_LENGTH);
+		break;
+
+	case CH_RX_BURST_OFFSET:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_OFFSET);
+		break;
+
+	case CH_RX_DDS_RESET_OFFSET:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_DDS_RESET_OFFSET);
 		break;
 
 	case CH_RX_OVERFLOWS:
@@ -388,6 +409,16 @@ static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_store,
 			CH_RX_BURST_LENGTH);
 
+static IIO_DEVICE_ATTR(rx_burst_offset, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_BURST_OFFSET);
+
+static IIO_DEVICE_ATTR(rx_dds_reset_offset, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_DDS_RESET_OFFSET);
+
 static IIO_DEVICE_ATTR(rx_overflows, S_IRUGO,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -411,6 +442,8 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_decimation.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length.dev_attr.attr,
+	&iio_dev_attr_rx_burst_offset.dev_attr.attr,
+	&iio_dev_attr_rx_dds_reset_offset.dev_attr.attr,
 	&iio_dev_attr_rx_overflows.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	NULL
