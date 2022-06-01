@@ -301,6 +301,43 @@ static ssize_t ad9834_write(struct device *dev,
 	return ret ? ret : len;
 }
 
+static ssize_t ad9834_show(struct device *dev,
+			struct device_attribute *attr,
+			char *buf)
+{
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct ad9834_state *st = iio_priv(indio_dev);
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	int ret = 0;
+	unsigned val;
+
+	mutex_lock(&st->lock);
+	switch ((u32)this_attr->address) {
+	case AD9834_OPBITEN:
+		if (st->control & AD9834_MODE) {
+			ret = -EINVAL;  /* AD9834 reserved mode */
+			goto out;
+		}
+		val = st->control & AD9834_OPBITEN;
+		break;
+	case AD9834_PIN_SW:
+		val = st->control & AD9834_PIN_SW;
+		break;
+	case AD9834_RESET:
+		val = st->control & AD9834_RESET;
+		break;
+	default:
+		ret = -ENODEV;
+		goto out;
+	}
+
+	ret = sprintf(buf, "%d\n", val);
+out:
+	mutex_unlock(&st->lock);
+
+	return ret;
+}
+
 static ssize_t ad9834_store_wavetype(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf,
@@ -410,10 +447,10 @@ static IIO_DEV_ATTR_FREQSYMBOL(0, 0200, NULL, ad9834_write, AD9834_FSEL);
 
 static IIO_DEV_ATTR_PHASESYMBOL(0, 0200, NULL, ad9834_write, AD9834_PSEL);
 
-static IIO_DEV_ATTR_PINCONTROL_EN(0, 0200, NULL,
+static IIO_DEV_ATTR_PINCONTROL_EN(0, 0644, ad9834_show,
 	ad9834_write, AD9834_PIN_SW);
-static IIO_DEV_ATTR_OUT_ENABLE(0, 0200, NULL, ad9834_write, AD9834_RESET);
-static IIO_DEV_ATTR_OUTY_ENABLE(0, 1, 0200, NULL,
+static IIO_DEV_ATTR_OUT_ENABLE(0, 0644, ad9834_show, ad9834_write, AD9834_RESET);
+static IIO_DEV_ATTR_OUTY_ENABLE(0, 1, 0644, ad9834_show,
 	ad9834_write, AD9834_OPBITEN);
 static IIO_DEV_ATTR_OUT_WAVETYPE(0, 0, ad9834_store_wavetype, 0);
 static IIO_DEV_ATTR_OUT_WAVETYPE(0, 1, ad9834_store_wavetype, 1);
@@ -465,12 +502,18 @@ static int ad9834_probe(struct spi_device *spi)
 	struct ad9834_state *st;
 	struct iio_dev *indio_dev;
 	struct regulator *reg;
+	struct device_node *np;
 	int ret;
-
+	u32 dt_frequency0 = 1000000;
+	u16 dt_phase0 = 512;
+	u32 dt_frequency1 = 5000000;
+	u16 dt_phase1 = 1024;
 
 	reg = devm_regulator_get(&spi->dev, "avdd");
-	if (IS_ERR(reg))
+	if (IS_ERR(reg)) {
+		dev_err(&spi->dev, "Failed to get avdd regulator\n");
 		return PTR_ERR(reg);
+	}
 
 	ret = regulator_enable(reg);
 	if (ret) {
@@ -480,6 +523,7 @@ static int ad9834_probe(struct spi_device *spi)
 
 	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));
 	if (!indio_dev) {
+		dev_err(&spi->dev, "Failed to allocate iio device\n");
 		ret = -ENOMEM;
 		goto error_disable_reg;
 	}
@@ -545,25 +589,53 @@ static int ad9834_probe(struct spi_device *spi)
 		goto error_clock_unprepare;
 	}
 
-	ret = ad9834_write_frequency(st, 0, 1000000);
-	if (ret)
-		goto error_clock_unprepare;
+	/* Setup DDS */
+	np = spi->dev.of_node;
 
-	ret = ad9834_write_frequency(st, 1, 5000000);
-	if (ret)
-		goto error_clock_unprepare;
+	of_property_read_u32(np, "dds,frequency0", &dt_frequency0);
+	of_property_read_u16(np, "dds,phase0", &dt_phase0);
+	of_property_read_u32(np, "dds,frequency1", &dt_frequency1);
+	of_property_read_u16(np, "dds,phase1", &dt_phase1);
 
-	ret = ad9834_write_phase(st, 0, 512);
-	if (ret)
+	ret = ad9834_write_frequency(st, 0, dt_frequency0);
+	if (ret) {
+		dev_err(&spi->dev, "Failed to set DDS 0 frequency!");
 		goto error_clock_unprepare;
+	}
 
-	ret = ad9834_write_phase(st, 1, 1024);
-	if (ret)
+	ret = ad9834_write_frequency(st, 1, dt_frequency1);
+	if (ret) {
+		dev_err(&spi->dev, "Failed to set DDS 1 frequency");
 		goto error_clock_unprepare;
+	}
+
+	ret = ad9834_write_phase(st, 0, dt_phase0);
+	if (ret) {
+		dev_err(&spi->dev, "Failed to set DDS 0 phase!");
+		goto error_clock_unprepare;
+	}
+
+	ret = ad9834_write_phase(st, 1, dt_phase1);
+	if (ret) {
+		dev_err(&spi->dev, "Failed to set DDS 1 phase!");
+		goto error_clock_unprepare;
+	}
+
+	if (of_property_read_bool(np, "dds,output-enable")) {
+		st->control &= ~AD9834_RESET;
+		st->data = cpu_to_be16(AD9834_REG_CMD | st->control);
+		ret = spi_sync(st->spi, &st->msg);
+		if (ret) {
+			dev_err(&spi->dev, "Output enable failed!\n");
+			goto error_clock_unprepare;
+		}
+	}
 
 	ret = iio_device_register(indio_dev);
-	if (ret)
+	if (ret) {
+		dev_err(&spi->dev, "Failed to register iio device!");
 		goto error_clock_unprepare;
+	}
 
 	return 0;
 error_clock_unprepare:
