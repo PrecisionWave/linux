@@ -1239,8 +1239,8 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
 
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
-	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0xE << 6)) | ((pdata->PLL1_R & 0xE) << 6);
-	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0xE << 6)) | ((pdata->PLL1_N & 0xE) << 6);
+	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3FFF << 6)) | ((pdata->PLL1_R & 0x3FFF) << 6);
+	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0x3FFF << 6)) | ((pdata->PLL1_N & 0x3FFF) << 6);
 	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0xFFF << 20)) | ((pdata->PLL2_R & 0xFFF) << 20);
 	st->pdata->reg_map[29] = (st->pdata->reg_map[29] & ~(0x3FFFF << 5)) | ((pdata->PLL2_N & 0x3FFFF) << 5);
 	st->pdata->reg_map[30] = (st->pdata->reg_map[30] & ~(0x3FFFF << 5)) | ((pdata->PLL2_N & 0x3FFFF) << 5);
