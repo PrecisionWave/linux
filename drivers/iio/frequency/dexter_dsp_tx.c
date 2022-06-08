@@ -22,7 +22,7 @@
 #include <linux/of_address.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
-
+#include <linux/clk.h>
 
 #define DRIVER_NAME			"dexter-dsp-tx"
 #define NB_OF_BLOCKS			1
@@ -75,7 +75,7 @@ struct dexter_dsp_tx_state {
 	struct iio_info	iio_info;
 	void __iomem	*regs;
 	struct mutex	lock;
-
+	struct clk		*dac_clk;
 	uint32_t	fs_if_dac;
 	bool 		gpsdo_locked;
   	uint32_t	pps_clk_error_ns;
@@ -565,7 +565,34 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 
 	st = iio_priv(indio_dev);
 
-//	st->adc_freq = pdata->adc_freq;
+	st->dac_clk = devm_clk_get(&pdev->dev, "dac_clk");
+	if (IS_ERR_OR_NULL(st->dac_clk)) {
+		ret = PTR_ERR(st->dac_clk);
+		dev_err(&pdev->dev, "Failed to get DAC clock (%d)\n", ret);
+		goto err_iio_device_free;
+	}
+
+	ret = clk_prepare_enable(st->dac_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable DAC clock\n");
+		goto err_iio_device_free;
+	}
+
+	ret = clk_get_rate(st->dac_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Unable to query DAC clock\n");
+		goto err_iio_device_free;
+	}
+
+	st->fs_if_dac = ret;
+
+	if (st->fs_if_dac == 0) {
+		dev_err(&pdev->dev, "dac_clk equal to 0 Hz\n");
+		ret = -EINVAL;
+		goto err_iio_device_free;
+	}
+
+	dev_info(&pdev->dev, "fs_if_dac rate is %u Hz", st->fs_if_dac);
 
 	/* get information about the structure of the device resource,
 	 * map device resource to kernel space
@@ -577,15 +604,6 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 	st->regs = devm_ioremap_resource(&pdev->dev, res);
 	if (!st->regs) {
 		ret = -ENOMEM;
-		goto err_iio_device_free;
-	}
-
-	if(of_property_read_u32(np, "required,fs-if-dac", &st->fs_if_dac)){
-		printk("DEXTER-DSP-TX: ***ERROR! \"required,fs-if-dac\" missing in devicetree?\n");
-		goto err_iio_device_free;
-	}
-	if(st->fs_if_dac == 0){
-		printk("DEXTER-DSP-TX: ***ERROR! \"required,fs-if-dac\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
 
