@@ -124,101 +124,100 @@ static const struct iio_dma_buffer_ops dma_buffer_ops = {
 	.abort = iio_dmaengine_buffer_abort,
 };
 
-static void ad9957_init(struct ad9957_state *st)
+static int ad9957_write_32(struct ad9957_state *st, u8 instruction, u32 word)
 {
-	struct spi_transfer xfer = {};
-	int ret;
-	u8 buffer5[5];
-	u8 buffer9[9];
+	u8 buffer[] = {
+		instruction,
+		(word >> 24) & 0xff,
+		(word >> 16) & 0xff,
+		(word >> 8) & 0xff,
+		(word >> 0) & 0xff
+	};
 
-	// Control Function Register 2 CFR2 (0x01)
-	buffer5[0] = 0x01;
-	buffer5[1] = 0x00;
-	buffer5[2] = 0x40;
-	buffer5[3] = 0x28;
-	buffer5[4] = 0x20;
+	struct spi_transfer xfer = {
+		.len = sizeof(buffer),
+		.tx_buf = &buffer,
+	};
+
+	int ret;
 
 	mutex_lock(&st->lock);
 
-	xfer.len = sizeof(buffer5);
-	xfer.tx_buf = &buffer5;
+	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret)
+		dev_dbg(&st->spi->dev, "Failed to write 0x%08x to register %d (ret was %d)", instruction, word, ret);
+
+	mutex_unlock(&st->lock);
+	return ret;
+}
+
+static int ad9957_write_64(struct ad9957_state *st, u8 instruction, u32 word1, u32 word2)
+{
+	u8 buffer[] = {
+		instruction,
+
+		(word1 >> 24) & 0xff,
+		(word1 >> 16) & 0xff,
+		(word1 >> 8) & 0xff,
+		(word1 >> 0) & 0xff,
+
+		(word2 >> 24) & 0xff,
+		(word2 >> 16) & 0xff,
+		(word2 >> 8) & 0xff,
+		(word2 >> 0) & 0xff
+	};
+
+	struct spi_transfer xfer = {
+		.len = sizeof(buffer),
+		.tx_buf = &buffer,
+	};
+
+	int ret;
+
+	mutex_lock(&st->lock);
 
 	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	if (ret)
+		dev_dbg(&st->spi->dev, "Failed to write 0x%08x%08x to register %d (ret was %d)", instruction, word1, word2, ret);
+
+	mutex_unlock(&st->lock);
+	return ret;
+}
+
+static void ad9957_init(struct ad9957_state *st)
+{
+	int ret;
+
+	// Control Function Register 2 CFR2 (0x01)
+	ret = ad9957_write_32(st, 0x01, 0x00402820);
 	if (ret) {
 		dev_err(&st->spi->dev, "CFR2 setup failed, status=%d", ret);
-		goto error_ret;
 	}
 
 	// Control Function Register 3 CFR3 (0x02)
-	buffer5[0] = 0x02;
-	buffer5[1] = 0x1e;
-	buffer5[2] = 0x3f;
-	buffer5[3] = 0xc0;
-	buffer5[4] = 0x00;
-
-	xfer.len = sizeof(buffer5);
-	xfer.tx_buf = &buffer5;
-
-	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	ret = ad9957_write_32(st, 0x02, 0x1e3dc000);
 	if (ret) {
 		dev_err(&st->spi->dev, "CFR3 setup failed, status=%d", ret);
-		goto error_ret;
 	}
 
 	// Auxiliary DAC Control Register (0x03)
-	buffer5[0] = 0x03;
-	buffer5[1] = 0x00;
-	buffer5[2] = 0x00;
-	buffer5[3] = 0xff;
-	buffer5[4] = 0x7f;
-
-	xfer.len = sizeof(buffer5);
-	xfer.tx_buf = &buffer5;
-
-	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	ret = ad9957_write_32(st, 0x03, 0x0000ff7f);
 	if (ret) {
 		dev_err(&st->spi->dev, "AuxDac setup failed, status=%d", ret);
-		goto error_ret;
 	}
 
 	// Profile 0 Register - QDUC (0x0E)
-	buffer9[0] = 0x0e;
-	buffer9[1] = 0x0c;
-	buffer9[2] = 0xb0;
-	buffer9[3] = 0x00;
-	buffer9[4] = 0x00;
-	buffer9[5] = 0x35;	// 0x35 55 55 55 = Frequency tuning word for fc=204.8MHz when fdac=983.04 MHz
-	buffer9[6] = 0x55;
-	buffer9[7] = 0x55;
-	buffer9[8] = 0x55;
-
-	xfer.len = sizeof(buffer9);
-	xfer.tx_buf = &buffer9;
-
-	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	// 0x35 55 55 55 = Frequency tuning word for fc=204.8MHz when fdac=983.04 MHz
+	ret = ad9957_write_64(st, 0x0e, 0x0cb00000, 0x35555555);
 	if (ret) {
 		dev_err(&st->spi->dev, "Profile 0 - QDUC setup failed, status=%d", ret);
-		goto error_ret;
 	}
 
 	// Control Function Register 1 CFR1 (0x00)
-	buffer5[0] = 0x00;
-	buffer5[1] = 0x00;
-	buffer5[2] = 0x00;
-	buffer5[3] = 0x00;
-	buffer5[4] = 0x00;
-
-	xfer.len = sizeof(buffer5);
-	xfer.tx_buf = &buffer5;
-
-	ret = spi_sync_transfer(st->spi, &xfer, 1);
+	ret = ad9957_write_32(st, 0x00, 0x00000000);
 	if (ret) {
 		dev_err(&st->spi->dev, "CFR1 setup failed, status=%d", ret);
-		goto error_ret;
 	}
-
-error_ret:
-	mutex_unlock(&st->lock);
 }
 
 static int ad9957_probe(struct spi_device *spi)
@@ -309,12 +308,6 @@ static int ad9957_probe(struct spi_device *spi)
 		goto error_disable_clk;
 	}
 
-/*
-	spi->max_speed_hz = 2000000;
-	spi->bits_per_word = 8;
-	spi->mode = SPI_MODE_3;
-	spi_setup(spi);
-*/
 	ad9957_init(st);
 
 	return 0;
