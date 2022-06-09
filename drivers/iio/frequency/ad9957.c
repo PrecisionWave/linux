@@ -9,6 +9,7 @@
  #include <linux/module.h>
  #include <linux/spi/spi.h>
  #include <linux/clk.h>
+ #include <linux/clk-provider.h>
  #include <linux/dma-mapping.h>
 
  #include <linux/iio/iio.h>
@@ -24,6 +25,7 @@ struct ad9957_state {
 	struct spi_device	*spi;
 	struct mutex 		lock;
 	struct clk			*ref_clk;
+	struct clk			*pdclk;
 	unsigned long				sysclk_frequency;
 	u64					center_frequency;
 	unsigned long				pdclk_frequency;
@@ -318,6 +320,14 @@ static int ad9957_probe(struct spi_device *spi)
 	/* With our settings f_PDCLK is f_SYSCLK/12. */
 	st->pdclk_frequency = st->sysclk_frequency / 12;
 	dev_info(&spi->dev, "PDCLK frequency is %lu Hz\n", st->pdclk_frequency);
+
+	st->pdclk = clk_register_fixed_rate(NULL, "pdclk", NULL, 0, st->pdclk_frequency);
+	if (IS_ERR(st->pdclk)) {
+		dev_err(&spi->dev, "Failed to register pdclk (error %d)", PTR_ERR(st->pdclk));
+		goto error_disable_clk;
+	}
+
+	of_clk_add_provider(spi->dev.of_node, of_clk_src_simple_get, st->pdclk);
 
 	ad9957_init(st);
 
