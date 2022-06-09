@@ -23,10 +23,10 @@ struct ad9957_state {
 	struct device		*dev;
 	struct spi_device	*spi;
 	struct mutex 		lock;
-	struct clk			*clk;
-	unsigned long				dac_clk;
+	struct clk			*ref_clk;
+	unsigned long				sysclk_frequency;
 	u64					center_frequency;
-	unsigned long				sampling_freq;
+	unsigned long				pdclk_frequency;
 	u32					num_ch;
 };
 
@@ -250,10 +250,10 @@ static int ad9957_probe(struct spi_device *spi)
 
 	mutex_init(&st->lock);
 
-	st->clk = devm_clk_get(&spi->dev, "clk");
-	if (IS_ERR(st->clk)) {
+	st->ref_clk = devm_clk_get(&spi->dev, "clk");
+	if (IS_ERR(st->ref_clk)) {
 		dev_err(&spi->dev, "devm_clk_get failed");
-		return PTR_ERR(st->clk);
+		return PTR_ERR(st->ref_clk);
 	}
 
 	spi_set_drvdata(spi, indio_dev);
@@ -302,15 +302,22 @@ static int ad9957_probe(struct spi_device *spi)
 	}
 
 	/* prepare / enable clock */
-	ret = clk_prepare_enable(st->clk);
+	ret = clk_prepare_enable(st->ref_clk);
 	if (ret < 0) {
 		dev_err(&spi->dev, "clk_prepare_enable failed");
 		goto error_disable_clk;
 	}
 
-	st->dac_clk = clk_get_rate(st->clk);
-	st->sampling_freq = st->dac_clk / 12;
-	dev_info(&spi->dev, "Clock rate is %lu Hz, sampling frequency is %lu Hz\n", st->dac_clk, st->sampling_freq);
+	/* Assume SYSCLK directly driven from REF_CLK input pin
+	   - PLL ENABLE in CFR3, BIT 8 = 0
+	   - REFCLK INPUT DIVIDER BYPASS CFR3, BIT 15 = 1
+	*/
+	st->sysclk_frequency = clk_get_rate(st->ref_clk);
+	dev_info(&spi->dev, "SYSCLK frequency is %lu Hz\n", st->sysclk_frequency);
+
+	/* With our settings f_PDCLK is f_SYSCLK/12. */
+	st->pdclk_frequency = st->sysclk_frequency / 12;
+	dev_info(&spi->dev, "PDCLK frequency is %lu Hz\n", st->pdclk_frequency);
 
 	ad9957_init(st);
 
@@ -318,7 +325,7 @@ static int ad9957_probe(struct spi_device *spi)
 
 
 error_disable_clk:
-	clk_disable_unprepare(st->clk);
+	clk_disable_unprepare(st->ref_clk);
 error_disable_buf:
 	i--;
 	for(;i>=0;i--)
@@ -333,7 +340,7 @@ static int ad9957_remove(struct spi_device *spi)
 	struct ad9957_state *st = iio_priv(indio_dev);
 
 	iio_dmaengine_buffer_free(indio_dev->buffer);
-	clk_disable_unprepare(st->clk);
+	clk_disable_unprepare(st->ref_clk);
 
 	return 0;
 }
