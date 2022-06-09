@@ -76,6 +76,8 @@ struct dexter_dsp_tx_state {
 	void __iomem	*regs;
 	struct mutex	lock;
 	struct clk		*dac_clk;
+	struct notifier_block	clk_rate_change_nb;
+	struct device	*dev;
 	uint32_t	fs_if_dac;
 	bool 		gpsdo_locked;
   	uint32_t	pps_clk_error_ns;
@@ -534,6 +536,28 @@ static const struct of_device_id dexter_dsp_tx_of_match[] = {
 
 MODULE_DEVICE_TABLE(of, dexter_dsp_tx_of_match);
 
+#define to_dexter_dsp_tx_state(x) \
+		container_of(x, struct dexter_dsp_tx_state, clk_rate_change_nb)
+
+static int dac_clk_clock_notifier(struct notifier_block *nb,
+				  unsigned long event, void *data)
+{
+	struct clk_notifier_data *ndata = data;
+	struct dexter_dsp_tx_state *st = to_dexter_dsp_tx_state(nb);
+
+	dev_info(st->dev, "dac_clk_clock_notifier: event %lu, Old rate %lu, New rate = %lu\n", event, ndata->old_rate, ndata->new_rate);
+
+	st->fs_if_dac = ndata->new_rate;
+
+	switch (event) {
+	case PRE_RATE_CHANGE:
+	case POST_RATE_CHANGE:
+	case ABORT_RATE_CHANGE:
+	default:
+		return NOTIFY_DONE;
+	}
+}
+
 static int dexter_dsp_tx_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *id;						// return of of_match_node()
@@ -564,6 +588,7 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	st = iio_priv(indio_dev);
+	st->dev = &pdev->dev;
 
 	st->dac_clk = devm_clk_get(&pdev->dev, "dac_clk");
 	if (IS_ERR_OR_NULL(st->dac_clk)) {
@@ -587,12 +612,15 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 	st->fs_if_dac = ret;
 
 	if (st->fs_if_dac == 0) {
-		dev_err(&pdev->dev, "dac_clk equal to 0 Hz\n");
-		ret = -EINVAL;
-		goto err_iio_device_free;
+		dev_warn(&pdev->dev, "dac_clk equal to 0 Hz\n");
+		//ret = -EINVAL;
+		//goto err_iio_device_free;
 	}
 
 	dev_info(&pdev->dev, "fs_if_dac rate is %u Hz", st->fs_if_dac);
+
+	st->clk_rate_change_nb.notifier_call = dac_clk_clock_notifier;
+	clk_notifier_register(st->dac_clk, &st->clk_rate_change_nb);
 
 	/* get information about the structure of the device resource,
 	 * map device resource to kernel space
