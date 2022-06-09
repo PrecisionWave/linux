@@ -6,17 +6,18 @@
  * Licensed under the GPL-2.
  */
 
- #include <linux/clk.h>
  #include <linux/module.h>
  #include <linux/spi/spi.h>
+ #include <linux/clk.h>
  #include <linux/dma-mapping.h>
- #include <linux/dmaengine.h>
 
  #include <linux/iio/iio.h>
  #include <linux/iio/sysfs.h>
- #include <linux/iio/buffer_impl.h>
  #include <linux/iio/buffer-dma.h>
  #include <linux/iio/buffer-dmaengine.h>
+
+
+#define NUM_TX_CH       4
 
 struct ad9957_state {
 	struct device		*dev;
@@ -26,6 +27,11 @@ struct ad9957_state {
 	u64					dac_clk;
 	u64					center_frequency;
 	u64					sampling_freq;
+	u32					num_ch;
+};
+
+struct ad9957_tx_state {
+	char name[20];
 };
 
 #define AD9957_CHAN(index)						\
@@ -77,8 +83,8 @@ static int ad9957_read_raw(struct iio_dev *indio_dev,
 }
 
 static int ad9957_write_raw(struct iio_dev *indio_dev,
-			    struct iio_chan_spec const *chan,
-			    int val, int val2, long mask)
+				struct iio_chan_spec const *chan,
+				int val, int val2, long mask)
 {
 	struct ad9957_state *st = iio_priv(indio_dev);
 
@@ -95,26 +101,17 @@ static const struct iio_info ad9957_info = {
 	.write_raw = &ad9957_write_raw,
 };
 
+/* we need that dummy function to get a valid iio_info object */
+static int ad9957_read_raw_dummy(struct iio_dev *indio_dev,
+			   const struct iio_chan_spec *chan,
+			   int *val, int *val2, long info)
+{
+	return -EINVAL;
+}
 
-// static int dds_buffer_submit_block(struct iio_dma_buffer_queue *queue,
-// 	struct iio_dma_buffer_block *block)
-// {
-// 	struct cf_axi_dds_state *st = iio_priv(queue->driver_data);
-//
-// 	if (block->block.bytes_used) {
-// 		bool enable_fifo = false;
-//
-// 		if (cf_axi_dds_dma_fifo_en(st) &&
-// 			(block->block.flags & IIO_BUFFER_BLOCK_FLAG_CYCLIC)) {
-// 			block->block.flags &= ~IIO_BUFFER_BLOCK_FLAG_CYCLIC;
-// 			enable_fifo = true;
-// 		}
-//
-// 		cf_axi_dds_pl_ddr_fifo_ctrl(st, enable_fifo);
-// 	}
-//
-// 	return iio_dmaengine_buffer_submit_block(queue, block, DMA_TO_DEVICE);
-// }
+static const struct iio_info ad9957_tx_info = {
+	.read_raw = &ad9957_read_raw_dummy,
+};
 
 static int hw_submit_block(struct iio_dma_buffer_queue *queue,
 	struct iio_dma_buffer_block *block)
@@ -227,17 +224,32 @@ error_ret:
 static int ad9957_probe(struct spi_device *spi)
 {
 	struct ad9957_state *st;
-	struct iio_dev *indio_dev;
-	struct iio_buffer *buffer;
-	int ret;
+	struct ad9957_tx_state *st_tx;
+	struct iio_dev *indio_dev, *indio_dev_tx[NUM_TX_CH];
+	struct iio_buffer *buffer[NUM_TX_CH];
+	int ret, i, dma_count;
 
-	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));		// alloc iio device (contain the spi device and enough space for the private data)
-	if (indio_dev == NULL) {
+
+	/* allocate memory for iio devices & private data */
+	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));
+	if (!indio_dev) {
 		dev_err(&spi->dev, "devm_iio_device_alloc failed");
 		return -ENOMEM;
 	}
 
-	st = iio_priv(indio_dev);										// link pointer to private data
+	for(i=0;i<NUM_TX_CH;i++) {
+		indio_dev_tx[i] = devm_iio_device_alloc(&spi->dev, sizeof(*st_tx));
+		if (!indio_dev_tx[i]){
+			dev_err(&spi->dev, "devm_iio_device_alloc failed");
+			return -ENOMEM;
+		}
+	}
+
+
+	/* configure & register main IIO device components (SPI) */
+	st = iio_priv(indio_dev);
+
+	mutex_init(&st->lock);
 
 	st->clk = devm_clk_get(&spi->dev, "clk");
 	if (IS_ERR(st->clk)) {
@@ -245,39 +257,58 @@ static int ad9957_probe(struct spi_device *spi)
 		return PTR_ERR(st->clk);
 	}
 
-	spi_set_drvdata(spi, indio_dev);								// do the following:   spi->dev->driver_data = indio_dev
+	spi_set_drvdata(spi, indio_dev);
 	st->spi = spi;
 	st->dev = &spi->dev;
 
-	mutex_init(&st->lock);
-
 	indio_dev->dev.parent = &spi->dev;
 	indio_dev->name = spi_get_device_id(spi)->name;
-	indio_dev->modes = INDIO_DIRECT_MODE | INDIO_BUFFER_HARDWARE;
-	indio_dev->channels = ad9957_channels;
-	indio_dev->num_channels = ARRAY_SIZE(ad9957_channels);
+	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &ad9957_info;
-
-	buffer = iio_dmaengine_buffer_alloc(indio_dev->dev.parent, "tx",
-					    &dma_buffer_ops, indio_dev);
-	if (IS_ERR(buffer)) {
-		dev_err(&spi->dev, "iio_dmaengine_buffer_alloc failed");
-		return PTR_ERR(buffer);
-	}
-
-	iio_device_attach_buffer(indio_dev, buffer);
-
-	ret = clk_prepare_enable(st->clk);
-	if (ret < 0) {
-		dev_err(&spi->dev, "clk_prepare_enable failed");
-		goto error_disable_reg;
-	}
 
 	ret = devm_iio_device_register(&spi->dev, indio_dev);
 	if (ret < 0) {
 		dev_err(&spi->dev, "devm_iio_device_register failed");
+		return ret;
+	}
+
+	/* configure & register secondary IIO devices components */
+	dma_count = of_property_count_strings(spi->dev.of_node, "dma-names");
+	for(i=0; i<NUM_TX_CH && i<dma_count; i++) {
+		char dma_ch[10];
+		st_tx = iio_priv(indio_dev_tx[i]);
+		sprintf(st_tx->name,"ad9957-dma%d",i);
+		sprintf(dma_ch,"tx%d",i);
+		indio_dev_tx[i]->dev.parent = &spi->dev;
+		indio_dev_tx[i]->name = st_tx->name;
+		indio_dev_tx[i]->modes = INDIO_DIRECT_MODE | INDIO_BUFFER_HARDWARE;
+		indio_dev_tx[i]->channels = ad9957_channels;
+		indio_dev_tx[i]->num_channels = ARRAY_SIZE(ad9957_channels);
+		indio_dev_tx[i]->direction = IIO_DEVICE_DIRECTION_OUT;
+		indio_dev_tx[i]->info = &ad9957_tx_info;
+
+		buffer[i] = iio_dmaengine_buffer_alloc(indio_dev_tx[i]->dev.parent, dma_ch,
+							&dma_buffer_ops, indio_dev_tx[i]);
+		if (IS_ERR(buffer[i])) {
+			dev_err(&spi->dev, "iio_dmaengine_buffer_alloc failed");
+			ret = PTR_ERR(buffer[i]);
+			goto error_disable_buf;
+		}
+
+		iio_device_attach_buffer(indio_dev_tx[i], buffer[i]);
+
+		iio_device_set_drvdata(indio_dev_tx[i], st);
+
+		devm_iio_device_register(&spi->dev, indio_dev_tx[i]);
+	}
+
+	/* prepare / enable clock */
+	ret = clk_prepare_enable(st->clk);
+	if (ret < 0) {
+		dev_err(&spi->dev, "clk_prepare_enable failed");
 		goto error_disable_clk;
 	}
+
 /*
 	spi->max_speed_hz = 2000000;
 	spi->bits_per_word = 8;
@@ -288,10 +319,13 @@ static int ad9957_probe(struct spi_device *spi)
 
 	return 0;
 
+
 error_disable_clk:
 	clk_disable_unprepare(st->clk);
-error_disable_reg:
-	iio_dmaengine_buffer_free(indio_dev->buffer);
+error_disable_buf:
+	i--;
+	for(;i>=0;i--)
+		iio_dmaengine_buffer_free(indio_dev_tx[i]->buffer);
 
 	return ret;
 }
