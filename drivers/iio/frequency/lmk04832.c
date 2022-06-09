@@ -1730,7 +1730,7 @@ static struct clk *lmk04832_clk_register(struct iio_dev *indio_dev, unsigned num
 	init.ops = &lmk04832_clk_ops;
 
 	init.num_parents = 0;
-	init.flags = CLK_IS_BASIC;
+	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE;
 	output->hw.init = &init;
 	output->indio_dev = indio_dev;
 	output->num = num;
