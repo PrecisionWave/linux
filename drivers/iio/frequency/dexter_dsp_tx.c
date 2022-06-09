@@ -156,7 +156,7 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 	 * octal (beginning with 0) and
 	 * hexadecimal (beginning with 0x)
 	 */
-	if ((uint32_t)this_attr->address == REG_STREAM0_START_CLKS){
+	if ((uint32_t)this_attr->address == REG_STREAM0_START_CLKS || (uint32_t)this_attr->address == REG_STREAM1_START_CLKS){
 		ret = kstrtoull(buf, 10, &readin);
 		if (ret)
 			return ret;
@@ -378,7 +378,7 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 	mutex_unlock(&indio_dev->mlock);
 
 	if(ret==0){
-		if((uint32_t)this_attr->address == REG_PPS_CLKS || (uint32_t)this_attr->address == REG_STREAM0_START_CLKS)
+		if((uint32_t)this_attr->address == REG_PPS_CLKS || (uint32_t)this_attr->address == REG_STREAM0_START_CLKS || (uint32_t)this_attr->address == REG_STREAM1_START_CLKS)
 			ret = sprintf(buf, "%llu\n", tempu64);
 		else
 			ret = sprintf(buf, "%d\n", val);
