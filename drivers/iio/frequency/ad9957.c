@@ -24,9 +24,9 @@ struct ad9957_state {
 	struct spi_device	*spi;
 	struct mutex 		lock;
 	struct clk			*clk;
-	u64					dac_clk;
+	unsigned long				dac_clk;
 	u64					center_frequency;
-	u64					sampling_freq;
+	unsigned long				sampling_freq;
 	u32					num_ch;
 };
 
@@ -307,6 +307,10 @@ static int ad9957_probe(struct spi_device *spi)
 		dev_err(&spi->dev, "clk_prepare_enable failed");
 		goto error_disable_clk;
 	}
+
+	st->dac_clk = clk_get_rate(st->clk);
+	st->sampling_freq = st->dac_clk / 12;
+	dev_info(&spi->dev, "Clock rate is %lu Hz, sampling frequency is %lu Hz\n", st->dac_clk, st->sampling_freq);
 
 	ad9957_init(st);
 
