@@ -277,7 +277,7 @@ static int ad9957_probe(struct spi_device *spi)
 	for(i=0; i<NUM_TX_CH && i<dma_count; i++) {
 		char dma_ch[10];
 		st_tx = iio_priv(indio_dev_tx[i]);
-		sprintf(st_tx->name,"ad9957-dma%d",i);
+		sprintf(st_tx->name,"ad9957_tx%d",i);
 		sprintf(dma_ch,"tx%d",i);
 		indio_dev_tx[i]->dev.parent = &spi->dev;
 		indio_dev_tx[i]->name = st_tx->name;
