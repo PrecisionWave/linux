@@ -23,17 +23,23 @@
 struct ad9957_state {
 	struct device		*dev;
 	struct spi_device	*spi;
-	struct mutex 		lock;
+	struct mutex 		spi_mtx;
+	struct mutex 		attr_mtx;
 	struct clk			*ref_clk;
 	struct clk			*pdclk;
 	unsigned long				sysclk_frequency;
-	u64					center_frequency;
+	unsigned long				center_frequency;
 	unsigned long				pdclk_frequency;
-	u32					num_ch;
+	u32					ftw;
 };
 
 struct ad9957_tx_state {
 	char name[20];
+};
+
+enum {
+	AD9957_CENTER_FREQUENCY,
+	AD9957_FTW,
 };
 
 #define AD9957_CHAN(index)						\
@@ -51,79 +57,9 @@ struct ad9957_tx_state {
 		},							\
 	}
 
-#define DECLARE_AD9957_CHANNELS(name)	\
-static struct iio_chan_spec name[] = {	\
-		AD9957_CHAN(0), \
-		AD9957_CHAN(1), \
-}
-
-DECLARE_AD9957_CHANNELS(ad9957_channels);
-
-
-static int ad9957_read_raw(struct iio_dev *indio_dev,
-			   const struct iio_chan_spec *chan,
-			   int *val, int *val2, long info)
-{
-	struct ad9957_state *st = iio_priv(indio_dev);
-	int ret;
-
-	switch (info) {
-// 	case IIO_CHAN_INFO_SCALE:
-// 		ret = regulator_get_voltage(st->vref);
-// 		if (ret < 0)
-// 			return ret;
-//
-// 		*val = 2 * (ret / 1000);
-// 		*val2 = chan->scan_type.realbits;
-// 		return IIO_VAL_FRACTIONAL_LOG2;
-// 	case IIO_CHAN_INFO_SAMP_FREQ:
-// 		*val = st->sampling_freq;
-// 		return IIO_VAL_INT;
-	default:
-		return -EINVAL;
-	}
-}
-
-static int ad9957_write_raw(struct iio_dev *indio_dev,
-				struct iio_chan_spec const *chan,
-				int val, int val2, long mask)
-{
-	struct ad9957_state *st = iio_priv(indio_dev);
-
-	switch (mask) {
-// 	case IIO_CHAN_INFO_SAMP_FREQ:
-// 		return ad7768_samp_freq_config(st, val);
-	default:
-		return -EINVAL;
-	}
-}
-
-static const struct iio_info ad9957_info = {
-	.read_raw = &ad9957_read_raw,
-	.write_raw = &ad9957_write_raw,
-};
-
-/* we need that dummy function to get a valid iio_info object */
-static int ad9957_read_raw_dummy(struct iio_dev *indio_dev,
-			   const struct iio_chan_spec *chan,
-			   int *val, int *val2, long info)
-{
-	return -EINVAL;
-}
-
-static const struct iio_info ad9957_tx_info = {
-	.read_raw = &ad9957_read_raw_dummy,
-};
-
-static int hw_submit_block(struct iio_dma_buffer_queue *queue,
-	struct iio_dma_buffer_block *block)
-{
-	return iio_dmaengine_buffer_submit_block(queue, block, DMA_TO_DEVICE);
-}
-
-static const struct iio_dma_buffer_ops dma_buffer_ops = {
-	.submit = hw_submit_block,
-	.abort = iio_dmaengine_buffer_abort,
+static struct iio_chan_spec ad9957_channels[] = {
+		AD9957_CHAN(0),
+		AD9957_CHAN(1),
 };
 
 static int ad9957_write_32(struct ad9957_state *st, u8 instruction, u32 word)
@@ -143,13 +79,13 @@ static int ad9957_write_32(struct ad9957_state *st, u8 instruction, u32 word)
 
 	int ret;
 
-	mutex_lock(&st->lock);
+	mutex_lock(&st->spi_mtx);
 
 	ret = spi_sync_transfer(st->spi, &xfer, 1);
 	if (ret)
 		dev_dbg(&st->spi->dev, "Failed to write 0x%08x to register %d (ret was %d)", instruction, word, ret);
 
-	mutex_unlock(&st->lock);
+	mutex_unlock(&st->spi_mtx);
 	return ret;
 }
 
@@ -176,15 +112,185 @@ static int ad9957_write_64(struct ad9957_state *st, u8 instruction, u32 word1, u
 
 	int ret;
 
-	mutex_lock(&st->lock);
+	mutex_lock(&st->spi_mtx);
 
 	ret = spi_sync_transfer(st->spi, &xfer, 1);
 	if (ret)
 		dev_dbg(&st->spi->dev, "Failed to write 0x%08x%08x to register %d (ret was %d)", instruction, word1, word2, ret);
 
-	mutex_unlock(&st->lock);
+	mutex_unlock(&st->spi_mtx);
 	return ret;
 }
+
+static ssize_t ad9957_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t len)
+{
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct ad9957_state *st = iio_priv(indio_dev);
+	long val, val2;
+	u64 val64, val2_64;
+	u32 rem;
+	int ret;
+	char s[101], *s1, s2[4] = "000", *p = s;
+	const char delim = '.';
+
+	memset(s, '\0', 101);
+	strncpy(s, buf, 100);
+
+	/* handle float value */
+	s1 = strsep(&p, &delim);
+	if (!s1) {
+		return -EINVAL;
+	}
+	if (p) {
+		int l = 3;
+		char* pos;
+		pos = strchr(p, '\n');
+		if (pos) {
+			l = pos - p;
+			if (l > 3)
+				l = 3;
+		}
+		strncpy(s2, p, l);
+		while (strlen(s2) < 3) {
+			strcat(s2, "0");
+		}
+		ret = kstrtol(s1, 10, &val);
+		if (ret < 0)
+			return ret;
+		ret = kstrtol(s2, 10, &val2);
+		if (ret < 0)
+			return ret;
+	}
+	else {
+		ret = kstrtol(buf, 0, &val);
+		if (ret < 0)
+			return ret;
+		val2 = 0;
+	}
+
+	// printk("val  =  %ld\n",val);
+	// printk("val2 =  %ld\n",val2);
+
+	mutex_lock(&st->attr_mtx);
+	switch ((u32)this_attr->address) {
+	case AD9957_CENTER_FREQUENCY:
+		/* calc FTW: round(2^32 * (f_out / f_sysclk)) */
+		val64 = 0x100000000ULL * val;
+		val64 = div_u64_rem(val64, st->sysclk_frequency, &rem);
+
+		val2_64 = 0x100000000ULL * val2;
+		val2_64 += rem * 1000ull;
+		val2_64 = DIV_ROUND_CLOSEST_ULL(val2_64, st->sysclk_frequency);
+		val2_64 = DIV_ROUND_CLOSEST_ULL(val2_64, 1000);
+
+		val64 += val2_64;
+		
+		if (val64 > 0xffffffff) {
+			val64 = 0xffffffff;
+		}
+
+		ret = ad9957_write_64(st, 0x0e, 0x0cb00000, (u32)val64);
+		if (ret) {
+			dev_err(&st->spi->dev, "Profile 0 - DDS configuration failed, status=%d", ret);
+		}
+		else {
+			st->ftw = (u32)val64;
+		}
+		break;
+	default:
+		ret = -ENODEV;
+	}
+	mutex_unlock(&st->attr_mtx);
+
+	return ret ? ret : len;
+}
+
+static ssize_t ad9957_show(struct device *dev,
+			struct device_attribute *attr,
+			char *buf)
+{
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct ad9957_state *st = iio_priv(indio_dev);
+	u64 val64, val2_64;
+	int ret;
+
+	mutex_lock(&st->attr_mtx);
+	switch ((u32)this_attr->address) {
+	case AD9957_CENTER_FREQUENCY:
+		/* calc f_out: (FTW / 2^32) * f_sysclk */
+		val64 = st->ftw;
+		val64 *= st->sysclk_frequency;
+		val64 = div64_u64_rem(val64, 0x100000000ULL, &val2_64);
+
+		val2_64 *= 1000;
+		val2_64 *= 2;
+		val2_64 = div64_u64(val2_64, 0x100000000ULL);
+		val2_64 += 1;
+		val2_64 = div_u64(val2_64, 2);
+
+		ret = sprintf(buf, "%u.%03u\n", (u32)val64, (u32)val2_64);
+		break;
+	case AD9957_FTW:
+		ret = sprintf(buf, "0x%08X\n", st->ftw);
+		break;
+	default:
+		ret = -ENODEV;
+	}
+	mutex_unlock(&st->attr_mtx);
+
+	return ret;
+}
+
+static IIO_DEVICE_ATTR(center_frequency, S_IRUGO | S_IWUSR,
+			ad9957_show,
+			ad9957_store,
+			AD9957_CENTER_FREQUENCY);
+
+static IIO_DEVICE_ATTR(ftw, S_IRUGO,
+			ad9957_show,
+			ad9957_store,
+			AD9957_FTW);
+
+static struct attribute *ad9957_attributes[] = {
+	&iio_dev_attr_center_frequency.dev_attr.attr,
+	&iio_dev_attr_ftw.dev_attr.attr,
+	NULL,
+};
+
+static const struct attribute_group ad9957_attribute_group = {
+	.attrs = ad9957_attributes,
+};
+
+static const struct iio_info ad9957_info = {
+	.attrs = &ad9957_attribute_group,
+};
+
+/* we need that dummy function to get a valid iio_info object */
+static int ad9957_read_raw_dummy(struct iio_dev *indio_dev,
+			   const struct iio_chan_spec *chan,
+			   int *val, int *val2, long info)
+{
+	return -EINVAL;
+}
+
+static const struct iio_info ad9957_tx_info = {
+	.read_raw = &ad9957_read_raw_dummy,
+};
+
+static int hw_submit_block(struct iio_dma_buffer_queue *queue,
+	struct iio_dma_buffer_block *block)
+{
+	return iio_dmaengine_buffer_submit_block(queue, block, DMA_TO_DEVICE);
+}
+
+static const struct iio_dma_buffer_ops dma_buffer_ops = {
+	.submit = hw_submit_block,
+	.abort = iio_dmaengine_buffer_abort,
+};
 
 static void ad9957_init(struct ad9957_state *st)
 {
@@ -213,6 +319,9 @@ static void ad9957_init(struct ad9957_state *st)
 	ret = ad9957_write_64(st, 0x0e, 0x0cb00000, 0x35555555);
 	if (ret) {
 		dev_err(&st->spi->dev, "Profile 0 - QDUC setup failed, status=%d", ret);
+	}
+	else {
+		st->ftw = 0x35555555;
 	}
 
 	// Control Function Register 1 CFR1 (0x00)
@@ -250,7 +359,8 @@ static int ad9957_probe(struct spi_device *spi)
 	/* configure & register main IIO device components (SPI) */
 	st = iio_priv(indio_dev);
 
-	mutex_init(&st->lock);
+	mutex_init(&st->spi_mtx);
+	mutex_init(&st->attr_mtx);
 
 	st->ref_clk = devm_clk_get(&spi->dev, "clk");
 	if (IS_ERR(st->ref_clk)) {
@@ -323,7 +433,7 @@ static int ad9957_probe(struct spi_device *spi)
 
 	st->pdclk = clk_register_fixed_rate(NULL, "pdclk", NULL, 0, st->pdclk_frequency);
 	if (IS_ERR(st->pdclk)) {
-		dev_err(&spi->dev, "Failed to register pdclk (error %d)", PTR_ERR(st->pdclk));
+		dev_err(&spi->dev, "Failed to register pdclk (error %ld)", PTR_ERR(st->pdclk));
 		goto error_disable_clk;
 	}
 
