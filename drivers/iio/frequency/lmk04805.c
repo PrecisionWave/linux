@@ -256,7 +256,7 @@ struct lmk04805_platform_data {
 //	uint16_t					PLL2_DLD_CNT;
 //	bool						PLL2_CP_TRI;
 //	bool						PLL1_CP_POL;
-//	uint8_t						PLL1_CP_GAIN;
+	uint8_t						PLL1_CP_GAIN;
 //	uint8_t						CLKin1_PreR_DIV;
 //	uint8_t						CLKin0_PreR_DIV;
 	uint16_t					PLL1_R;
@@ -1262,6 +1262,7 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
 
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
+	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3 << 26)) | ((pdata->PLL1_CP_GAIN & 0x3) << 26);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3FFF << 6)) | ((pdata->PLL1_R & 0x3FFF) << 6);
 	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0x3FFF << 6)) | ((pdata->PLL1_N & 0x3FFF) << 6);
 	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0xFFF << 20)) | ((pdata->PLL2_R & 0xFFF) << 20);
@@ -1354,6 +1355,19 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 	/* VCXO frequency */
 	ret = of_property_read_u32(np, "lmk,vcxo-freq", &pdata->vcxo_freq);
 	if(ret < 0){ printk("lmk04805: error - lmk,vcxo-freq\n"); return ret; }
+
+	/* setting: PLL1_CP_GAIN */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,pll1-cp-gain", &attr);
+	if(ret < 0){
+		pdata->PLL1_CP_GAIN = 2;  // charge pump current = 400 uA
+		printk("lmk04805: lmk,pll1-cp-gain=2\n");
+	}
+	else{
+		if(attr < 0){ pdata->PLL1_CP_GAIN = 0; printk("lmk04805: lmk,pll1-cp-gain=0\n"); }
+		else if(attr > 3){ pdata->PLL1_CP_GAIN = 3; printk("lmk04805: lmk,pll1-cp-gain=3\n"); }
+		else{ pdata->PLL1_CP_GAIN = attr; }
+	}
 
 	/* setting: PLL1_R */
 	attr = 0;
