@@ -739,6 +739,17 @@ static ssize_t lmk04805_show(struct device *dev,
 	return ret;
 }
 
+static void lmk04805_force_recalc_rate(struct lmk04805_state *st)
+{
+	int i;
+
+	for(i=0; i<LMK04805_NUM_CHAN; i++) {
+		/* HACK: Use reparent to trigger notify */
+		clk_hw_reparent(&st->output[i].hw, NULL);
+		dev_dbg(&st->spi->dev, "recalc rate %d: %lu", i, clk_get_rate(st->clks[i]));
+	}
+}
+
 static ssize_t lmk04805_store(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t len)
@@ -927,6 +938,8 @@ static ssize_t lmk04805_store(struct device *dev,
 	}
 	mutex_unlock(&indio_dev->mlock);
 
+	lmk04805_force_recalc_rate(st);
+
 	return ret ? ret : len;
 }
 
@@ -1023,6 +1036,9 @@ static int lmk04805_write_raw(struct iio_dev *indio_dev,
 
 end:
 	mutex_unlock(&indio_dev->mlock);
+
+	lmk04805_force_recalc_rate(st);
+
 	return ret;
 }
 
@@ -1046,6 +1062,8 @@ static int lmk04805_reg_access(struct iio_dev *indio_dev,
 
 out_unlock:
 	mutex_unlock(&indio_dev->mlock);
+
+	lmk04805_force_recalc_rate(iio_priv(indio_dev));
 	return ret;
 }
 
@@ -1222,7 +1240,7 @@ static struct clk *lmk04805_clk_register(struct iio_dev *indio_dev, unsigned num
 	init.ops = &lmk04805_clk_ops;
 
 	init.num_parents = 0;
-	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE;
+	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE | CLK_RECALC_NEW_RATES;
 	output->hw.init = &init;
 	output->indio_dev = indio_dev;
 	output->num = num;
