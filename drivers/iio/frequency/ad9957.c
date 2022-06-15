@@ -40,6 +40,7 @@ struct ad9957_tx_state {
 enum {
 	AD9957_CENTER_FREQUENCY,
 	AD9957_FTW,
+	AD9957_RESET,
 };
 
 #define AD9957_CHAN(index)						\
@@ -122,6 +123,45 @@ static int ad9957_write_64(struct ad9957_state *st, u8 instruction, u32 word1, u
 	return ret;
 }
 
+static void ad9957_init(struct ad9957_state *st)
+{
+	int ret;
+
+	// Control Function Register 2 CFR2 (0x01)
+	ret = ad9957_write_32(st, 0x01, 0x00402820);
+	if (ret) {
+		dev_err(&st->spi->dev, "CFR2 setup failed, status=%d", ret);
+	}
+
+	// Control Function Register 3 CFR3 (0x02)
+	ret = ad9957_write_32(st, 0x02, 0x1e3dc000);
+	if (ret) {
+		dev_err(&st->spi->dev, "CFR3 setup failed, status=%d", ret);
+	}
+
+	// Auxiliary DAC Control Register (0x03)
+	ret = ad9957_write_32(st, 0x03, 0x0000ff7f);
+	if (ret) {
+		dev_err(&st->spi->dev, "AuxDac setup failed, status=%d", ret);
+	}
+
+	// Profile 0 Register - QDUC (0x0E)
+	// 0x35 55 55 55 = Frequency tuning word for fc=204.8MHz when fdac=983.04 MHz
+	ret = ad9957_write_64(st, 0x0e, 0x0cb00000, 0x35555555);
+	if (ret) {
+		dev_err(&st->spi->dev, "Profile 0 - QDUC setup failed, status=%d", ret);
+	}
+	else {
+		st->ftw = 0x35555555;
+	}
+
+	// Control Function Register 1 CFR1 (0x00)
+	ret = ad9957_write_32(st, 0x00, (1<<21));
+	if (ret) {
+		dev_err(&st->spi->dev, "CFR1 setup failed, status=%d", ret);
+	}
+}
+
 static ssize_t ad9957_store(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t len)
@@ -187,7 +227,7 @@ static ssize_t ad9957_store(struct device *dev,
 		val2_64 = DIV_ROUND_CLOSEST_ULL(val2_64, 1000);
 
 		val64 += val2_64;
-		
+
 		if (val64 > 0xffffffff) {
 			val64 = 0xffffffff;
 		}
@@ -199,6 +239,9 @@ static ssize_t ad9957_store(struct device *dev,
 		else {
 			st->ftw = (u32)val64;
 		}
+		break;
+	case AD9957_RESET:
+		ad9957_init(st);
 		break;
 	default:
 		ret = -ENODEV;
@@ -255,9 +298,15 @@ static IIO_DEVICE_ATTR(ftw, S_IRUGO,
 			ad9957_store,
 			AD9957_FTW);
 
+static IIO_DEVICE_ATTR(reset, S_IWUSR,
+			ad9957_show,
+			ad9957_store,
+			AD9957_RESET);
+
 static struct attribute *ad9957_attributes[] = {
 	&iio_dev_attr_center_frequency.dev_attr.attr,
 	&iio_dev_attr_ftw.dev_attr.attr,
+	&iio_dev_attr_reset.dev_attr.attr,
 	NULL,
 };
 
@@ -291,45 +340,6 @@ static const struct iio_dma_buffer_ops dma_buffer_ops = {
 	.submit = hw_submit_block,
 	.abort = iio_dmaengine_buffer_abort,
 };
-
-static void ad9957_init(struct ad9957_state *st)
-{
-	int ret;
-
-	// Control Function Register 2 CFR2 (0x01)
-	ret = ad9957_write_32(st, 0x01, 0x00402820);
-	if (ret) {
-		dev_err(&st->spi->dev, "CFR2 setup failed, status=%d", ret);
-	}
-
-	// Control Function Register 3 CFR3 (0x02)
-	ret = ad9957_write_32(st, 0x02, 0x1e3dc000);
-	if (ret) {
-		dev_err(&st->spi->dev, "CFR3 setup failed, status=%d", ret);
-	}
-
-	// Auxiliary DAC Control Register (0x03)
-	ret = ad9957_write_32(st, 0x03, 0x0000ff7f);
-	if (ret) {
-		dev_err(&st->spi->dev, "AuxDac setup failed, status=%d", ret);
-	}
-
-	// Profile 0 Register - QDUC (0x0E)
-	// 0x35 55 55 55 = Frequency tuning word for fc=204.8MHz when fdac=983.04 MHz
-	ret = ad9957_write_64(st, 0x0e, 0x0cb00000, 0x35555555);
-	if (ret) {
-		dev_err(&st->spi->dev, "Profile 0 - QDUC setup failed, status=%d", ret);
-	}
-	else {
-		st->ftw = 0x35555555;
-	}
-
-	// Control Function Register 1 CFR1 (0x00)
-	ret = ad9957_write_32(st, 0x00, 0x00000000);
-	if (ret) {
-		dev_err(&st->spi->dev, "CFR1 setup failed, status=%d", ret);
-	}
-}
 
 static int ad9957_probe(struct spi_device *spi)
 {
