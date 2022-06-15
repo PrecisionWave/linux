@@ -545,17 +545,13 @@ static int dac_clk_clock_notifier(struct notifier_block *nb,
 	struct clk_notifier_data *ndata = data;
 	struct dexter_dsp_tx_state *st = to_dexter_dsp_tx_state(nb);
 
-	dev_info(st->dev, "dac_clk_clock_notifier: event %lu, Old rate %lu, New rate = %lu\n", event, ndata->old_rate, ndata->new_rate);
+	dev_info(st->dev, "dac_clk rate change: new rate = %lu Hz\n", ndata->new_rate);
 
-	st->fs_if_dac = ndata->new_rate;
-
-	switch (event) {
-	case PRE_RATE_CHANGE:
-	case POST_RATE_CHANGE:
-	case ABORT_RATE_CHANGE:
-	default:
-		return NOTIFY_DONE;
+	if (event == POST_RATE_CHANGE) {
+		st->fs_if_dac = ndata->new_rate;
 	}
+	
+	return NOTIFY_DONE;
 }
 
 static int dexter_dsp_tx_probe(struct platform_device *pdev)
