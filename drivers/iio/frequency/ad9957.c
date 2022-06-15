@@ -26,6 +26,7 @@ struct ad9957_state {
 	struct mutex 		spi_mtx;
 	struct mutex 		attr_mtx;
 	struct clk			*ref_clk;
+	struct notifier_block	ref_clk_rate_change_nb;
 	struct clk			*pdclk;
 	unsigned long				sysclk_frequency;
 	unsigned long				center_frequency;
@@ -341,6 +342,43 @@ static const struct iio_dma_buffer_ops dma_buffer_ops = {
 	.abort = iio_dmaengine_buffer_abort,
 };
 
+static void ad5597_update_ref_clk(struct ad9957_state *st, unsigned long ref_clk_rate)
+{
+	/* Assume SYSCLK directly driven from REF_CLK input pin
+	   - PLL ENABLE in CFR3, BIT 8 = 0
+	   - REFCLK INPUT DIVIDER BYPASS CFR3, BIT 15 = 1
+	*/
+	st->sysclk_frequency = ref_clk_rate;
+	dev_info(&st->spi->dev, "SYSCLK frequency is %lu Hz\n", st->sysclk_frequency);
+
+	/* With our settings f_PDCLK is f_SYSCLK/12. */
+	st->pdclk_frequency = st->sysclk_frequency / 12;
+	dev_info(&st->spi->dev, "PDCLK frequency is %lu Hz\n", st->pdclk_frequency);
+}
+
+#define to_ad9957_state(x) \
+		container_of(x, struct ad9957_state, ref_clk_rate_change_nb)
+
+static int ref_clk_clock_notifier(struct notifier_block *nb,
+				  unsigned long event, void *data)
+{
+	struct clk_notifier_data *ndata = data;
+	struct ad9957_state *st = to_ad9957_state(nb);
+
+	dev_info(st->dev, "ref_clk_clock_notifier: event %lu, Old rate %lu, New rate = %lu\n", event, ndata->old_rate, ndata->new_rate);
+
+	ad5597_update_ref_clk(st, ndata->new_rate);
+	clk_set_rate(st->pdclk, st->pdclk_frequency);
+
+	switch (event) {
+	case PRE_RATE_CHANGE:
+	case POST_RATE_CHANGE:
+	case ABORT_RATE_CHANGE:
+	default:
+		return NOTIFY_DONE;
+	}
+}
+
 static int ad9957_probe(struct spi_device *spi)
 {
 	struct ad9957_state *st;
@@ -430,17 +468,10 @@ static int ad9957_probe(struct spi_device *spi)
 		goto error_disable_clk;
 	}
 
-	/* Assume SYSCLK directly driven from REF_CLK input pin
-	   - PLL ENABLE in CFR3, BIT 8 = 0
-	   - REFCLK INPUT DIVIDER BYPASS CFR3, BIT 15 = 1
-	*/
-	st->sysclk_frequency = clk_get_rate(st->ref_clk);
-	dev_info(&spi->dev, "SYSCLK frequency is %lu Hz\n", st->sysclk_frequency);
+	/* calculate derived lcoks */
+	ad5597_update_ref_clk(st, clk_get_rate(st->ref_clk));
 
-	/* With our settings f_PDCLK is f_SYSCLK/12. */
-	st->pdclk_frequency = st->sysclk_frequency / 12;
-	dev_info(&spi->dev, "PDCLK frequency is %lu Hz\n", st->pdclk_frequency);
-
+	/* register pdclk as clock provider */
 	st->pdclk = clk_register_fixed_rate(NULL, "pdclk", NULL, 0, st->pdclk_frequency);
 	if (IS_ERR(st->pdclk)) {
 		dev_err(&spi->dev, "Failed to register pdclk (error %ld)", PTR_ERR(st->pdclk));
@@ -449,6 +480,11 @@ static int ad9957_probe(struct spi_device *spi)
 
 	of_clk_add_provider(spi->dev.of_node, of_clk_src_simple_get, st->pdclk);
 
+	/* register notifier to get ref_clk change notifications */
+	st->ref_clk_rate_change_nb.notifier_call = ref_clk_clock_notifier;
+	clk_notifier_register(st->ref_clk, &st->ref_clk_rate_change_nb);
+
+	/* finally setup registers */
 	ad9957_init(st);
 
 	return 0;
