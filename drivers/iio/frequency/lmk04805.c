@@ -350,6 +350,7 @@ enum attributes{
 	ATTR_PLL2_R,
 	ATTR_PLL2_N,
 	ATTR_PLL2_P,
+	ATTR_PLL2_FAST_PDF,
 	ATTR_VCO_MODE,
 	ATTR_CLKIN_SELECT_MODE
 };
@@ -608,6 +609,25 @@ int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
 	return 0;
 }
 
+static void recalc_vco_freq(struct iio_dev *indio_dev)
+{
+	struct lmk04805_state *st = iio_priv(indio_dev);
+	struct lmk04805_platform_data *pdata = st->pdata;
+
+	st->vco_freq = (pdata->vcxo_freq * (pdata->EN_PLL2_REF_2X ? 2 : 1)
+			/ pdata->PLL2_R) * (pdata->VCO_MUX ? pdata->VCO_DIV : 1)
+			* pdata->PLL2_P * pdata->PLL2_N;
+
+	st->vco_out_freq = st->vco_freq / (pdata->VCO_MUX ? pdata->VCO_DIV : 1);
+	// st->vco_out_freq /= pdata->channels[7].clock_divider;
+	// st->vco_out_freq *= pdata->channels[7].clock_divider;
+
+	if (st->vco_freq > 100000000)
+		lmk04805_inject_register_value(&st->pdata->reg_map[29], 23, 1, 1);
+	else
+		lmk04805_inject_register_value(&st->pdata->reg_map[29], 23, 1, 0);
+}
+
 static ssize_t lmk04805_show(struct device *dev,
 			struct device_attribute *attr,
 			char *buf)
@@ -689,6 +709,12 @@ static ssize_t lmk04805_show(struct device *dev,
 		if(ret == 0)
 			lmk04805_extract_register_value(reg, 24, 3, &val);
 		break;
+	case ATTR_PLL2_FAST_PDF:
+		reg_num = 29;
+		ret = lmk04805_read(indio_dev, reg_num, &reg);
+		if(ret == 0)
+			lmk04805_extract_register_value(reg, 23, 1, &val);
+		break;
 	case ATTR_VCO_MODE:
 		reg_num = 11;
 		ret = lmk04805_read(indio_dev, reg_num, &reg);
@@ -719,6 +745,8 @@ static ssize_t lmk04805_store(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct lmk04805_state *st = iio_priv(indio_dev);
+	struct lmk04805_platform_data *pdata = st->pdata;
 	int ret = 0;
 	long val;
 	u32 reg;
@@ -818,7 +846,10 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 20, 12, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		pdata->PLL2_R = val;
+		st->pdata->reg_map[reg_num] = reg;
+		recalc_vco_freq(indio_dev);
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	case ATTR_PLL2_N:
 		if(val<1 || val>262143){
@@ -830,7 +861,10 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 5, 18, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		pdata->PLL2_N = val;
+		st->pdata->reg_map[reg_num] = reg;
+		recalc_vco_freq(indio_dev);
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	case ATTR_PLL2_P:
 		if(val<2 || val>8){
@@ -842,7 +876,10 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 24, 3, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		pdata->PLL2_P = val;
+		st->pdata->reg_map[reg_num] = reg;
+		recalc_vco_freq(indio_dev);
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	case ATTR_VCO_MODE:
 		if(val<0 || val>16){
@@ -1052,6 +1089,11 @@ static IIO_DEVICE_ATTR(PLL2_P, S_IRUGO | S_IWUSR,
 			lmk04805_store,
 			ATTR_PLL2_P);
 
+static IIO_DEVICE_ATTR(PLL2_FAST_PDF, S_IRUGO,
+			lmk04805_show,
+			lmk04805_store,
+			ATTR_PLL2_FAST_PDF);
+
 static IIO_DEVICE_ATTR(VCO_Mode, S_IRUGO | S_IWUSR,
 			lmk04805_show,
 			lmk04805_store,
@@ -1071,6 +1113,7 @@ static struct attribute *lmk04805_attributes[] = {
 	ATTR_REF(PLL2_R),
 	ATTR_REF(PLL2_N),
 	ATTR_REF(PLL2_P),
+	ATTR_REF(PLL2_FAST_PDF),
 	ATTR_REF(VCO_Mode),
 	ATTR_REF(CLKin_SELECT_MODE),
 	NULL,
@@ -1192,7 +1235,6 @@ static struct clk *lmk04805_clk_register(struct iio_dev *indio_dev, unsigned num
 	return clk;
 }
 
-
 static int lmk04805_setup(struct iio_dev *indio_dev)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
@@ -1214,26 +1256,7 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 		}
 	}
 
-/*	lmk04805_set_clk_format(0, 0x00, &(lmk04805_reg_default[LMK04805_GET_CLK_FORMAT_REG(0)]));
-	printk(">>>REG: 0x%08x\n",lmk04805_reg_default[LMK04805_GET_CLK_FORMAT_REG(0)]);
-	lmk04805_set_clk_format(0, 0x04, &(lmk04805_reg_default[LMK04805_GET_CLK_FORMAT_REG(0)]));
-	printk(">>>REG: 0x%08x\n",lmk04805_reg_default[LMK04805_GET_CLK_FORMAT_REG(0)]);
-
-	lmk04805_write(indio_dev, LMK04805_GET_CLK_FORMAT_REG(0), lmk04805_reg_default[LMK04805_GET_CLK_FORMAT_REG(0)]);
-*/
-
-// TODO: folgende variable Werte müssen die Daten oben manipulieren bevor der LMK initialisiert wird !
-	st->vco_freq = (pdata->vcxo_freq * (pdata->EN_PLL2_REF_2X ? 2 : 1)
-			/ pdata->PLL2_R) * (pdata->VCO_MUX ? pdata->VCO_DIV : 1)
-			* pdata->PLL2_P * pdata->PLL2_N;
-
-	//printk(">>>vcxo_freq=%d, EN_PLL2_REF_2X=%d, PLL2_R=%d, VCO_MUX=%d, VCO_DIV=%d, PLL2_P=%d, PLL2_N=%d, vco_freq=%d\n", pdata->vcxo_freq, pdata->EN_PLL2_REF_2X, pdata->PLL2_R, pdata->VCO_MUX, pdata->VCO_DIV, pdata->PLL2_P, pdata->PLL2_N, st->vco_freq);
-
-	st->vco_out_freq = st->vco_freq / (pdata->VCO_MUX ? pdata->VCO_DIV : 1);
-	st->vco_out_freq /= pdata->channels[7].clock_divider;
-	st->vco_out_freq *= pdata->channels[7].clock_divider;
-
-	//printk(">>>vco_out_freq=%d\n", st->vco_out_freq);
+	recalc_vco_freq(indio_dev);
 
 	// TODO: let's do it that way for all attibutes that are parsed from the devicetree!
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
