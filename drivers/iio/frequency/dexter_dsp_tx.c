@@ -79,7 +79,6 @@ struct dexter_dsp_tx_state {
 	struct notifier_block	clk_rate_change_nb;
 	struct device	*dev;
 	uint32_t	fs_if_dac;
-	bool 		gpsdo_locked;
   	uint32_t	pps_clk_error_ns;
   	uint32_t	pps_clk_error_hz;
 };
@@ -256,7 +255,13 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 		break;
 
 	case REG_GPSDO_LOCKED:
-		st->gpsdo_locked = (u32)val & 0x1;
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dexter_dsp_tx_read(st, ADDR_PPS_SETTINGS) & ~(1<<30);
+		temp32 += (u32)val<<30;
+		dexter_dsp_tx_write(st, ADDR_PPS_SETTINGS, temp32);
 		break;
 
 	default:
@@ -364,7 +369,7 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		break;
 
 	case REG_GPSDO_LOCKED:
-		val = st->gpsdo_locked;
+		val = (dexter_dsp_tx_read(st, ADDR_PPS_SETTINGS) >>30) & 1;
 		break;
 
 	case REG_DSP_VERSION:
