@@ -68,6 +68,7 @@ enum chan_num{
 	REG_PPS_REFERENCE_FREQUENCY,
 	REG_PPS_DELAY,
 	REG_GPSDO_LOCKED,
+	REG_PPS_LOSS_OF_SIGNAL,
 	REG_DSP_VERSION
 };
 
@@ -78,6 +79,7 @@ struct dexter_dsp_tx_state {
 	struct clk		*dac_clk;
 	struct notifier_block	clk_rate_change_nb;
 	struct device	*dev;
+	bool 		pps_los;
 	uint32_t	fs_if_dac;
   	uint32_t	pps_clk_error_ns;
   	uint32_t	pps_clk_error_hz;
@@ -230,28 +232,28 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 			break;
 		}
 		temp32 = dexter_dsp_tx_read(st, ADDR_PPS_SETTINGS) & ~(1<<29);
-		temp32 += (u32)val<<29;
+		temp32 += (uint32_t)val<<29;
 		dexter_dsp_tx_write(st, ADDR_PPS_SETTINGS, temp32);
 		break;
 
 	case REG_PPS_REFERENCE_FREQUENCY:
 		temp32 = dexter_dsp_tx_read(st, ADDR_PPS_SETTINGS) & ~(0x1FFFFFFF);
-		temp32 += (u32)val & 0x1FFFFFFF;
+		temp32 += (uint32_t)val & 0x1FFFFFFF;
 		dexter_dsp_tx_write(st, ADDR_PPS_SETTINGS, temp32);
 		break;
 
 	case REG_PPS_DELAY:
 		temp32 = dexter_dsp_tx_read(st, ADDR_PPS_DELAY) & ~(0x1FFFFFFF);
-		temp32 += (u32)val & 0x1FFFFFFF;
+		temp32 += (uint32_t)val & 0x1FFFFFFF;
 		dexter_dsp_tx_write(st, ADDR_PPS_DELAY, temp32);
 		break;
 
 	case REG_PPS_CLK_ERROR_NS:
-		st->pps_clk_error_ns = (u32)val;
+		st->pps_clk_error_ns = (uint32_t)val;
 		break;
 
 	case REG_PPS_CLK_ERROR_HZ:
-		st->pps_clk_error_hz = (u32)val;
+		st->pps_clk_error_hz = (uint32_t)val;
 		break;
 
 	case REG_GPSDO_LOCKED:
@@ -260,8 +262,16 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 			break;
 		}
 		temp32 = dexter_dsp_tx_read(st, ADDR_PPS_SETTINGS) & ~(1<<30);
-		temp32 += (u32)val<<30;
+		temp32 += (uint32_t)val<<30;
 		dexter_dsp_tx_write(st, ADDR_PPS_SETTINGS, temp32);
+		break;
+
+	case REG_PPS_LOSS_OF_SIGNAL:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		st->pps_los = (bool)val;
 		break;
 
 	default:
@@ -372,6 +382,10 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		val = (dexter_dsp_tx_read(st, ADDR_PPS_SETTINGS) >>30) & 1;
 		break;
 
+	case REG_PPS_LOSS_OF_SIGNAL:
+		val = st->pps_los;
+		break;
+
 	case REG_DSP_VERSION:
 		val = dexter_dsp_tx_read(st, ADDR_DSP_VERSION);
 		break;
@@ -478,6 +492,11 @@ static IIO_DEVICE_ATTR(gpsdo_locked, S_IRUGO | S_IWUSR,
 			dexter_dsp_tx_store,
 			REG_GPSDO_LOCKED);
 
+static IIO_DEVICE_ATTR(pps_loss_of_signal, S_IRUGO | S_IWUSR,
+			dexter_dsp_tx_show,
+			dexter_dsp_tx_store,
+			REG_PPS_LOSS_OF_SIGNAL);
+
 static IIO_DEVICE_ATTR(pps_cnt, S_IRUGO,
 			dexter_dsp_tx_show,
 			dexter_dsp_tx_store,
@@ -515,6 +534,7 @@ static struct attribute *dexter_dsp_tx_attributes[] = {
 	&iio_dev_attr_pps_cnt.dev_attr.attr,
 	&iio_dev_attr_pps_clks.dev_attr.attr,
 	&iio_dev_attr_gpsdo_locked.dev_attr.attr,
+	&iio_dev_attr_pps_loss_of_signal.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	NULL
 };
@@ -590,6 +610,8 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 
 	st = iio_priv(indio_dev);
 	st->dev = &pdev->dev;
+
+	st->pps_los = true;
 
 	st->dac_clk = devm_clk_get(&pdev->dev, "dac_clk");
 	if (IS_ERR_OR_NULL(st->dac_clk)) {
