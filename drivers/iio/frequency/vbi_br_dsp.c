@@ -194,6 +194,7 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 	uint64_t temp64;
 	uint32_t temp32, i, ch;
 	unsigned long long readin;
+	int attr_is_64bits = 0;
 
 
 	/* convert to long
@@ -201,9 +202,16 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 	 * octal (beginning with 0) and
 	 * hexadecimal (beginning with 0x)
 	 */
-	if (((u32)this_attr->address == REG_INT_TO_VOLT_SCALAR) || (u32)this_attr->address == REG_CH(ch, REG_RX_FREQUENCY)){
+	attr_is_64bits = (u32)this_attr->address == REG_INT_TO_VOLT_SCALAR;
+	for (ch=0; ch < st->nb_of_blocks_dt; ch++) {
+		if ((u32)this_attr->address == REG_CH(ch, REG_RX_FREQUENCY)) {
+			attr_is_64bits = 1;
+		}
+	}
+
+	if (attr_is_64bits) {
 		ret = kstrtoull(buf, 10, &readin);
-		if (ret)
+		if (ret < 0)
 			return ret;
 	} else {
 		ret = kstrtol(buf, 0, &val);
@@ -235,7 +243,8 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 			temp64 = div_u64(temp64,50); // scale milliherz frequency to 1/25 Hz steps, otherwise 64bit is not enough
 			//printk("nyquist=%d, scaled readin=%llu\n", st->rx_nyquist_zone, temp64);
 			if(temp64 > 10*(u64)st->fs_adc)
-				temp64 %= 10*(u64)st->fs_adc;
+				div64_u64_rem(temp64, 10*(u64)st->fs_adc, &temp64);
+				//temp64 %= 10*(u64)st->fs_adc;
 			if((st->rx_nyquist_zone[ch] & 1) == 0)
 				temp64 = 10*(u64)st->fs_adc - temp64;
 			temp64 = temp64 << DDS_PHASEWIDTH;
@@ -379,7 +388,8 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 			st->rx_nyquist_zone[i] = (u32)div64_u64(temp64,500ULL*(u64)st->fs_adc) + 1; // calculate and store nyquist zone
 			temp64 = div_u64(temp64,50); // scale milliherz frequency to 1/25 Hz steps, otherwise 64bit is not enough
 			if(temp64 > 10*(u64)st->fs_adc)
-				temp64 %= 10*(u64)st->fs_adc;
+				div64_u64_rem(temp64, 10*(u64)st->fs_adc, &temp64);
+				//temp64 %= 10*(u64)st->fs_adc;
 			if((st->rx_nyquist_zone[i] & 1) == 0)
 				temp64 = 10*(u64)st->fs_adc - temp64;
 			temp64 = temp64 << DDS_PHASEWIDTH;
@@ -526,7 +536,10 @@ static ssize_t vbi_br_dsp_show(struct device *dev,
 			if((vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) >> 2 ) & 1) // read bypass decimator bit
 				val = st->fs_adc/4;
 			else
-				val = st->fs_adc/9/vbi_br_dsp_read(st, ADDR_RX_DECIMATION(ch));
+				temp32 = vbi_br_dsp_read(st, ADDR_RX_DECIMATION(ch));
+				if(temp32==0)
+					temp32 = 1;
+				val = st->fs_adc/9/temp32;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_BYPASS_DECIMATOR)){
