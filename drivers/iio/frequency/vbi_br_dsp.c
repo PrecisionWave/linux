@@ -87,6 +87,8 @@ enum chan_num{
 	REG_ALL_CH(REG_RX_INIT_STREAMING),
 	REG_ALL_CH(REG_RX_ENABLE_HEADER),
 	REG_ALL_CH(REG_RX_SWAP_IQ),
+	REG_ALL_CH(REG_RX_ENABLE_IQ_TESTDATA),
+	REG_ALL_CH(REG_RX_ENABLE_IQ_TESTDATA_PER_FRAME),
 	REG_ALL_CH(REG_RX_FIR_DECIMATION),
 	REG_ALL_CH(REG_RX_FIR_COEFFICIENTS),
 	REG_ALL_CH(REG_RX_BUFFER_OVERFLOW_SAMPLES),
@@ -319,6 +321,28 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 			val = (st->rx_nyquist_zone[ch] & 1) ^ st->rx_swap_iq[ch];
 			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) & ~(1<<1);
 			temp32 += (u32)val << 1;
+			vbi_br_dsp_write(st, ADDR_SETTINGS(ch), temp32);
+			break;
+		}
+		if((u32)this_attr->address == REG_CH(ch, REG_RX_ENABLE_IQ_TESTDATA)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) & ~(1<<4);
+			temp32 += (u32)val<<4;
+			vbi_br_dsp_write(st, ADDR_SETTINGS(ch), temp32);
+			break;
+		}
+		if((u32)this_attr->address == REG_CH(ch, REG_RX_ENABLE_IQ_TESTDATA_PER_FRAME)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			temp32 = vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) & ~(1<<5);
+			temp32 += (u32)val<<5;
 			vbi_br_dsp_write(st, ADDR_SETTINGS(ch), temp32);
 			break;
 		}
@@ -562,6 +586,16 @@ static ssize_t vbi_br_dsp_show(struct device *dev,
 			val = st->rx_swap_iq[ch];
 			break;
 		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_RX_ENABLE_IQ_TESTDATA)){
+			match = 1;
+			val = (vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) >> 4) & 1;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_RX_ENABLE_IQ_TESTDATA_PER_FRAME)){
+			match = 1;
+			val = (vbi_br_dsp_read(st, ADDR_SETTINGS(ch)) >> 5) & 1;
+			break;
+		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_PERIOD)){
 			match = 1;
 			val = vbi_br_dsp_read(st, ADDR_RX_PERIOD(ch));
@@ -710,6 +744,16 @@ IIO_DEVICE_ATTR_ALL_CH(rx_enable_header, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_show,
 			vbi_br_dsp_store,
 			REG_RX_ENABLE_HEADER);
+
+IIO_DEVICE_ATTR_ALL_CH(rx_enable_iq_testdata, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_RX_ENABLE_IQ_TESTDATA);
+
+IIO_DEVICE_ATTR_ALL_CH(rx_enable_iq_testdata_per_frame, S_IRUGO | S_IWUSR,
+			vbi_br_dsp_show,
+			vbi_br_dsp_store,
+			REG_RX_ENABLE_IQ_TESTDATA_PER_FRAME);
 
 IIO_DEVICE_ATTR_ALL_CH(rx_swap_iq, S_IRUGO | S_IWUSR,
 			vbi_br_dsp_show,
@@ -860,6 +904,8 @@ static struct attribute *vbi_br_dsp_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_init_streaming),
 	IIO_ATTR_ALL_CH(rx_enable_header),
 	IIO_ATTR_ALL_CH(rx_swap_iq),
+	IIO_ATTR_ALL_CH(rx_enable_iq_testdata),
+	IIO_ATTR_ALL_CH(rx_enable_iq_testdata_per_frame),
 	IIO_ATTR_ALL_CH(rx_period),
 	IIO_ATTR_ALL_CH(rx_frame_length),
 	IIO_ATTR_ALL_CH(rx_fir_decimation),
