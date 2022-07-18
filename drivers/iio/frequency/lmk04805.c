@@ -352,7 +352,10 @@ enum attributes{
 	ATTR_PLL2_P,
 	ATTR_PLL2_FAST_PDF,
 	ATTR_VCO_MODE,
-	ATTR_CLKIN_SELECT_MODE
+	ATTR_CLKIN_SELECT_MODE,
+	ATTR_PLL1_DLD,
+	ATTR_PLL2_DLD,
+	ATTR_CLKIN0_LOS
 };
 
 int rename_iio_attribute(struct attribute *attr, char *name){
@@ -410,7 +413,9 @@ struct lmk04805_state {
 	unsigned long	vco_freq;
 	unsigned long	vco_out_freq;
 
-	struct mutex	lock;
+	struct gpio_desc*	status_ld;
+	struct gpio_desc*	status_holdover;
+	struct gpio_desc*	status_clkin0;
 //	/*
 //	 * DMA (thus cache coherency maintenance) requires the
 //	 * transfer buffers to live in their own cache lines.
@@ -634,6 +639,7 @@ static ssize_t lmk04805_show(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret = 0;
 	u32 val = 0;
 	u32 reg;
@@ -726,6 +732,27 @@ static ssize_t lmk04805_show(struct device *dev,
 		ret = lmk04805_read(indio_dev, reg_num, &reg);
 		if(ret == 0)
 			lmk04805_extract_register_value(reg, 9, 3, &val);
+		break;
+	case ATTR_PLL1_DLD:
+		if (IS_ERR(st->status_ld)) {
+			ret = -ENODEV;
+			break;
+		}
+		val = gpiod_get_value_cansleep(st->status_ld);
+		break;
+	case ATTR_PLL2_DLD:
+		if (IS_ERR(st->status_holdover)) {
+			ret = -ENODEV;
+			break;
+		}
+		val = gpiod_get_value_cansleep(st->status_holdover);
+		break;
+	case ATTR_CLKIN0_LOS:
+		if (IS_ERR(st->status_clkin0)) {
+			ret = -ENODEV;
+			break;
+		}
+		val = gpiod_get_value_cansleep(st->status_clkin0);
 		break;
 	default:
 		ret = -ENODEV;
@@ -1112,15 +1139,30 @@ static IIO_DEVICE_ATTR(PLL2_FAST_PDF, S_IRUGO,
 			lmk04805_store,
 			ATTR_PLL2_FAST_PDF);
 
-static IIO_DEVICE_ATTR(VCO_Mode, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(VCO_MODE, S_IRUGO | S_IWUSR,
 			lmk04805_show,
 			lmk04805_store,
 			ATTR_VCO_MODE);
 
-static IIO_DEVICE_ATTR(CLKin_SELECT_MODE, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(CLKIN_SELECT_MODE, S_IRUGO | S_IWUSR,
 			lmk04805_show,
 			lmk04805_store,
 			ATTR_CLKIN_SELECT_MODE);
+
+static IIO_DEVICE_ATTR(PLL1_DLD, S_IRUGO,
+			lmk04805_show,
+			lmk04805_store,
+			ATTR_PLL1_DLD);
+
+static IIO_DEVICE_ATTR(PLL2_DLD, S_IRUGO,
+			lmk04805_show,
+			lmk04805_store,
+			ATTR_PLL2_DLD);
+
+static IIO_DEVICE_ATTR(CLKIN0_LOS, S_IRUGO,
+			lmk04805_show,
+			lmk04805_store,
+			ATTR_CLKIN0_LOS);
 
 static struct attribute *lmk04805_attributes[] = {
 	ALL_CLK_IIO_ATTR_REF(PD),
@@ -1132,8 +1174,11 @@ static struct attribute *lmk04805_attributes[] = {
 	ATTR_REF(PLL2_N),
 	ATTR_REF(PLL2_P),
 	ATTR_REF(PLL2_FAST_PDF),
-	ATTR_REF(VCO_Mode),
-	ATTR_REF(CLKin_SELECT_MODE),
+	ATTR_REF(VCO_MODE),
+	ATTR_REF(CLKIN_SELECT_MODE),
+	ATTR_REF(PLL1_DLD),
+	ATTR_REF(PLL2_DLD),
+	ATTR_REF(CLKIN0_LOS),
 	NULL,
 };
 
@@ -1309,6 +1354,15 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 		}
 	}
 
+	/* update status pins configuration */
+	if (!IS_ERR(st->status_ld))
+		lmk04805_inject_register_value(&st->pdata->reg_map[12], 27, 5, 0x01);  // set LD_MUX to 'PLL1 DLD'
+	if (!IS_ERR(st->status_holdover))
+		lmk04805_inject_register_value(&st->pdata->reg_map[13], 27, 5, 0x02);  // set HOLDOVER_MUX to 'PLL2 DLD'
+	if (!IS_ERR(st->status_clkin0))
+		lmk04805_inject_register_value(&st->pdata->reg_map[13], 20, 3, 0x01);  // set Status_CLKin1_MUX to 'CLKin1 LOS'
+
+	/* write all registers to the chip */
 	lmk04805_sync_all_registers(indio_dev);
 	msleep(300);	// give the lmk04805 some time to setup the clocks
 
@@ -1570,6 +1624,17 @@ static int lmk04805_probe(struct spi_device *spi)
 	// 	if(ret == -2)
 	// 		printk("LMK04805: >>>> TEST: NULL Pointer 1");
 	// }
+
+	/* obtain GPIOs connected to status pins */
+	st->status_ld = devm_gpiod_get_optional(&spi->dev, "status-ld", GPIOD_IN);
+	if (IS_ERR(st->status_ld))
+		printk("lmk04805: warning - couldn't acquire gpio for status-ld (error %ld)\n", PTR_ERR(st->status_ld));
+	st->status_holdover = devm_gpiod_get_optional(&spi->dev, "status-holdover", GPIOD_IN);
+	if (IS_ERR(st->status_holdover))
+		printk("lmk04805: warning - couldn't acquire gpio for status-holdover (error %ld)\n", PTR_ERR(st->status_holdover));
+	st->status_clkin0 = devm_gpiod_get_optional(&spi->dev, "status-clkin0", GPIOD_IN);
+	if (IS_ERR(st->status_clkin0))
+		printk("lmk04805: warning - couldn't acquire gpio for status-clkin0 (error %ld)\n", PTR_ERR(st->status_clkin0));
 
 	/* parse device-tree */
 	//printk("lmk04805: parsing device tree ..\n");
