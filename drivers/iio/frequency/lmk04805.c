@@ -734,21 +734,21 @@ static ssize_t lmk04805_show(struct device *dev,
 			lmk04805_extract_register_value(reg, 9, 3, &val);
 		break;
 	case ATTR_PLL1_DLD:
-		if (IS_ERR(st->status_ld)) {
+		if (IS_ERR(st->status_ld) || !st->status_ld) {
 			ret = -ENODEV;
 			break;
 		}
 		val = gpiod_get_value_cansleep(st->status_ld);
 		break;
 	case ATTR_PLL2_DLD:
-		if (IS_ERR(st->status_holdover)) {
+		if (IS_ERR(st->status_holdover) || !st->status_holdover) {
 			ret = -ENODEV;
 			break;
 		}
 		val = gpiod_get_value_cansleep(st->status_holdover);
 		break;
 	case ATTR_CLKIN0_LOS:
-		if (IS_ERR(st->status_clkin0)) {
+		if (IS_ERR(st->status_clkin0) || !st->status_clkin0) {
 			ret = -ENODEV;
 			break;
 		}
