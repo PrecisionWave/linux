@@ -51,7 +51,7 @@ const uint32_t lmk04805_reg_default[] = {
 		0x9102410A,
 		0x0000300B, //0x03F0300B
 		0x1B0C006C, //0x1B0C01AC
-		0x3B01002D, //0x1B01002D,
+		0x3B03002D, //0x1B01002D,
 		0x1200000E,
 		0x8009C40F,
 		0xC1550410,
@@ -355,6 +355,7 @@ enum attributes{
 	ATTR_CLKIN_SELECT_MODE,
 	ATTR_PLL1_DLD,
 	ATTR_PLL2_DLD,
+	ATTR_PLL1_PLL2_DLD,
 	ATTR_CLKIN0_LOS
 };
 
@@ -734,18 +735,66 @@ static ssize_t lmk04805_show(struct device *dev,
 			lmk04805_extract_register_value(reg, 9, 3, &val);
 		break;
 	case ATTR_PLL1_DLD:
-		if (IS_ERR(st->status_ld) || !st->status_ld) {
-			ret = -ENODEV;
-			break;
-		}
-		val = gpiod_get_value_cansleep(st->status_ld);
-		break;
-	case ATTR_PLL2_DLD:
 		if (IS_ERR(st->status_holdover) || !st->status_holdover) {
 			ret = -ENODEV;
 			break;
 		}
 		val = gpiod_get_value_cansleep(st->status_holdover);
+		break;
+	case ATTR_PLL2_DLD:
+		/* get VCO Mode */
+		reg_num = 11;
+		ret = lmk04805_read(indio_dev, reg_num, &reg);
+		if (ret == 0)
+			lmk04805_extract_register_value(reg, 27, 5, &val);
+		else {
+			ret = -ENODEV;
+			break;
+		}
+		/* Single Loop VCO Mode ? */
+		if (val > 3) {
+			if (IS_ERR(st->status_ld) || !st->status_ld) {
+				ret = -ENODEV;
+				break;
+			}
+			val = gpiod_get_value_cansleep(st->status_ld);
+		}
+		/* Dual Loop VCO Mode */
+		else {
+			ret = -ENODEV;
+		}
+		break;
+	case ATTR_PLL1_PLL2_DLD:
+		/* get VCO Mode */
+		reg_num = 11;
+		ret = lmk04805_read(indio_dev, reg_num, &reg);
+		if (ret == 0)
+			lmk04805_extract_register_value(reg, 27, 5, &val);
+		else {
+			ret = -ENODEV;
+			break;
+		}
+		/* Single Loop VCO Mode */
+		if (val > 3) {
+			if (IS_ERR(st->status_holdover) || !st->status_holdover) {
+				ret = -ENODEV;
+				break;
+			}
+			if (IS_ERR(st->status_ld) || !st->status_ld) {
+				ret = -ENODEV;
+				break;
+			}
+			val = gpiod_get_value_cansleep(st->status_holdover);  // PLL1 DLD
+			val |= gpiod_get_value_cansleep(st->status_ld);  // PLL2 DLD
+		}
+		/* Dual Loop VCO Mode */
+		else {
+			if (IS_ERR(st->status_ld) || !st->status_ld) {
+				ret = -ENODEV;
+				break;
+			}
+			val = gpiod_get_value_cansleep(st->status_ld);  // PLL1 & PLL2 DLD
+		}
 		break;
 	case ATTR_CLKIN0_LOS:
 		if (IS_ERR(st->status_clkin0) || !st->status_clkin0) {
@@ -934,6 +983,20 @@ static ssize_t lmk04805_store(struct device *dev,
 			case 13:
 			case 14:
 				ret = -EINVAL;
+				break;
+			case 0:
+			case 2:
+			case 3:
+				if (!IS_ERR(st->status_ld)) {
+					lmk04805_inject_register_value(&st->pdata->reg_map[12], 27, 5, 0x03);  // set LD_MUX to 'PLL1 DLD' & 'PLL2 DLD'
+				}
+				break;
+			case 6:
+			case 11:
+			case 15:
+				if (!IS_ERR(st->status_ld)) {
+					lmk04805_inject_register_value(&st->pdata->reg_map[12], 27, 5, 0x02);  // set LD_MUX to 'PLL2 DLD'
+				}
 				break;
 			default:
 				break;
@@ -1159,6 +1222,11 @@ static IIO_DEVICE_ATTR(PLL2_DLD, S_IRUGO,
 			lmk04805_store,
 			ATTR_PLL2_DLD);
 
+static IIO_DEVICE_ATTR(PLL1_PLL2_DLD, S_IRUGO,
+			lmk04805_show,
+			lmk04805_store,
+			ATTR_PLL1_PLL2_DLD);
+
 static IIO_DEVICE_ATTR(CLKIN0_LOS, S_IRUGO,
 			lmk04805_show,
 			lmk04805_store,
@@ -1178,6 +1246,7 @@ static struct attribute *lmk04805_attributes[] = {
 	ATTR_REF(CLKIN_SELECT_MODE),
 	ATTR_REF(PLL1_DLD),
 	ATTR_REF(PLL2_DLD),
+	ATTR_REF(PLL1_PLL2_DLD),
 	ATTR_REF(CLKIN0_LOS),
 	NULL,
 };
@@ -1355,12 +1424,18 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	}
 
 	/* update status pins configuration */
-	if (!IS_ERR(st->status_ld))
-		lmk04805_inject_register_value(&st->pdata->reg_map[12], 27, 5, 0x01);  // set LD_MUX to 'PLL1 DLD'
-	if (!IS_ERR(st->status_holdover))
-		lmk04805_inject_register_value(&st->pdata->reg_map[13], 27, 5, 0x02);  // set HOLDOVER_MUX to 'PLL2 DLD'
-	if (!IS_ERR(st->status_clkin0))
-		lmk04805_inject_register_value(&st->pdata->reg_map[13], 20, 3, 0x01);  // set Status_CLKin1_MUX to 'CLKin1 LOS'
+	if (!IS_ERR(st->status_ld)) {
+		if (pdata->VCO_MODE == 6)
+			lmk04805_inject_register_value(&st->pdata->reg_map[12], 27, 5, 0x02);  // set LD_MUX to 'PLL2 DLD'
+		else
+			lmk04805_inject_register_value(&st->pdata->reg_map[12], 27, 5, 0x03);  // set LD_MUX to 'PLL1 DLD' & 'PLL2 DLD'
+	}
+	if (!IS_ERR(st->status_holdover)) {
+		lmk04805_inject_register_value(&st->pdata->reg_map[13], 27, 5, 0x01);  // set HOLDOVER_MUX to 'PLL1 DLD'
+	}
+	if (!IS_ERR(st->status_clkin0)) {
+		lmk04805_inject_register_value(&st->pdata->reg_map[13], 12, 3, 0x01);  // set Status_CLKin0_MUX to 'CLKin0 LOS'
+	}
 
 	/* write all registers to the chip */
 	lmk04805_sync_all_registers(indio_dev);
