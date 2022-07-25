@@ -33,26 +33,72 @@
 
 #define ADDR_DSP_VERSION		0*4
 #define ADDR_CHIRP_LEN_DAC_SPS		1*4
-#define ADDR_CHIRP_INC_STEP		2*4
-#define ADDR_CHIRP_INC_START0		3*4
-#define ADDR_CHIRP_INC_START1		4*4
-#define ADDR_CHIRP_GAIN01		5*4
-#define ADDR_RX_DDS_INC			6*4
-#define ADDR_RX_DECIMATION		7*4
-#define ADDR_RX_BURST_PERIOD		8*4
-#define ADDR_RX_BURST_LENGTH		9*4
-#define ADDR_RX_OVERFLOWS		10*4
-#define ADDR_RX_BURST_OFFSET		11*4
-#define ADDR_RX_DDS_RESET_OFFSET	12*4
+#define ADDR_CHIRP_INC_STEP_UP		2*4
+#define ADDR_CHIRP_INC_STEP_DOWN	3*4
+#define ADDR_CHIRP_UP_RAMP_END		4*4
+#define ADDR_CHIRP_UP_HOLD_END		5*4
+#define ADDR_CHIRP_DOWN_RAMP_END	6*4
+#define ADDR_CHIRP_INC_START0		7*4
+#define ADDR_CHIRP_INC_START1		8*4
+#define ADDR_CHIRP_GAIN01		9*4
+#define ADDR_CHIRP_SETTINGS		10*4
+#define ADDR_CHIRP_DELAY_TX2		11*4
 
+#define ADDR_RX_DDS_INC			16*4
+#define ADDR_RX_DECIMATION		17*4
+#define ADDR_RX_BURST_PERIOD		18*4
+#define ADDR_RX_BURST_LENGTH		19*4
+#define ADDR_RX_OVERFLOWS		20*4
+#define ADDR_RX_BURST_OFFSET		21*4
+#define ADDR_RX_DDS_RESET_OFFSET	22*4
+
+#define ADDR_TX1_RF_GATE_CTRL_POS	32*4
+#define ADDR_TX1_RF_GATE_CTRL_NEG	33*4
+#define ADDR_TX2_RF_GATE_CTRL_POS	34*4
+#define ADDR_TX2_RF_GATE_CTRL_NEG	35*4
+#define ADDR_RX1TO4_RF_GATE_CTRL_POS	36*4
+#define ADDR_RX1TO4_RF_GATE_CTRL_NEG	37*4
+#define ADDR_RX5TO8_RF_GATE_CTRL_POS	38*4
+#define ADDR_RX5TO8_RF_GATE_CTRL_NEG	39*4
+#define ADDR_PRF_PULSE_POS		40*4
+#define ADDR_PRF_PULSE_NEG		41*4
+
+#define ADDR_PPS_SETTINGS		64*4
+#define ADDR_PPS_ERROR			65*4
+#define ADDR_PPS_CNT			66*4
+#define ADDR_PPS_DELAY			67*4
+#define ADDR_PPS_CLKS_LSB		68*4
+#define ADDR_PPS_CLKS_MSB		69*4
+#define ADDR_MARKER_A_CLKS_LSB		70*4
+#define ADDR_MARKER_A_CLKS_MSB		71*4
+#define ADDR_MARKER_B_CLKS_LSB		72*4
+#define ADDR_MARKER_B_CLKS_MSB		73*4
 
 enum chan_num{
-  	CH_TX_CHIRP_LEN_SPS,
+  	CH_TX_CHIRP_UP_RAMP_END,
+  	CH_TX_CHIRP_UP_HOLD_END,
+  	CH_TX_CHIRP_DOWN_RAMP_END,
+  	CH_TX_CHIRP_DOWN_HOLD_END,
   	CH_TX_CHIRP_START_FREQ,
-  	CH_TX_CHIRP_STOP_FREQ,
+  	CH_TX_CHIRP_UP_RAMP_FREQ_STEP,
+  	CH_TX_CHIRP_DOWN_RAMP_FREQ_STEP,
   	CH_TX2_CHIRP_OFFSET_FREQ,
+  	CH_TX2_CHIRP_DELAY,
   	CH_TX1_CHIRP_GAIN,
   	CH_TX2_CHIRP_GAIN,
+  	CH_TX_CHIRP_ALWAYS_ON,
+  	CH_TX1_CHIRP_MUTE_DURING_HOLD,
+  	CH_TX2_CHIRP_MUTE_DURING_HOLD,
+	CH_TX1_RF_GATE_CTRL_POS,
+	CH_TX1_RF_GATE_CTRL_NEG,
+	CH_TX2_RF_GATE_CTRL_POS,
+	CH_TX2_RF_GATE_CTRL_NEG,
+	CH_RX1TO4_RF_GATE_CTRL_POS,
+	CH_RX1TO4_RF_GATE_CTRL_NEG,
+	CH_RX5TO8_RF_GATE_CTRL_POS,
+	CH_RX5TO8_RF_GATE_CTRL_NEG,
+	CH_PRF_PULSE_POS,
+	CH_PRF_PULSE_NEG,
   	CH_RX_FREQ,
   	CH_RX_DECIMATION,
   	CH_RX_BURST_PERIOD,
@@ -60,6 +106,18 @@ enum chan_num{
   	CH_RX_BURST_OFFSET,
   	CH_RX_DDS_RESET_OFFSET,
   	CH_RX_OVERFLOWS,
+	CH_PPS_DIRECTION_OUT_N_IN,
+	CH_PPS_CLK_ERROR,
+	CH_PPS_CLK_ERROR_NS,
+	CH_PPS_CLK_ERROR_HZ,
+	CH_PPS_CNT,
+	CH_PPS_CLKS,
+	CH_MARKER_A_CLKS,
+	CH_MARKER_B_CLKS,
+	CH_PPS_REFERENCE_FREQUENCY,
+	CH_PPS_DELAY,
+	CH_GPSDO_LOCKED,
+	CH_PPS_LOSS_OF_SIGNAL,
 	CH_DSP_VERSION
 };
 
@@ -72,11 +130,12 @@ struct zebu_fmcw_dsp_state {
 	uint32_t	fs_if_adc;
   	int32_t		chirp_start_freq0;
   	int32_t		chirp_start_freq1;
-  	int32_t		chirp_stop_freq0;
   	int32_t		chirp_start_inc0;
   	int32_t		chirp_start_inc1;
-  	int32_t		chirp_stop_inc0;
   	int32_t	      	chirp_offset_freq;
+	bool 		pps_los;
+  	uint32_t	pps_clk_error_ns;
+  	uint32_t	pps_clk_error_hz;
 };
 
 static void zebu_fmcw_dsp_write(struct zebu_fmcw_dsp_state *st, unsigned reg, uint32_t val)
@@ -156,11 +215,19 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 	mutex_lock(&indio_dev->mlock);
 	switch ((uint32_t)this_attr->address) {
 
-	case CH_TX_CHIRP_LEN_SPS:
-    		temp64 = (int64_t)st->chirp_stop_inc0 - (int64_t)st->chirp_start_inc0; // inc_stop - inc_start0
-    		temp64 <<= CHIRP_INC_STEP_SHIFT;
-    		temp64 = div_s64(temp64,val);
-		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP, (int32_t)temp64);
+	case CH_TX_CHIRP_UP_RAMP_END:
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_UP_RAMP_END, (uint32_t)val);
+		break;
+
+	case CH_TX_CHIRP_UP_HOLD_END:
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_UP_HOLD_END, (uint32_t)val);
+		break;
+
+	case CH_TX_CHIRP_DOWN_RAMP_END:
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_DOWN_RAMP_END, (uint32_t)val);
+		break;
+
+	case CH_TX_CHIRP_DOWN_HOLD_END:
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_LEN_DAC_SPS, (uint32_t)val);
 		break;
 
@@ -170,26 +237,22 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
     		st->chirp_start_inc0 = (int32_t)div_s64(temp64,st->fs_if_dac);
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_START0, st->chirp_start_inc0);
 
-    		temp64 = (int64_t)st->chirp_stop_inc0 - (int64_t)st->chirp_start_inc0; // inc_step
-    		temp64 <<= CHIRP_INC_STEP_SHIFT;
-    		temps32 = (int32_t)div_s64(temp64,zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS));
-    		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP, temps32);
-
     		st->chirp_start_freq1 = st->chirp_start_freq0 + st->chirp_offset_freq; // chirp_start_freq1
     		temp64 = (int64_t)st->chirp_start_freq1  << CHIRP_DDS_PHASEWIDTH;
     		st->chirp_start_inc1 = (int32_t)div_s64(temp64,st->fs_if_dac); // inc_start1
     		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_START1, st->chirp_start_inc1);
 		break;
 
-	case CH_TX_CHIRP_STOP_FREQ:
-		st->chirp_stop_freq0 = val; // inc_stop
-		temp64 = (int64_t)st->chirp_stop_freq0  << CHIRP_DDS_PHASEWIDTH;
-		st->chirp_stop_inc0 = (int32_t)div_s64(temp64,st->fs_if_dac);
+	case CH_TX_CHIRP_UP_RAMP_FREQ_STEP:
+		temp64 = (int64_t)val  << (CHIRP_DDS_PHASEWIDTH + CHIRP_INC_STEP_SHIFT);
+		temps32 = (int32_t)div_s64(temp64,st->fs_if_dac);
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP_UP, temps32);
+		break;
 
-		temp64 = (int64_t)st->chirp_stop_inc0 - (int64_t)st->chirp_start_inc0; // inc_step
-		temp64 <<= CHIRP_INC_STEP_SHIFT;
-		temps32 = (int32_t)div_s64(temp64, zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS));
-		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP, temps32);
+	case CH_TX_CHIRP_DOWN_RAMP_FREQ_STEP:
+		temp64 = (int64_t)val  << (CHIRP_DDS_PHASEWIDTH + CHIRP_INC_STEP_SHIFT);
+		temps32 = (int32_t)div_s64(temp64,st->fs_if_dac);
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_STEP_DOWN, temps32);
 		break;
 
 	case CH_TX2_CHIRP_OFFSET_FREQ:
@@ -198,6 +261,10 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		temp64 = (int64_t)st->chirp_start_freq1  << CHIRP_DDS_PHASEWIDTH;
 		st->chirp_start_inc1 = (int32_t)div_s64(temp64,st->fs_if_dac); // inc_start1
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_INC_START1, st->chirp_start_inc1);
+		break;
+
+	case CH_TX2_CHIRP_DELAY:
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_DELAY_TX2, (uint32_t)val);
 		break;
 
 	case CH_TX1_CHIRP_GAIN:
@@ -210,6 +277,76 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		temp32 = zebu_fmcw_dsp_read(st, ADDR_CHIRP_GAIN01) & 0xFFFF;
 		temp32 += (uint32_t)val << 16;
 		zebu_fmcw_dsp_write(st, ADDR_CHIRP_GAIN01, temp32);
+		break;
+
+	case CH_TX_CHIRP_ALWAYS_ON:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_CHIRP_SETTINGS) & ~(0x1<<0);
+		temp32 += (uint32_t)val << 0;
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_SETTINGS, temp32);
+		break;
+
+	case CH_TX1_CHIRP_MUTE_DURING_HOLD:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_CHIRP_SETTINGS) & ~(0x1<<1);
+		temp32 += (uint32_t)val << 1;
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_SETTINGS, temp32);
+		break;
+
+	case CH_TX2_CHIRP_MUTE_DURING_HOLD:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_CHIRP_SETTINGS) & ~(0x1<<2);
+		temp32 += (uint32_t)val << 2;
+		zebu_fmcw_dsp_write(st, ADDR_CHIRP_SETTINGS, temp32);
+		break;
+
+	case CH_TX1_RF_GATE_CTRL_POS:
+		zebu_fmcw_dsp_write(st, ADDR_TX1_RF_GATE_CTRL_POS, (uint32_t)val);
+		break;
+
+	case CH_TX1_RF_GATE_CTRL_NEG:
+		zebu_fmcw_dsp_write(st, ADDR_TX1_RF_GATE_CTRL_NEG, (uint32_t)val);
+		break;
+
+	case CH_TX2_RF_GATE_CTRL_POS:
+		zebu_fmcw_dsp_write(st, ADDR_TX2_RF_GATE_CTRL_POS, (uint32_t)val);
+		break;
+
+	case CH_TX2_RF_GATE_CTRL_NEG:
+		zebu_fmcw_dsp_write(st, ADDR_TX2_RF_GATE_CTRL_NEG, (uint32_t)val);
+		break;
+
+	case CH_RX1TO4_RF_GATE_CTRL_POS:
+		zebu_fmcw_dsp_write(st, ADDR_RX1TO4_RF_GATE_CTRL_POS, (uint32_t)val);
+		break;
+
+	case CH_RX1TO4_RF_GATE_CTRL_NEG:
+		zebu_fmcw_dsp_write(st, ADDR_RX1TO4_RF_GATE_CTRL_NEG, (uint32_t)val);
+		break;
+
+	case CH_RX5TO8_RF_GATE_CTRL_POS:
+		zebu_fmcw_dsp_write(st, ADDR_RX5TO8_RF_GATE_CTRL_POS, (uint32_t)val);
+		break;
+
+	case CH_RX5TO8_RF_GATE_CTRL_NEG:
+		zebu_fmcw_dsp_write(st, ADDR_RX5TO8_RF_GATE_CTRL_NEG, (uint32_t)val);
+		break;
+
+	case CH_PRF_PULSE_POS:
+		zebu_fmcw_dsp_write(st, ADDR_PRF_PULSE_POS, (uint32_t)val);
+		break;
+
+	case CH_PRF_PULSE_NEG:
+		zebu_fmcw_dsp_write(st, ADDR_PRF_PULSE_NEG, (uint32_t)val);
 		break;
 
 	case CH_RX_FREQ:
@@ -246,6 +383,54 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_RX_DDS_RESET_OFFSET, val);
 		break;
 
+	case CH_PPS_DIRECTION_OUT_N_IN:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_PPS_SETTINGS) & ~(1<<29);
+		temp32 += (uint32_t)val<<29;
+		zebu_fmcw_dsp_write(st, ADDR_PPS_SETTINGS, temp32);
+		break;
+
+	case CH_PPS_REFERENCE_FREQUENCY:
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_PPS_SETTINGS) & ~(0x1FFFFFFF);
+		temp32 += (uint32_t)val & 0x1FFFFFFF;
+		zebu_fmcw_dsp_write(st, ADDR_PPS_SETTINGS, temp32);
+		break;
+
+	case CH_PPS_DELAY:
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_PPS_DELAY) & ~(0x1FFFFFFF);
+		temp32 += (uint32_t)val & 0x1FFFFFFF;
+		zebu_fmcw_dsp_write(st, ADDR_PPS_DELAY, temp32);
+		break;
+
+	case CH_PPS_CLK_ERROR_NS:
+		st->pps_clk_error_ns = (uint32_t)val;
+		break;
+
+	case CH_PPS_CLK_ERROR_HZ:
+		st->pps_clk_error_hz = (uint32_t)val;
+		break;
+
+	case CH_GPSDO_LOCKED:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_PPS_SETTINGS) & ~(1<<30);
+		temp32 += (uint32_t)val<<30;
+		zebu_fmcw_dsp_write(st, ADDR_PPS_SETTINGS, temp32);
+		break;
+
+	case CH_PPS_LOSS_OF_SIGNAL:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		st->pps_los = (bool)val;
+		break;
+
 	default:
 		ret = -ENODEV;
 	}
@@ -269,12 +454,25 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 	int ret = 0;
 	int32_t val;
 	int64_t temp64;
+	uint64_t tempu64;
 
 	mutex_lock(&indio_dev->mlock);
 
 	switch ((uint32_t)this_attr->address) {
 
-	case CH_TX_CHIRP_LEN_SPS:
+	case CH_TX_CHIRP_UP_RAMP_END:
+		val = zebu_fmcw_dsp_read(st, ADDR_CHIRP_UP_RAMP_END);
+		break;
+
+	case CH_TX_CHIRP_UP_HOLD_END:
+		val = zebu_fmcw_dsp_read(st, ADDR_CHIRP_UP_HOLD_END);
+		break;
+
+	case CH_TX_CHIRP_DOWN_RAMP_END:
+		val = zebu_fmcw_dsp_read(st, ADDR_CHIRP_DOWN_RAMP_END);
+		break;
+
+	case CH_TX_CHIRP_DOWN_HOLD_END:
 		val = zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
 		break;
 
@@ -284,13 +482,16 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		val = (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
 		break;
 
-	case CH_TX_CHIRP_STOP_FREQ:
-		//temp64 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP) * (uint32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
-		//temp64 >>= CHIRP_INC_STEP_SHIFT;
-		//temp64 += (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_START0); // inc stop
-		temp64 = st->chirp_stop_inc0;
-		temp64 = temp64 * st->fs_if_dac;
-		val = (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
+	case CH_TX_CHIRP_UP_RAMP_FREQ_STEP:
+		temps32 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP_UP);
+		temp64 = (int64_t)st->fs_if_dac * (int64_t)temps32;
+		val = (int32_t)(temp64 >> (CHIRP_DDS_PHASEWIDTH + CHIRP_INC_STEP_SHIFT));
+		break;
+
+	case CH_TX_CHIRP_DOWN_RAMP_FREQ_STEP:
+		temps32 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_CHIRP_INC_STEP_DOWN);
+		temp64 = (int64_t)st->fs_if_dac * (int64_t)temps32;
+		val = (int32_t)(temp64 >> (CHIRP_DDS_PHASEWIDTH + CHIRP_INC_STEP_SHIFT));
 		break;
 
 	case CH_TX2_CHIRP_OFFSET_FREQ:
@@ -302,12 +503,68 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		val = temps32 - (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
 		break;
 
+	case CH_TX2_CHIRP_DELAY:
+		val = zebu_fmcw_dsp_read(st, ADDR_CHIRP_DELAY_TX2);
+		break;
+
 	case CH_TX1_CHIRP_GAIN:
 		val = zebu_fmcw_dsp_read(st, ADDR_CHIRP_GAIN01) & 0xFFFF;
 		break;
 
 	case CH_TX2_CHIRP_GAIN:
 		val = (zebu_fmcw_dsp_read(st, ADDR_CHIRP_GAIN01) & 0xFFFF0000) >> 16;
+		break;
+
+	case CH_TX_CHIRP_ALWAYS_ON:
+		val = (zebu_fmcw_dsp_read(st, ADDR_CHIRP_SETTINGS) >> 0) & 0x1;
+		break;
+
+	case CH_TX1_CHIRP_MUTE_DURING_HOLD:
+		val = (zebu_fmcw_dsp_read(st, ADDR_CHIRP_SETTINGS) >> 1) & 0x1;
+		break;
+
+	case CH_TX2_CHIRP_MUTE_DURING_HOLD:
+		val = (zebu_fmcw_dsp_read(st, ADDR_CHIRP_SETTINGS) >> 2) & 0x1;
+		break;
+
+	case CH_TX1_RF_GATE_CTRL_POS:
+		val = zebu_fmcw_dsp_read(st, ADDR_TX1_RF_GATE_CTRL_POS);
+		break;
+
+	case CH_TX1_RF_GATE_CTRL_NEG:
+		val = zebu_fmcw_dsp_read(st, ADDR_TX1_RF_GATE_CTRL_NEG);
+		break;
+
+	case CH_TX2_RF_GATE_CTRL_POS:
+		val = zebu_fmcw_dsp_read(st, ADDR_TX2_RF_GATE_CTRL_POS);
+		break;
+
+	case CH_TX2_RF_GATE_CTRL_NEG:
+		val = zebu_fmcw_dsp_read(st, ADDR_TX2_RF_GATE_CTRL_NEG);
+		break;
+
+	case CH_RX1TO4_RF_GATE_CTRL_POS:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX1TO4_RF_GATE_CTRL_POS);
+		break;
+
+	case CH_RX1TO4_RF_GATE_CTRL_NEG:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX1TO4_RF_GATE_CTRL_NEG);
+		break;
+
+	case CH_RX5TO8_RF_GATE_CTRL_POS:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX5TO8_RF_GATE_CTRL_POS);
+		break;
+
+	case CH_RX5TO8_RF_GATE_CTRL_NEG:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX5TO8_RF_GATE_CTRL_NEG);
+		break;
+
+	case CH_PRF_PULSE_POS:
+		val = zebu_fmcw_dsp_read(st, ADDR_PRF_PULSE_POS);
+		break;
+
+	case CH_PRF_PULSE_NEG:
+		val = zebu_fmcw_dsp_read(st, ADDR_PRF_PULSE_NEG);
 		break;
 
 	case CH_RX_FREQ:
@@ -341,6 +598,54 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		val = zebu_fmcw_dsp_read(st, ADDR_RX_OVERFLOWS);
 		break;
 
+	case CH_PPS_DIRECTION_OUT_N_IN:
+		val = (zebu_fmcw_dsp_read(st, ADDR_PPS_SETTINGS) >>29) & 1;
+		break;
+
+	case CH_PPS_CLK_ERROR:
+		val = zebu_fmcw_dsp_read(st, ADDR_PPS_ERROR) & 0x1FFFFFFF;
+		break;
+
+	case CH_PPS_CLK_ERROR_HZ:
+		val = st->pps_clk_error_hz;
+		break;
+
+	case CH_PPS_CLK_ERROR_NS:
+		val = st->pps_clk_error_ns;
+		break;
+
+	case CH_PPS_REFERENCE_FREQUENCY:
+		val = zebu_fmcw_dsp_read(st, ADDR_PPS_SETTINGS) & 0x1FFFFFFF;
+		break;
+
+	case CH_PPS_DELAY:
+		val = zebu_fmcw_dsp_read(st, ADDR_PPS_DELAY) & 0x1FFFFFFF;
+		break;
+
+	case CH_PPS_CNT:
+		val = zebu_fmcw_dsp_read(st, ADDR_PPS_CNT);
+		break;
+
+	case CH_PPS_CLKS:
+		tempu64 = ((uint64_t)zebu_fmcw_dsp_read(st, ADDR_PPS_CLKS_MSB) << 32) + zebu_fmcw_dsp_read(st, ADDR_PPS_CLKS_LSB);
+		break;
+
+	case CH_MARKER_A_CLKS:
+		tempu64 = ((uint64_t)zebu_fmcw_dsp_read(st, ADDR_MARKER_A_CLKS_MSB) << 32) + zebu_fmcw_dsp_read(st, ADDR_MARKER_A_CLKS_LSB);
+		break;
+
+	case CH_MARKER_B_CLKS:
+		tempu64 = ((uint64_t)zebu_fmcw_dsp_read(st, ADDR_MARKER_B_CLKS_MSB) << 32) + zebu_fmcw_dsp_read(st, ADDR_MARKER_B_CLKS_LSB);
+		break;
+
+	case CH_GPSDO_LOCKED:
+		val = (zebu_fmcw_dsp_read(st, ADDR_PPS_SETTINGS) >>30) & 1;
+		break;
+
+	case CH_PPS_LOSS_OF_SIGNAL:
+		val = st->pps_los;
+		break;
+
 	case CH_DSP_VERSION:
 		val = zebu_fmcw_dsp_read(st, ADDR_DSP_VERSION);
 		break;
@@ -352,32 +657,59 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 	mutex_unlock(&indio_dev->mlock);
 
 	if(ret==0){
-		ret = sprintf(buf, "%d\n", val);
+		if((uint32_t)this_attr->address == CH_PPS_CLKS || (uint32_t)this_attr->address == CH_MARKER_A_CLKS || (uint32_t)this_attr->address == CH_MARKER_B_CLKS)
+			ret = sprintf(buf, "%llu\n", tempu64);
+		else
+			ret = sprintf(buf, "%d\n", val);
 	}
 	return ret;
 }
 
 
-
-static IIO_DEVICE_ATTR(tx_chirp_len_sps, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx_chirp_up_ramp_end, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
-			CH_TX_CHIRP_LEN_SPS);
+			CH_TX_CHIRP_UP_RAMP_END);
+
+static IIO_DEVICE_ATTR(tx_chirp_up_hold_end, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX_CHIRP_UP_HOLD_END);
+
+static IIO_DEVICE_ATTR(tx_chirp_down_ramp_end, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX_CHIRP_DOWN_RAMP_END);
+
+static IIO_DEVICE_ATTR(tx_chirp_down_hold_end, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX_CHIRP_DOWN_HOLD_END);
 
 static IIO_DEVICE_ATTR(tx_chirp_start_freq, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
 			CH_TX_CHIRP_START_FREQ);
 
-static IIO_DEVICE_ATTR(tx_chirp_stop_freq, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx_chirp_up_ramp_freq_step, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
-			CH_TX_CHIRP_STOP_FREQ);
+			CH_TX_CHIRP_UP_RAMP_FREQ_STEP);
+
+static IIO_DEVICE_ATTR(tx_chirp_down_ramp_freq_step, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX_CHIRP_DOWN_RAMP_FREQ_STEP);
 
 static IIO_DEVICE_ATTR(tx2_chirp_offset_freq, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
 			CH_TX2_CHIRP_OFFSET_FREQ);
+
+static IIO_DEVICE_ATTR(tx2_chirp_delay, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX2_CHIRP_DELAY);
 
 static IIO_DEVICE_ATTR(tx1_chirp_gain, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
@@ -388,6 +720,71 @@ static IIO_DEVICE_ATTR(tx2_chirp_gain, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
 			CH_TX2_CHIRP_GAIN);
+
+static IIO_DEVICE_ATTR(tx_chirp_always_on, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX_CHIRP_ALWAYS_ON);
+
+static IIO_DEVICE_ATTR(tx1_chirp_mute_during_hold, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX1_CHIRP_MUTE_DURING_HOLD);
+
+static IIO_DEVICE_ATTR(tx2_chirp_mute_during_hold, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX2_CHIRP_MUTE_DURING_HOLD);
+
+static IIO_DEVICE_ATTR(tx1_rf_gate_ctrl_pos, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX1_RF_GATE_CTRL_POS);
+
+static IIO_DEVICE_ATTR(tx1_rf_gate_ctrl_neg, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX1_RF_GATE_CTRL_NEG);
+
+static IIO_DEVICE_ATTR(tx2_rf_gate_ctrl_pos, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX2_RF_GATE_CTRL_POS);
+
+static IIO_DEVICE_ATTR(tx2_rf_gate_ctrl_neg, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_TX2_RF_GATE_CTRL_NEG);
+
+static IIO_DEVICE_ATTR(rx1to4_rf_gate_ctrl_pos, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX1TO4_RF_GATE_CTRL_POS);
+
+static IIO_DEVICE_ATTR(rx1to4_rf_gate_ctrl_neg, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX1TO4_RF_GATE_CTRL_NEG);
+
+static IIO_DEVICE_ATTR(rx5to8_rf_gate_ctrl_pos, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX5TO8_RF_GATE_CTRL_POS);
+
+static IIO_DEVICE_ATTR(rx5to8_rf_gate_ctrl_neg, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX5TO8_RF_GATE_CTRL_NEG);
+
+static IIO_DEVICE_ATTR(prf_pulse_pos, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PRF_PULSE_POS);
+
+static IIO_DEVICE_ATTR(prf_pulse_neg, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PRF_PULSE_NEG);
 
 static IIO_DEVICE_ATTR(rx_frequency, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
@@ -424,6 +821,66 @@ static IIO_DEVICE_ATTR(rx_overflows, S_IRUGO,
 			zebu_fmcw_dsp_store,
 			CH_RX_OVERFLOWS);
 
+static IIO_DEVICE_ATTR(pps_direction_out_n_in, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_DIRECTION_OUT_N_IN);
+
+static IIO_DEVICE_ATTR(pps_clk_error, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_CLK_ERROR);
+
+static IIO_DEVICE_ATTR(pps_clk_error_ns, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_CLK_ERROR_NS);
+
+static IIO_DEVICE_ATTR(pps_clk_error_hz, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_CLK_ERROR_HZ);
+
+static IIO_DEVICE_ATTR(pps_reference_frequency, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_REFERENCE_FREQUENCY);
+
+static IIO_DEVICE_ATTR(pps_delay, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_DELAY);
+
+static IIO_DEVICE_ATTR(gpsdo_locked, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_GPSDO_LOCKED);
+
+static IIO_DEVICE_ATTR(pps_loss_of_signal, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_LOSS_OF_SIGNAL);
+
+static IIO_DEVICE_ATTR(pps_cnt, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_CNT);
+
+static IIO_DEVICE_ATTR(pps_clks, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_PPS_CLKS);
+
+static IIO_DEVICE_ATTR(marker_a_clks, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_MARKER_A_CLKS);
+
+static IIO_DEVICE_ATTR(marker_b_clks, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_MARKER_B_CLKS);
+
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -432,12 +889,30 @@ static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 
 
 static struct attribute *zebu_fmcw_dsp_attributes[] = {
-	&iio_dev_attr_tx_chirp_len_sps.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_up_ramp_end.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_up_hold_end.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_down_ramp_end.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_down_hold_end.dev_attr.attr,
 	&iio_dev_attr_tx_chirp_start_freq.dev_attr.attr,
-	&iio_dev_attr_tx_chirp_stop_freq.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_up_ramp_freq_step.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_down_ramp_freq_step.dev_attr.attr,
 	&iio_dev_attr_tx2_chirp_offset_freq.dev_attr.attr,
+	&iio_dev_attr_tx2_chirp_delay.dev_attr.attr,
 	&iio_dev_attr_tx1_chirp_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_chirp_gain.dev_attr.attr,
+	&iio_dev_attr_tx_chirp_always_on.dev_attr.attr,
+	&iio_dev_attr_tx1_chirp_mute_during_hold.dev_attr.attr,
+	&iio_dev_attr_tx2_chirp_mute_during_hold.dev_attr.attr,
+	&iio_dev_attr_tx1_rf_gate_ctrl_pos.dev_attr.attr,
+	&iio_dev_attr_tx1_rf_gate_ctrl_neg.dev_attr.attr,
+	&iio_dev_attr_tx2_rf_gate_ctrl_pos.dev_attr.attr,
+	&iio_dev_attr_tx2_rf_gate_ctrl_neg.dev_attr.attr,
+	&iio_dev_attr_rx1to4_rf_gate_ctrl_pos.dev_attr.attr,
+	&iio_dev_attr_rx1to4_rf_gate_ctrl_neg.dev_attr.attr,
+	&iio_dev_attr_rx5to8_rf_gate_ctrl_pos.dev_attr.attr,
+	&iio_dev_attr_rx5to8_rf_gate_ctrl_neg.dev_attr.attr,
+	&iio_dev_attr_prf_pulse_pos.dev_attr.attr,
+	&iio_dev_attr_prf_pulse_neg.dev_attr.attr,
 	&iio_dev_attr_rx_frequency.dev_attr.attr,
 	&iio_dev_attr_rx_decimation.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period.dev_attr.attr,
@@ -445,6 +920,18 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_burst_offset.dev_attr.attr,
 	&iio_dev_attr_rx_dds_reset_offset.dev_attr.attr,
 	&iio_dev_attr_rx_overflows.dev_attr.attr,
+	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,
+	&iio_dev_attr_pps_clk_error.dev_attr.attr,
+	&iio_dev_attr_pps_clk_error_ns.dev_attr.attr,
+	&iio_dev_attr_pps_clk_error_hz.dev_attr.attr,
+	&iio_dev_attr_pps_reference_frequency.dev_attr.attr,
+	&iio_dev_attr_pps_delay.dev_attr.attr,
+	&iio_dev_attr_pps_cnt.dev_attr.attr,
+	&iio_dev_attr_pps_clks.dev_attr.attr,
+	&iio_dev_attr_marker_a_clks.dev_attr.attr,
+	&iio_dev_attr_marker_b_clks.dev_attr.attr,
+	&iio_dev_attr_gpsdo_locked.dev_attr.attr,
+	&iio_dev_attr_pps_loss_of_signal.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	NULL
 };
