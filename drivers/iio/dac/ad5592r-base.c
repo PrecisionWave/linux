@@ -592,6 +592,7 @@ static void ad5592r_init_scales(struct ad5592r_state *st, int vref_mV)
 int ad5592r_probe(struct device *dev, const char *name,
 		const struct ad5592r_rw_ops *ops)
 {
+	struct device_node *np = dev->of_node;
 	struct iio_dev *iio_dev;
 	struct ad5592r_state *st;
 	int ret;
@@ -619,7 +620,12 @@ int ad5592r_probe(struct device *dev, const char *name,
 	}
 
 	iio_dev->dev.parent = dev;
-	iio_dev->name = name;
+
+	if (np && np->name)
+		iio_dev->name = np->name;
+	else
+		iio_dev->name = name;
+
 	iio_dev->info = &ad5592r_info;
 	iio_dev->modes = INDIO_DIRECT_MODE;
 
