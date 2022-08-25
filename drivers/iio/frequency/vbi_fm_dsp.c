@@ -774,8 +774,8 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 		}
 		if(val>0)
 			val += 1;
-		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) & ~(0x3<<3);
-		temp32 += (u32)val << 3;
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) & ~(0x3<<5);
+		temp32 += (u32)val << 5;
 		vbi_fm_dsp_write(st, ADDR_DMA_SOURCE_CHANNEL, temp32);
 		break;
 	case REG_DMA_SOURCE_CHANNEL:
