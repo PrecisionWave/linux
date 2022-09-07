@@ -45,6 +45,7 @@
 #define ADDR_ADC_BER_TESTER		4*8
 #define ADDR_DEMOD_SETTINGS		4*11
 #define ADDR_PPS_SETTINGS		4*12
+#define ADDR_WATCHDOG			4*13
 
 #define ADDR_BLOCK_SETTINGS(x)		(ADDR_START_BLOCK+x*ADDR_PER_BLOCK+4*0)
 #define ADDR_BLOCK_DEMOD_GAIN(x)	(ADDR_START_BLOCK+x*ADDR_PER_BLOCK+4*1)
@@ -256,6 +257,8 @@ enum chan_num{
 	REG_ADC_BER_ALTERNATE,
 	REG_ADC_BER_CHECKER,
 	REG_DEMOD_SOURCE_CHANNEL,
+	REG_WATCHDOG_ENABLE,
+	REG_WATCHDOG_TRIGGER,
 //	REG_DEMOD_PHASE_ERR,
 //	REG_DEMOD_SPWR,
 //	REG_DEMOD_NPWR,
@@ -605,6 +608,22 @@ static ssize_t vbi_dab_dsp_store(struct device *dev,
 		}
 		vbi_dab_dsp_write(st, ADDR_DEMOD_SETTINGS, (u32)val);
 		break;
+	case REG_WATCHDOG_ENABLE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_dab_dsp_read(st, ADDR_WATCHDOG) & ~(1<<0);
+		temp32 += (u32)val<<0;
+		vbi_dab_dsp_write(st, ADDR_WATCHDOG, temp32);
+		break;
+	case REG_WATCHDOG_TRIGGER:
+		temp32 = vbi_dab_dsp_read(st, ADDR_WATCHDOG) & ~(1<<1);
+		temp32 += 1<<1;
+		vbi_dab_dsp_write(st, ADDR_WATCHDOG, temp32);
+		temp32 &= ~(1<<1);
+		vbi_dab_dsp_write(st, ADDR_WATCHDOG, temp32);
+		break;
 //	case REG_PPS_SRC_INT_N_EXT:
 //		if(val<0 || val>1){
 //			ret = -EINVAL;
@@ -846,6 +865,12 @@ static ssize_t vbi_dab_dsp_show(struct device *dev,
 	case REG_DEMOD_SOURCE_CHANNEL:
 		val = vbi_dab_dsp_read(st, ADDR_DEMOD_SETTINGS) & 0xF;
 		break;
+	case REG_WATCHDOG_ENABLE:
+		val = (vbi_dab_dsp_read(st, ADDR_WATCHDOG) >>0) & 1;
+		break;
+	case REG_WATCHDOG_TRIGGER:
+		val = (vbi_dab_dsp_read(st, ADDR_WATCHDOG) >>1) & 1;
+		break;
 //	case REG_DEMOD_PHASE_ERR:
 //		val = (int32_t)((int16_t)vbi_dab_dsp_read(st, ADDR_DEMOD_PHASE_ERR));
 //		break;
@@ -1080,6 +1105,16 @@ static IIO_DEVICE_ATTR(demod_source_channel, S_IRUGO | S_IWUSR,
 			vbi_dab_dsp_show,
 			vbi_dab_dsp_store,
 			REG_DEMOD_SOURCE_CHANNEL);
+
+static IIO_DEVICE_ATTR(watchdog_enable, S_IRUGO | S_IWUSR,
+			vbi_dab_dsp_show,
+			vbi_dab_dsp_store,
+			REG_WATCHDOG_ENABLE);
+
+static IIO_DEVICE_ATTR(watchdog_trigger, S_IRUGO | S_IWUSR,
+			vbi_dab_dsp_show,
+			vbi_dab_dsp_store,
+			REG_WATCHDOG_TRIGGER);
 
 //static IIO_DEVICE_ATTR(demod_phase_err, S_IRUGO,
 //			vbi_dab_dsp_show,
