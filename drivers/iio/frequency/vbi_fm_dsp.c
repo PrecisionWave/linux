@@ -41,7 +41,7 @@
 #define ADDR_DMA_BURST_LENGTH		(6*4)
 #define ADDR_DMA_BURST_PERIOD		(7*4)
 #define ADDR_DMA_DECIMATION		(8*4)
-#define ADDR_DMA_SINK			(9*4)
+#define ADDR_DMA_SINK_WATCHDOG			(9*4)
 #define ADDR_DMA_SOURCE_CHANNEL		(10*4)
 #define ADDR_AUDIO_SEL			(11*4)
 #define ADDR_PPS_SETTINGS		(12*4)
@@ -236,6 +236,8 @@ enum chan_num{
 	REG_DMA_BURST_PERIOD,
 	REG_DMA_BURST_LENGTH,
 	REG_DMA_DECIMATION,
+	REG_WATCHDOG_ENABLE,
+	REG_WATCHDOG_TRIGGER,
 	REG_GAIN_AUDIO,
 	REG_GAIN_RDS,
 	REG_METER_AUDIO1,
@@ -792,7 +794,9 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		vbi_fm_dsp_write(st, ADDR_DMA_SINK, (u32)val);
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) & ~(0x3<<0);
+		temp32 += (u32)val << 0;
+		vbi_fm_dsp_write(st, ADDR_DMA_SINK_WATCHDOG, (u32)val);
 		break;
 	case REG_DMA_BURST_PERIOD:
 		vbi_fm_dsp_write(st, ADDR_DMA_BURST_PERIOD, (u32)val);
@@ -806,6 +810,22 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 			break;
 		}
 		vbi_fm_dsp_write(st, ADDR_DMA_DECIMATION, (u32)val);
+		break;
+	case REG_WATCHDOG_ENABLE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) & ~(0x1<<2);
+		temp32 += (u32)val << 2;
+		vbi_fm_dsp_write(st, ADDR_DMA_SINK_WATCHDOG, temp32);
+		break;
+	case REG_WATCHDOG_TRIGGER:
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) & ~(0x1<<3);
+		temp32 += 1 << 3;
+		vbi_fm_dsp_write(st, ADDR_DMA_SINK_WATCHDOG, temp32);
+		temp32 &= ~(1 << 3);
+		vbi_fm_dsp_write(st, ADDR_DMA_SINK_WATCHDOG, temp32);
 		break;
 	case REG_GAIN_AUDIO:
 		if(val<MIN_GAIN || val>MAX_GAIN){
@@ -1073,7 +1093,7 @@ static ssize_t vbi_fm_dsp_show(struct device *dev,
 		val = vbi_fm_dsp_read(st, ADDR_DMA_SOURCE_CHANNEL) & 0x1f;
 		break;
 	case REG_DMA_SINK:
-		val = vbi_fm_dsp_read(st, ADDR_DMA_SINK);
+		val = vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) & 0x3;
 		break;
 	case REG_DMA_BURST_PERIOD:
 		val = vbi_fm_dsp_read(st, ADDR_DMA_BURST_PERIOD);
@@ -1083,6 +1103,12 @@ static ssize_t vbi_fm_dsp_show(struct device *dev,
 		break;
 	case REG_DMA_DECIMATION:
 		val = vbi_fm_dsp_read(st, ADDR_DMA_DECIMATION);
+		break;
+	case REG_WATCHDOG_ENABLE:
+		val = (vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) >> 2) & 0x1;
+		break;
+	case REG_WATCHDOG_TRIGGER:
+		val = (vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) >> 3) & 0x1;
 		break;
 	case REG_GAIN_AUDIO:
 		val = vbi_fm_dsp_read(st, ADDR_GAIN_MOD) & 0xFFFF;
@@ -1263,6 +1289,16 @@ static IIO_DEVICE_ATTR(dma_decimation, S_IRUGO | S_IWUSR,
 			vbi_fm_dsp_store,
 			REG_DMA_DECIMATION);
 
+static IIO_DEVICE_ATTR(watchdog_enable, S_IRUGO | S_IWUSR,
+			vbi_fm_dsp_show,
+			vbi_fm_dsp_store,
+			REG_WATCHDOG_ENABLE);
+
+static IIO_DEVICE_ATTR(watchdog_trigger, S_IRUGO | S_IWUSR,
+			vbi_fm_dsp_show,
+			vbi_fm_dsp_store,
+			REG_WATCHDOG_TRIGGER);
+
 static IIO_DEVICE_ATTR(gain_audio, S_IRUGO | S_IWUSR,
 			vbi_fm_dsp_show,
 			vbi_fm_dsp_store,
@@ -1365,6 +1401,8 @@ static struct attribute *vbi_fm_dsp_attributes[] = {
 	&iio_dev_attr_dma_burst_period.dev_attr.attr,
 	&iio_dev_attr_dma_burst_length.dev_attr.attr,
 	&iio_dev_attr_dma_decimation.dev_attr.attr,
+	&iio_dev_attr_watchdog_enable.dev_attr.attr,
+	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
 	&iio_dev_attr_gain_audio.dev_attr.attr,
 	&iio_dev_attr_gain_rds.dev_attr.attr,
 	&iio_dev_attr_meter_audio1.dev_attr.attr,
