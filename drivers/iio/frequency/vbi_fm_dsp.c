@@ -238,6 +238,7 @@ enum chan_num{
 	REG_DMA_DECIMATION,
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
+	REG_SATURATION_MUTING_OCCURRENCE,
 	REG_GAIN_AUDIO,
 	REG_GAIN_RDS,
 	REG_METER_AUDIO1,
@@ -827,6 +828,15 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 		temp32 &= ~(1 << 3);
 		vbi_fm_dsp_write(st, ADDR_DMA_SINK_WATCHDOG, temp32);
 		break;
+	case REG_SATURATION_MUTING_OCCURRENCE:
+		if(val<0 || val>4095){
+			val=4095;
+			break;
+		}
+		temp32 = vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) & ~(0xfff<<4);
+		temp32 += (u32)val << 4;
+		vbi_fm_dsp_write(st, ADDR_DMA_SINK_WATCHDOG, temp32);
+		break;
 	case REG_GAIN_AUDIO:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
@@ -1110,6 +1120,9 @@ static ssize_t vbi_fm_dsp_show(struct device *dev,
 	case REG_WATCHDOG_TRIGGER:
 		val = (vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) >> 3) & 0x1;
 		break;
+	case REG_SATURATION_MUTING_OCCURRENCE:
+		val = (vbi_fm_dsp_read(st, ADDR_DMA_SINK_WATCHDOG) >> 4) & 0xfff;
+		break;
 	case REG_GAIN_AUDIO:
 		val = vbi_fm_dsp_read(st, ADDR_GAIN_MOD) & 0xFFFF;
 		break;
@@ -1299,6 +1312,11 @@ static IIO_DEVICE_ATTR(watchdog_trigger, S_IRUGO | S_IWUSR,
 			vbi_fm_dsp_store,
 			REG_WATCHDOG_TRIGGER);
 
+static IIO_DEVICE_ATTR(saturation_muting_occurrence, S_IRUGO | S_IWUSR,
+			vbi_fm_dsp_show,
+			vbi_fm_dsp_store,
+			REG_SATURATION_MUTING_OCCURRENCE);
+
 static IIO_DEVICE_ATTR(gain_audio, S_IRUGO | S_IWUSR,
 			vbi_fm_dsp_show,
 			vbi_fm_dsp_store,
@@ -1403,6 +1421,7 @@ static struct attribute *vbi_fm_dsp_attributes[] = {
 	&iio_dev_attr_dma_decimation.dev_attr.attr,
 	&iio_dev_attr_watchdog_enable.dev_attr.attr,
 	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
+	&iio_dev_attr_saturation_muting_occurrence.dev_attr.attr,
 	&iio_dev_attr_gain_audio.dev_attr.attr,
 	&iio_dev_attr_gain_rds.dev_attr.attr,
 	&iio_dev_attr_meter_audio1.dev_attr.attr,

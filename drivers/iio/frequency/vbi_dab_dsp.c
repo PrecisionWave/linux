@@ -259,6 +259,7 @@ enum chan_num{
 	REG_DEMOD_SOURCE_CHANNEL,
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
+	REG_SATURATION_MUTING_OCCURRENCE,
 //	REG_DEMOD_PHASE_ERR,
 //	REG_DEMOD_SPWR,
 //	REG_DEMOD_NPWR,
@@ -624,6 +625,15 @@ static ssize_t vbi_dab_dsp_store(struct device *dev,
 		temp32 &= ~(1<<1);
 		vbi_dab_dsp_write(st, ADDR_WATCHDOG, temp32);
 		break;
+	case REG_SATURATION_MUTING_OCCURRENCE:
+		if(val<0 || val>4095){
+			val=4095;
+			break;
+		}
+		temp32 = vbi_dab_dsp_read(st, ADDR_WATCHDOG) & ~(0xfff<<2);
+		temp32 += (u32)val << 2;
+		vbi_dab_dsp_write(st, ADDR_WATCHDOG, temp32);
+		break;
 //	case REG_PPS_SRC_INT_N_EXT:
 //		if(val<0 || val>1){
 //			ret = -EINVAL;
@@ -871,6 +881,9 @@ static ssize_t vbi_dab_dsp_show(struct device *dev,
 	case REG_WATCHDOG_TRIGGER:
 		val = (vbi_dab_dsp_read(st, ADDR_WATCHDOG) >>1) & 1;
 		break;
+	case REG_SATURATION_MUTING_OCCURRENCE:
+		val = (vbi_dab_dsp_read(st, ADDR_WATCHDOG) >>2) & 0xFFF;
+		break;
 //	case REG_DEMOD_PHASE_ERR:
 //		val = (int32_t)((int16_t)vbi_dab_dsp_read(st, ADDR_DEMOD_PHASE_ERR));
 //		break;
@@ -1116,6 +1129,11 @@ static IIO_DEVICE_ATTR(watchdog_trigger, S_IRUGO | S_IWUSR,
 			vbi_dab_dsp_store,
 			REG_WATCHDOG_TRIGGER);
 
+static IIO_DEVICE_ATTR(saturation_muting_occurrence, S_IRUGO | S_IWUSR,
+			vbi_dab_dsp_show,
+			vbi_dab_dsp_store,
+			REG_SATURATION_MUTING_OCCURRENCE);
+
 //static IIO_DEVICE_ATTR(demod_phase_err, S_IRUGO,
 //			vbi_dab_dsp_show,
 //			vbi_dab_dsp_store,
@@ -1216,6 +1234,9 @@ static struct attribute *vbi_dab_dsp_attributes[] = {
 	&iio_dev_attr_adc_ber_alternate.dev_attr.attr,
 	&iio_dev_attr_adc_ber_checker.dev_attr.attr,
 	&iio_dev_attr_demod_source_channel.dev_attr.attr,
+	&iio_dev_attr_watchdog_enable.dev_attr.attr,
+	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
+	&iio_dev_attr_saturation_muting_occurrence.dev_attr.attr,
 //	&iio_dev_attr_demod_phase_err.dev_attr.attr,
 //	&iio_dev_attr_demod_spwr.dev_attr.attr,
 //	&iio_dev_attr_demod_npwr.dev_attr.attr,
