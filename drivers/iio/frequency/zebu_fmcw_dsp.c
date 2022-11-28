@@ -110,12 +110,19 @@ enum chan_num{
 	CH_PRF_PULSE_POS,
 	CH_PRF_PULSE_NEG,
   	CH_RX_FREQ,
+	CH_RX_FREQ_10G,
   	CH_RX_DECIMATION,
+	CH_RX_DECIMATION_10G,
+	CH_RX_STREAM_ENABLE_10G,
   	CH_RX_BURST_PERIOD,
   	CH_RX_BURST_LENGTH,
+  	CH_RX_BURST_LENGTH_10G,
   	CH_RX_BURST_OFFSET,
+  	CH_RX_BURST_OFFSET_10G,
   	CH_RX_DDS_RESET_OFFSET,
+	CH_RX_DDS_RESET_OFFSET_10G,
   	CH_RX_OVERFLOWS,
+	CH_RX_CHANNEL_ENABLE_10G,
 	CH_PPS_DIRECTION_OUT_N_IN,
 	CH_PPS_CLK_ERROR,
 	CH_PPS_CLK_ERROR_NS,
@@ -128,7 +135,7 @@ enum chan_num{
 	CH_PPS_DELAY,
 	CH_GPSDO_LOCKED,
 	CH_PPS_LOSS_OF_SIGNAL,
-	CH_DSP_VERSION
+	CH_DSP_VERSION,
 };
 
 struct zebu_fmcw_dsp_state {
@@ -393,6 +400,56 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_RX_DDS_RESET_OFFSET, val);
 		break;
 
+	case CH_RX_FREQ_10G:
+    		temp64 = (int64_t)val  << CHIRP_DDS_PHASEWIDTH;
+    		temp32 = (int32_t)div_s64(temp64,st->fs_if_adc);
+		zebu_fmcw_dsp_write(st, ADDR_RX_DDS_INC_10G, temp32);
+		break;
+
+	case CH_RX_DECIMATION_10G:
+		if(val>64)
+			val = 64;
+		val >>= 1;
+		temp32 = 0;
+		while(val>0){ // LOG2
+			val >>= 1;
+			temp32++;
+		}
+		temp32 &= 0x7;
+		temp32 |= zebu_fmcw_dsp_read(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G) & ~0x7;
+		zebu_fmcw_dsp_write(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G, temp32);
+		break;
+
+  	case CH_RX_BURST_LENGTH_10G:
+		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_LENGTH_10G, val);
+		break;
+
+  	case CH_RX_BURST_OFFSET_10G:
+		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_OFFSET_10G, val);
+		break;
+
+	case CH_RX_DDS_RESET_OFFSET_10G:
+		zebu_fmcw_dsp_write(st, ADDR_RX_DDS_RESET_OFFSET_10G, val);
+		break;
+
+	case CH_RX_CHANNEL_ENABLE_10G:
+		if(val<0 || val>255){
+			ret = -EINVAL;
+			break;
+		}
+		zebu_fmcw_dsp_write(st, ADDR_RX_CHANNEL_ENABLE_10G, val);
+		break;
+
+	case CH_RX_STREAM_ENABLE_10G:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G) & ~(1<<3);
+		temp32 += (uint32_t)val << 3;
+		zebu_fmcw_dsp_write(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G, temp32);
+		break;
+
 	case CH_PPS_DIRECTION_OUT_N_IN:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -606,6 +663,37 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 
 	case CH_RX_OVERFLOWS:
 		val = zebu_fmcw_dsp_read(st, ADDR_RX_OVERFLOWS);
+		break;
+
+	case CH_RX_FREQ_10G:
+		temp64 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_RX_DDS_INC_10G);
+		temp64 = temp64 * st->fs_if_adc;
+		val = (int32_t)(temp64 >> CHIRP_DDS_PHASEWIDTH);
+		break;
+
+	case CH_RX_DECIMATION_10G:
+		temps32 = zebu_fmcw_dsp_read(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G) & 0x7;
+		val = 1<<temps32;
+		break;
+		
+  	case CH_RX_BURST_LENGTH_10G:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_LENGTH_10G);
+		break;
+
+  	case CH_RX_BURST_OFFSET_10G:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_OFFSET_10G);
+		break;
+
+	case CH_RX_DDS_RESET_OFFSET_10G:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_DDS_RESET_OFFSET_10G);
+		break;
+
+	case CH_RX_CHANNEL_ENABLE_10G:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_CHANNEL_ENABLE_10G);
+		break;
+
+	case CH_RX_STREAM_ENABLE_10G:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G) >> 3) & 1;
 		break;
 
 	case CH_PPS_DIRECTION_OUT_N_IN:
@@ -831,6 +919,41 @@ static IIO_DEVICE_ATTR(rx_overflows, S_IRUGO,
 			zebu_fmcw_dsp_store,
 			CH_RX_OVERFLOWS);
 
+static IIO_DEVICE_ATTR(rx_frequency_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_FREQ_10G);
+
+static IIO_DEVICE_ATTR(rx_decimation_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_DECIMATION_10G);
+
+static IIO_DEVICE_ATTR(rx_burst_length_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_BURST_LENGTH_10G);
+
+static IIO_DEVICE_ATTR(rx_burst_offset_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_BURST_OFFSET_10G);
+
+static IIO_DEVICE_ATTR(rx_dds_reset_offset_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_DDS_RESET_OFFSET_10G);
+
+static IIO_DEVICE_ATTR(rx_channel_enable_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_CHANNEL_ENABLE_10G);
+
+static IIO_DEVICE_ATTR(rx_en_streaming_10g, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_STREAM_ENABLE_10G);
+
 static IIO_DEVICE_ATTR(pps_direction_out_n_in, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -895,9 +1018,6 @@ static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
 			CH_DSP_VERSION);
-
-
-
 static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_tx_chirp_up_ramp_end.dev_attr.attr,
 	&iio_dev_attr_tx_chirp_up_hold_end.dev_attr.attr,
@@ -930,6 +1050,13 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_burst_offset.dev_attr.attr,
 	&iio_dev_attr_rx_dds_reset_offset.dev_attr.attr,
 	&iio_dev_attr_rx_overflows.dev_attr.attr,
+	&iio_dev_attr_rx_frequency_10g.dev_attr.attr,
+	&iio_dev_attr_rx_decimation_10g.dev_attr.attr,
+	&iio_dev_attr_rx_burst_length_10g.dev_attr.attr,
+	&iio_dev_attr_rx_burst_offset_10g.dev_attr.attr,
+	&iio_dev_attr_rx_dds_reset_offset_10g.dev_attr.attr,
+	&iio_dev_attr_rx_channel_enable_10g.dev_attr.attr,
+	&iio_dev_attr_rx_en_streaming_10g.dev_attr.attr,
 	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,
 	&iio_dev_attr_pps_clk_error.dev_attr.attr,
 	&iio_dev_attr_pps_clk_error_ns.dev_attr.attr,
