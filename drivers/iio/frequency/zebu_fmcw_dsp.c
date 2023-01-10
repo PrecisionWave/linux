@@ -109,8 +109,8 @@ enum chan_num{
 	CH_RX5TO8_RF_GATE_CTRL_NEG,
 	CH_PRF_PULSE_POS,
 	CH_PRF_PULSE_NEG,
-	CH_DSP_CH1_RX_SOURCE_SEL,
-	CH_DSP_CH2_RX_SOURCE_SEL,
+	CH_RX_CH1_SELECTION,
+	CH_RX_CH2_SELECTION,
   	CH_RX_FREQ,
 	CH_RX_FREQ_10G,
   	CH_RX_DECIMATION,
@@ -368,23 +368,23 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_PRF_PULSE_NEG, (uint32_t)val);
 		break;
 
-	case CH_DSP_CH1_RX_SOURCE_SEL:
-		if(val<0 || val>7){
+	case CH_RX_CH1_SELECTION:
+		if(val<1 || val>8){
 			ret = -EINVAL;
 			break;
 		}
 		temp32 = zebu_fmcw_dsp_read(st, ADDR_RX_SOURCE_SEL) & ~0x7;
-		temp32 |= val & 0x7;
+		temp32 |= (val-1) & 0x7;
 		zebu_fmcw_dsp_write(st, ADDR_RX_SOURCE_SEL, temp32);
 		break;
 
-	case CH_DSP_CH2_RX_SOURCE_SEL:
-		if(val<0 || val>7){
+	case CH_RX_CH2_SELECTION:
+		if(val<1 || val>8){
 			ret = -EINVAL;
 			break;
 		}
 		temp32 = zebu_fmcw_dsp_read(st, ADDR_RX_SOURCE_SEL) & ~(0x7 << 3);
-		temp32 |= (val & 0x7) << 3;
+		temp32 |= ((val-1) & 0x7) << 3;
 		zebu_fmcw_dsp_write(st, ADDR_RX_SOURCE_SEL, temp32);
 		break;
 
@@ -656,12 +656,12 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		val = zebu_fmcw_dsp_read(st, ADDR_PRF_PULSE_NEG);
 		break;
 
-	case CH_DSP_CH1_RX_SOURCE_SEL:
-		val = zebu_fmcw_dsp_read(st, ADDR_RX_SOURCE_SEL) & 0x7;
+	case CH_RX_CH1_SELECTION:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_SOURCE_SEL) & 0x7) + 1;
 		break;
 
-	case CH_DSP_CH2_RX_SOURCE_SEL:
-		val = (zebu_fmcw_dsp_read(st, ADDR_RX_SOURCE_SEL) >> 3) & 0x7;
+	case CH_RX_CH2_SELECTION:
+		val = ((zebu_fmcw_dsp_read(st, ADDR_RX_SOURCE_SEL) >> 3) & 0x7) + 1;
 		break;
 
 	case CH_RX_FREQ:
@@ -914,15 +914,15 @@ static IIO_DEVICE_ATTR(prf_pulse_neg, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_store,
 			CH_PRF_PULSE_NEG);
 
-static IIO_DEVICE_ATTR(dsp_ch1_rx_sel, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(rx_ch1_selection, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
-			CH_DSP_CH1_RX_SOURCE_SEL);
+			CH_RX_CH1_SELECTION);
 
-static IIO_DEVICE_ATTR(dsp_ch2_rx_sel, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(rx_ch2_selection, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
-			CH_DSP_CH2_RX_SOURCE_SEL);
+			CH_RX_CH2_SELECTION);
 
 static IIO_DEVICE_ATTR(rx_frequency, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
@@ -1083,8 +1083,8 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx5to8_rf_gate_ctrl_neg.dev_attr.attr,
 	&iio_dev_attr_prf_pulse_pos.dev_attr.attr,
 	&iio_dev_attr_prf_pulse_neg.dev_attr.attr,
-	&iio_dev_attr_dsp_ch1_rx_sel.dev_attr.attr,
-	&iio_dev_attr_dsp_ch2_rx_sel.dev_attr.attr,
+	&iio_dev_attr_rx_ch1_selection.dev_attr.attr,
+	&iio_dev_attr_rx_ch2_selection.dev_attr.attr,
 	&iio_dev_attr_rx_frequency.dev_attr.attr,
 	&iio_dev_attr_rx_decimation.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period.dev_attr.attr,
