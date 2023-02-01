@@ -83,6 +83,7 @@
 #define ADDR_MARKER_A_CLKS_MSB		71*4
 #define ADDR_MARKER_B_CLKS_LSB		72*4
 #define ADDR_MARKER_B_CLKS_MSB		73*4
+#define ADDR_MARKER_SIMULATION		74*4
 
 enum chan_num{
   	CH_TX_CHIRP_UP_RAMP_END,
@@ -125,6 +126,7 @@ enum chan_num{
 	CH_RX_DDS_RESET_OFFSET_10G,
   	CH_RX_OVERFLOWS,
 	CH_RX_CHANNEL_ENABLE_10G,
+	CH_MARKER_SIM,
 	CH_PPS_DIRECTION_OUT_N_IN,
 	CH_PPS_CLK_ERROR,
 	CH_PPS_CLK_ERROR_NS,
@@ -472,6 +474,10 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G, temp32);
 		break;
 
+	case CH_MARKER_SIM:
+		zebu_fmcw_dsp_write(st, ADDR_MARKER_SIMULATION, val);
+		break;
+
 	case CH_PPS_DIRECTION_OUT_N_IN:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -724,6 +730,10 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 
 	case CH_RX_STREAM_ENABLE_10G:
 		val = (zebu_fmcw_dsp_read(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G) >> 3) & 1;
+		break;
+
+	case CH_MARKER_SIM:
+		val = zebu_fmcw_dsp_read(st, ADDR_MARKER_SIMULATION);
 		break;
 
 	case CH_PPS_DIRECTION_OUT_N_IN:
@@ -994,6 +1004,11 @@ static IIO_DEVICE_ATTR(rx_en_streaming_10g, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_store,
 			CH_RX_STREAM_ENABLE_10G);
 
+static IIO_DEVICE_ATTR(marker_simulation, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_MARKER_SIM);
+
 static IIO_DEVICE_ATTR(pps_direction_out_n_in, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -1099,6 +1114,7 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_dds_reset_offset_10g.dev_attr.attr,
 	&iio_dev_attr_rx_channel_enable_10g.dev_attr.attr,
 	&iio_dev_attr_rx_en_streaming_10g.dev_attr.attr,
+	&iio_dev_attr_marker_simulation.dev_attr.attr,
 	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,
 	&iio_dev_attr_pps_clk_error.dev_attr.attr,
 	&iio_dev_attr_pps_clk_error_ns.dev_attr.attr,
