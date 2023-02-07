@@ -30,6 +30,9 @@
 
 #define LMK04805_GET_CLK_FORMAT_REG(ch)		(ch/4)+6
 
+#define LMK04805_GET_CLK_OSCIN_SEL_REG(ch)	(ch/2)
+#define LMK04805_GET_CLK_OSCIN_SEL(x)			((x >> 30) & 1)
+
 #define LMK04805_GET_CLK_DIVIDER_REG(ch)	(ch/2)
 #define LMK04805_GET_CLK_DIVIDER(x)			((x >> 5) & 0x7FF)
 #define LMK04805_SET_CLK_DIVIDER(x)			((x & 0x7FF) << 5)
@@ -119,8 +122,7 @@ struct lmk04805_channel_spec {
 //	bool			divider_output_invert_en;
 //	bool			sync_ignore_en;
 //	bool			low_power_mode_en;
-				 /* CH0..CH3 VCXO, CH4..CH9 VCO2 */
-//	bool			use_alt_clock_src;
+	bool			oscin_sel; // For CLKout 6/7/8/9 only
 	bool			powerdown;
 	// enum outp_drv_mode	driver_mode;
 //	uint8_t			divider_phase;
@@ -146,8 +148,8 @@ struct lmk04805_platform_data {
 //	bool						CLKout6_7_PD;
 //	bool						CLKout8_9_PD;
 //	bool						CLKout10_11_PD;
-//	uint8_t						CLKout6_7_OSCin_Sel;
-//	uint8_t						CLKout8_9_OSCin_Sel;
+//	bool						CLKout6_7_OSCin_Sel;
+//	bool						CLKout8_9_OSCin_Sel;
 //	uint16_t 					CLKout0_1_DIV;
 //	uint16_t 					CLKout2_3_DIV;
 //	uint16_t 					CLKout4_5_DIV;
@@ -172,14 +174,14 @@ struct lmk04805_platform_data {
 //	uint8_t						CLKoutX_Y_ADLY;
 //
 //	/* Osc Buffer Control */
-//	uint8_t						OSCout1_LVPECL_AMP;
-//	uint8_t						OSCout0_TYPE;
-//	bool						EN_OSCout1;
-//	bool						EN_OSCout0;
-//	bool						OSCout1_MUX;
-//	bool						OSCout0_MUX;
+	uint8_t						OSCout1_LVPECL_AMP;
+	uint8_t						OSCout0_TYPE;
+	bool						EN_OSCout1;
+	bool						EN_OSCout0;
+	bool						OSCout1_MUX;
+	bool						OSCout0_MUX;
 //	bool						PD_OSCin;
-//	uint8_t						OSCout_DIV;
+	uint8_t						OSCout_DIV;
 //
 //	/* Mode */
 	bool						VCO_MUX;
@@ -216,7 +218,7 @@ struct lmk04805_platform_data {
 //	uint8_t						Status_CLKin0_TYPE;
 //	bool						DISABLE_DLD1_DET;
 //	uint8_t						Status_CLKin0_MUX;
-	uint8_t						CLKin_SELECT_MODE;
+//	uint8_t						CLKin_SELECT_MODE;
 //	bool						CLKin_Sel_INV;
 //
 //	/* CLKin Control */
@@ -265,7 +267,7 @@ struct lmk04805_platform_data {
 	uint16_t					PLL1_N;
 //	uint8_t						OSCin_FREQ;
 //	bool						PLL2_FAST_PDF;
-	uint32_t					PLL2_N_CAL;
+//	uint32_t					PLL2_N_CAL;
 	uint8_t						PLL2_P;
 	uint8_t						VCO_MODE;
 	uint32_t					PLL2_N;
@@ -410,7 +412,7 @@ struct lmk04805_state {
 	struct clk*			clks[LMK04805_NUM_CHAN];
 
 	uint8_t		clk_output_format[LMK04805_NUM_CHAN];
-	unsigned long	vcxo_freq;
+	unsigned long	oscin_freq;
 	unsigned long	vco_freq;
 	unsigned long	vco_out_freq;
 
@@ -620,6 +622,7 @@ static void recalc_vco_freq(struct iio_dev *indio_dev)
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	struct lmk04805_platform_data *pdata = st->pdata;
 
+	st->oscin_freq = pdata->vcxo_freq;
 	st->vco_freq = (pdata->vcxo_freq * (pdata->EN_PLL2_REF_2X ? 2 : 1)
 			/ pdata->PLL2_R) * (pdata->VCO_MUX ? pdata->VCO_DIV : 1)
 			* pdata->PLL2_P * pdata->PLL2_N;
@@ -1041,7 +1044,7 @@ static int lmk04805_read_raw(struct iio_dev *indio_dev,
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
-	uint32_t reg;
+	uint32_t reg, reg2;
 
 	mutex_lock(&indio_dev->mlock);
 	switch(m){
@@ -1060,10 +1063,19 @@ static int lmk04805_read_raw(struct iio_dev *indio_dev,
 		ret = IIO_VAL_INT;
 		break;
 	case IIO_CHAN_INFO_FREQUENCY:
+		ret = lmk04805_read(indio_dev, LMK04805_GET_CLK_OSCIN_SEL_REG(chan->channel), &reg2);
+		if(ret < 0)
+			break;
+
 		ret = lmk04805_read(indio_dev, LMK04805_GET_CLK_DIVIDER_REG(chan->channel), &reg);
 		if(ret < 0)
 			break;
-		*val = st->vco_out_freq / LMK04805_GET_CLK_DIVIDER(reg);
+
+		if (LMK04805_GET_CLK_OSCIN_SEL(reg2))
+			*val = st->oscin_freq / LMK04805_GET_CLK_DIVIDER(reg);
+		else
+			*val = st->vco_out_freq / LMK04805_GET_CLK_DIVIDER(reg);
+		
 		ret = IIO_VAL_INT;
 		break;
 	default:
@@ -1391,6 +1403,14 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	recalc_vco_freq(indio_dev);
 
 	// TODO: let's do it that way for all attibutes that are parsed from the devicetree!
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 16, 3, pdata->OSCout_DIV);
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 20, 1, pdata->OSCout0_MUX);
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 21, 1, pdata->OSCout1_MUX);
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 22, 1, pdata->EN_OSCout0);
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 23, 1, pdata->EN_OSCout1);
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 24, 4, pdata->OSCout0_TYPE);
+	lmk04805_inject_register_value(&st->pdata->reg_map[10], 30, 2, pdata->OSCout1_LVPECL_AMP);
+
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
 
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
@@ -1420,6 +1440,7 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 			else
 				lmk04805_set_clk_format(i, st->clk_output_format[i], &st->pdata->reg_map[LMK04805_GET_CLK_FORMAT_REG(i)]);
 
+			lmk04805_inject_register_value(&st->pdata->reg_map[i>>1], 30, 1, pdata->channels[i].oscin_sel ? 1 : 0);
 		}
 	}
 
@@ -1612,6 +1633,47 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 		else{ pdata->PLL2_N = attr; }
 	}
 
+	/* setting: OSCout_DIV */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,oscout-div", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,oscout-div=0\n");
+		pdata->OSCout_DIV = 0;
+	}
+	else{
+		pdata->OSCout_DIV = attr;
+	}
+
+	/* OSCout Mux */
+	pdata->OSCout0_MUX = of_property_read_bool(np, "lmk,oscout0-mux");
+	pdata->OSCout1_MUX = of_property_read_bool(np, "lmk,oscout1-mux");
+
+	/* OSCout Enables */
+	pdata->EN_OSCout0 = of_property_read_bool(np, "lmk,en-oscout0");
+	pdata->EN_OSCout1 = of_property_read_bool(np, "lmk,en-oscout1");
+
+	/* setting: OSCout0_TYPE */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,oscout0-type", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,oscout0-type=0\n");
+		pdata->OSCout0_TYPE = 0;
+	}
+	else{
+		pdata->OSCout0_TYPE = attr;
+	}
+
+	/* setting: OSCout1_LVPECL_AMP */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,oscout1-lvpecl-amp", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,oscout1-lvpecl-amp=0\n");
+		pdata->OSCout1_LVPECL_AMP = 0;
+	}
+	else{
+		pdata->OSCout1_LVPECL_AMP = attr;
+	}
+
 	/* Output Channel Configuration */
 	for_each_child_of_node(np, chan_np)
 		cnt++;
@@ -1632,6 +1694,15 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 
 		/* channel setting: powerdown */
 		pdata->channels[cnt].powerdown = of_property_read_bool(chan_np, "lmk,powerdown");
+
+		/* channel setting: oscin_sel */
+		pdata->channels[cnt].oscin_sel = of_property_read_bool(chan_np, "lmk,oscin-sel");
+		if (pdata->channels[cnt].oscin_sel) {
+			if (pdata->channels[cnt].channel_num < 6)
+				dev_warn(dev, "lmk,oscin-sel not available for channel %d!", pdata->channels[cnt].channel_num);
+			if (pdata->channels[cnt].channel_num > 9)
+				dev_warn(dev, "lmk,oscin-sel not available for channel %d!", pdata->channels[cnt].channel_num);
+		}
 
 		/* channel setting: CLKoutX_TYPE */
 		attr = 0;
