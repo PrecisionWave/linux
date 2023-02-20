@@ -46,7 +46,6 @@
 
 #define ADDR_RX_DDS_INC			16*4
 #define ADDR_RX_DECIMATION		17*4
-#define ADDR_RX_BURST_PERIOD		18*4
 #define ADDR_RX_BURST_LENGTH		19*4
 #define ADDR_RX_OVERFLOWS		20*4
 #define ADDR_RX_BURST_OFFSET		21*4
@@ -66,9 +65,7 @@
 
 #define ADDR_RX_DDS_INC_10G		48*4
 #define ADDR_RX_STREAM_ENABLE_DECIMATION_10G		49*4
-//#define ADDR_RX_BURST_PERIOD_10G	50*4
 #define ADDR_RX_BURST_LENGTH_10G	51*4
-//#define ADDR_RX_OVERFLOWS_10G		52*4
 #define ADDR_RX_BURST_OFFSET_10G	53*4
 #define ADDR_RX_DDS_RESET_OFFSET_10G	54*4
 #define ADDR_RX_CHANNEL_ENABLE_10G	55*4
@@ -117,7 +114,6 @@ enum chan_num{
   	CH_RX_DECIMATION,
 	CH_RX_DECIMATION_10G,
 	CH_RX_STREAM_ENABLE_10G,
-  	CH_RX_BURST_PERIOD,
   	CH_RX_BURST_LENGTH,
   	CH_RX_BURST_LENGTH_10G,
   	CH_RX_BURST_OFFSET,
@@ -408,10 +404,6 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		zebu_fmcw_dsp_write(st, ADDR_RX_DECIMATION, temp32);
 		break;
 
-	case CH_RX_BURST_PERIOD:
-		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_PERIOD, val);
-		break;
-
 	case CH_RX_BURST_LENGTH:
 		zebu_fmcw_dsp_write(st, ADDR_RX_BURST_LENGTH, val);
 		break;
@@ -681,10 +673,6 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		val = 1<<temps32;
 		break;
 
-	case CH_RX_BURST_PERIOD:
-		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_PERIOD);
-		break;
-
 	case CH_RX_BURST_LENGTH:
 		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_LENGTH);
 		break;
@@ -944,11 +932,6 @@ static IIO_DEVICE_ATTR(rx_decimation, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_store,
 			CH_RX_DECIMATION);
 
-static IIO_DEVICE_ATTR(rx_burst_period, S_IRUGO | S_IWUSR,
-			zebu_fmcw_dsp_show,
-			zebu_fmcw_dsp_store,
-			CH_RX_BURST_PERIOD);
-
 static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -1102,7 +1085,6 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_ch2_selection.dev_attr.attr,
 	&iio_dev_attr_rx_frequency.dev_attr.attr,
 	&iio_dev_attr_rx_decimation.dev_attr.attr,
-	&iio_dev_attr_rx_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_burst_offset.dev_attr.attr,
 	&iio_dev_attr_rx_dds_reset_offset.dev_attr.attr,
