@@ -1,6 +1,6 @@
 {
   "clocks": {
-    "deviceClock_kHz": 38400,
+    "deviceClock_kHz": 122880,
     "clkPllVcoFreq_daHz": 884736000,
     "clkPllHsDiv": 0,
     "clkPllMode": 0,
@@ -37,9 +37,9 @@
     "rxInitChannelMask": 195,
     "rxChannelCfg": [ {
         "profile": {
-          "primarySigBandwidth_Hz": 1008000,
-          "rxOutputRate_Hz": 1920000,
-          "rxInterfaceSampleRate_Hz": 1920000,
+          "primarySigBandwidth_Hz": 9000000,
+          "rxOutputRate_Hz": 15360000,
+          "rxInterfaceSampleRate_Hz": 15360000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
@@ -55,6 +55,7 @@
           "channelType": 1,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -69,9 +70,9 @@
               "decBy2Blk47En": 0
             },
             "rxWbDecTop": {
-              "decBy2Blk25En": 1,
-              "decBy2Blk27En": 1,
-              "decBy2Blk29En": 1,
+              "decBy2Blk25En": 0,
+              "decBy2Blk27En": 0,
+              "decBy2Blk29En": 0,
               "decBy2Blk31En": 1,
               "decBy2Blk33En": 1,
               "wbLpfBlk33p1En": 0
@@ -101,7 +102,7 @@
                 "rxNbNcoEn": 1,
                 "rxNbNcoConfig": {
                   "freq": 0,
-                  "sampleFreq": 1920000,
+                  "sampleFreq": 15360000,
                   "phase": 0,
                   "realOut": 0
                 }
@@ -133,9 +134,9 @@
             "minGainIndex": 0
           },
           "rxSsiConfig": {
-            "ssiType": 1,
+            "ssiType": 2,
             "ssiDataFormatSel": 4,
-            "numLaneSel": 0,
+            "numLaneSel": 1,
             "strobeType": 0,
             "lsbFirst": 0,
             "qFirst": 0,
@@ -147,15 +148,15 @@
             "lvdsRxClkInversionEn": false,
             "cmosDdrPosClkEn": false,
             "cmosClkInversionEn": false,
-            "ddrEn": false,
+            "ddrEn": true,
             "rxMaskStrobeEn": false
           }
         }
       }, {
         "profile": {
-          "primarySigBandwidth_Hz": 1008000,
-          "rxOutputRate_Hz": 1920000,
-          "rxInterfaceSampleRate_Hz": 1920000,
+          "primarySigBandwidth_Hz": 9000000,
+          "rxOutputRate_Hz": 15360000,
+          "rxInterfaceSampleRate_Hz": 15360000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
@@ -171,6 +172,7 @@
           "channelType": 2,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -185,9 +187,9 @@
               "decBy2Blk47En": 0
             },
             "rxWbDecTop": {
-              "decBy2Blk25En": 1,
-              "decBy2Blk27En": 1,
-              "decBy2Blk29En": 1,
+              "decBy2Blk25En": 0,
+              "decBy2Blk27En": 0,
+              "decBy2Blk29En": 0,
               "decBy2Blk31En": 1,
               "decBy2Blk33En": 1,
               "wbLpfBlk33p1En": 0
@@ -217,7 +219,7 @@
                 "rxNbNcoEn": 1,
                 "rxNbNcoConfig": {
                   "freq": 0,
-                  "sampleFreq": 1920000,
+                  "sampleFreq": 15360000,
                   "phase": 0,
                   "realOut": 0
                 }
@@ -249,9 +251,9 @@
             "minGainIndex": 0
           },
           "rxSsiConfig": {
-            "ssiType": 1,
+            "ssiType": 2,
             "ssiDataFormatSel": 4,
-            "numLaneSel": 0,
+            "numLaneSel": 1,
             "strobeType": 0,
             "lsbFirst": 0,
             "qFirst": 0,
@@ -263,7 +265,7 @@
             "lvdsRxClkInversionEn": false,
             "cmosDdrPosClkEn": false,
             "cmosClkInversionEn": false,
-            "ddrEn": false,
+            "ddrEn": true,
             "rxMaskStrobeEn": false
           }
         }
@@ -287,6 +289,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -403,6 +406,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -501,9 +505,9 @@
         }
       }, {
         "profile": {
-          "primarySigBandwidth_Hz": 1008000,
-          "rxOutputRate_Hz": 1920000,
-          "rxInterfaceSampleRate_Hz": 1920000,
+          "primarySigBandwidth_Hz": 9000000,
+          "rxOutputRate_Hz": 15360000,
+          "rxInterfaceSampleRate_Hz": 15360000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
@@ -519,6 +523,7 @@
           "channelType": 64,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -533,9 +538,9 @@
               "decBy2Blk47En": 0
             },
             "rxWbDecTop": {
-              "decBy2Blk25En": 1,
-              "decBy2Blk27En": 1,
-              "decBy2Blk29En": 1,
+              "decBy2Blk25En": 0,
+              "decBy2Blk27En": 0,
+              "decBy2Blk29En": 0,
               "decBy2Blk31En": 1,
               "decBy2Blk33En": 1,
               "wbLpfBlk33p1En": 0
@@ -597,9 +602,9 @@
             "minGainIndex": 0
           },
           "rxSsiConfig": {
-            "ssiType": 1,
+            "ssiType": 2,
             "ssiDataFormatSel": 4,
-            "numLaneSel": 0,
+            "numLaneSel": 1,
             "strobeType": 0,
             "lsbFirst": 0,
             "qFirst": 0,
@@ -611,15 +616,15 @@
             "lvdsRxClkInversionEn": false,
             "cmosDdrPosClkEn": false,
             "cmosClkInversionEn": false,
-            "ddrEn": false,
+            "ddrEn": true,
             "rxMaskStrobeEn": false
           }
         }
       }, {
         "profile": {
-          "primarySigBandwidth_Hz": 1008000,
-          "rxOutputRate_Hz": 1920000,
-          "rxInterfaceSampleRate_Hz": 1920000,
+          "primarySigBandwidth_Hz": 9000000,
+          "rxOutputRate_Hz": 15360000,
+          "rxInterfaceSampleRate_Hz": 15360000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
@@ -635,6 +640,7 @@
           "channelType": 128,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -649,9 +655,9 @@
               "decBy2Blk47En": 0
             },
             "rxWbDecTop": {
-              "decBy2Blk25En": 1,
-              "decBy2Blk27En": 1,
-              "decBy2Blk29En": 1,
+              "decBy2Blk25En": 0,
+              "decBy2Blk27En": 0,
+              "decBy2Blk29En": 0,
               "decBy2Blk31En": 1,
               "decBy2Blk33En": 1,
               "wbLpfBlk33p1En": 0
@@ -713,9 +719,9 @@
             "minGainIndex": 0
           },
           "rxSsiConfig": {
-            "ssiType": 1,
+            "ssiType": 2,
             "ssiDataFormatSel": 4,
-            "numLaneSel": 0,
+            "numLaneSel": 1,
             "strobeType": 0,
             "lsbFirst": 0,
             "qFirst": 0,
@@ -727,7 +733,7 @@
             "lvdsRxClkInversionEn": false,
             "cmosDdrPosClkEn": false,
             "cmosClkInversionEn": false,
-            "ddrEn": false,
+            "ddrEn": true,
             "rxMaskStrobeEn": false
           }
         }
@@ -751,6 +757,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -867,6 +874,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -968,9 +976,9 @@
   "tx": {
     "txInitChannelMask": 12,
     "txProfile": [ {
-        "primarySigBandwidth_Hz": 1008000,
-        "txInputRate_Hz": 1920000,
-        "txInterfaceSampleRate_Hz": 1920000,
+        "primarySigBandwidth_Hz": 9000000,
+        "txInputRate_Hz": 15360000,
+        "txInterfaceSampleRate_Hz": 15360000,
         "txOffsetLo_kHz": 0,
         "validDataDelay": 0,
         "txBbf3dBCorner_kHz": 50000,
@@ -996,9 +1004,9 @@
             "txPreProcWbNbPfirQBankSel": 1
           },
           "txWbIntTop": {
-            "txInterpBy2Blk30En": 1,
-            "txInterpBy2Blk28En": 1,
-            "txInterpBy2Blk26En": 1,
+            "txInterpBy2Blk30En": 0,
+            "txInterpBy2Blk28En": 0,
+            "txInterpBy2Blk26En": 0,
             "txInterpBy2Blk24En": 1,
             "txInterpBy2Blk22En": 1,
             "txWbLpfBlk22p1En": 0
@@ -1045,9 +1053,9 @@
           }
         },
         "txSsiConfig": {
-          "ssiType": 1,
+          "ssiType": 2,
           "ssiDataFormatSel": 4,
-          "numLaneSel": 0,
+          "numLaneSel": 1,
           "strobeType": 0,
           "lsbFirst": 0,
           "qFirst": 0,
@@ -1059,13 +1067,13 @@
           "lvdsRxClkInversionEn": false,
           "cmosDdrPosClkEn": false,
           "cmosClkInversionEn": false,
-          "ddrEn": false,
+          "ddrEn": true,
           "rxMaskStrobeEn": false
         }
       }, {
-        "primarySigBandwidth_Hz": 1008000,
-        "txInputRate_Hz": 1920000,
-        "txInterfaceSampleRate_Hz": 1920000,
+        "primarySigBandwidth_Hz": 9000000,
+        "txInputRate_Hz": 15360000,
+        "txInterfaceSampleRate_Hz": 15360000,
         "txOffsetLo_kHz": 0,
         "validDataDelay": 0,
         "txBbf3dBCorner_kHz": 50000,
@@ -1091,9 +1099,9 @@
             "txPreProcWbNbPfirQBankSel": 3
           },
           "txWbIntTop": {
-            "txInterpBy2Blk30En": 1,
-            "txInterpBy2Blk28En": 1,
-            "txInterpBy2Blk26En": 1,
+            "txInterpBy2Blk30En": 0,
+            "txInterpBy2Blk28En": 0,
+            "txInterpBy2Blk26En": 0,
             "txInterpBy2Blk24En": 1,
             "txInterpBy2Blk22En": 1,
             "txWbLpfBlk22p1En": 0
@@ -1140,9 +1148,9 @@
           }
         },
         "txSsiConfig": {
-          "ssiType": 1,
+          "ssiType": 2,
           "ssiDataFormatSel": 4,
-          "numLaneSel": 0,
+          "numLaneSel": 1,
           "strobeType": 0,
           "lsbFirst": 0,
           "qFirst": 0,
@@ -1154,7 +1162,7 @@
           "lvdsRxClkInversionEn": false,
           "cmosDdrPosClkEn": false,
           "cmosClkInversionEn": false,
-          "ddrEn": false,
+          "ddrEn": true,
           "rxMaskStrobeEn": false
         }
       } ]
@@ -1179,7 +1187,7 @@
       "symmetricSel": 0,
       "tapsSel": 3,
       "gainSel": 2,
-      "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -392, -228, 1164, -426, -2275, 3118, 1517, -7492, 4673, 8616, -16569, 2081, 24816, -27732, -11318, 53353, -35059, -44826, 94798, -27039, -110096, 145573, 15827, -224287, 197850, 132551, -432387, 241249, 465740, -1004873, 265939, 4480229, 4480229, 265939, -1004873, 465740, 241249, -432387, 132551, 197850, -224287, 15827, 145573, -110096, -27039, 94798, -44826, -35059, 53353, -11318, -27732, 24816, 2081, -16569, 8616, 4673, -7492, 1517, 3118, -2275, -426, 1164, -228, -392, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+      "coefficients": [ 475, 312, -782, -39, 1201, -777, -1182, 1981, 177, -2874, 1941, 2393, -4416, 225, 5594, -4581, -3668, 8650, -1992, -9342, 9646, 4213, -15137, 6404, 13615, -18199, -2610, 23969, -15142, -17198, 31204, -3269, -34604, 30213, 17955, -49337, 16361, 45636, -53954, -12567, 72920, -40769, -54562, 89506, -4148, -102269, 83183, 57280, -142874, 41767, 139213, -158628, -45955, 231679, -125964, -193870, 320642, -4532, -442087, 390927, 347244, -1055854, 429729, 4391599, 4391599, 429729, -1055854, 347244, 390927, -442087, -4532, 320642, -193870, -125964, 231679, -45955, -158628, 139213, 41767, -142874, 57280, 83183, -102269, -4148, 89506, -54562, -40769, 72920, -12567, -53954, 45636, 16361, -49337, 17955, 30213, -34604, -3269, 31204, -17198, -15142, 23969, -2610, -18199, 13615, 6404, -15137, 4213, 9646, -9342, -1992, 8650, -3668, -4581, 5594, 225, -4416, 2393, 1941, -2874, 177, 1981, -1182, -777, 1201, -39, -782, 312, 0 ]
     },
     "pfirRxWbNbChFilterCoeff_B": {
       "numCoeff": 128,
@@ -1193,7 +1201,7 @@
       "symmetricSel": 0,
       "tapsSel": 3,
       "gainSel": 2,
-      "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -392, -228, 1164, -426, -2275, 3118, 1517, -7492, 4673, 8616, -16569, 2081, 24816, -27732, -11318, 53353, -35059, -44826, 94798, -27039, -110096, 145573, 15827, -224287, 197850, 132551, -432387, 241249, 465740, -1004873, 265939, 4480229, 4480229, 265939, -1004873, 465740, 241249, -432387, 132551, 197850, -224287, 15827, 145573, -110096, -27039, 94798, -44826, -35059, 53353, -11318, -27732, 24816, 2081, -16569, 8616, 4673, -7492, 1517, 3118, -2275, -426, 1164, -228, -392, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+      "coefficients": [ 475, 312, -782, -39, 1201, -777, -1182, 1981, 177, -2874, 1941, 2393, -4416, 225, 5594, -4581, -3668, 8650, -1992, -9342, 9646, 4213, -15137, 6404, 13615, -18199, -2610, 23969, -15142, -17198, 31204, -3269, -34604, 30213, 17955, -49337, 16361, 45636, -53954, -12567, 72920, -40769, -54562, 89506, -4148, -102269, 83183, 57280, -142874, 41767, 139213, -158628, -45955, 231679, -125964, -193870, 320642, -4532, -442087, 390927, 347244, -1055854, 429729, 4391599, 4391599, 429729, -1055854, 347244, 390927, -442087, -4532, 320642, -193870, -125964, 231679, -45955, -158628, 139213, 41767, -142874, 57280, 83183, -102269, -4148, 89506, -54562, -40769, 72920, -12567, -53954, 45636, 16361, -49337, 17955, 30213, -34604, -3269, 31204, -17198, -15142, 23969, -2610, -18199, 13615, 6404, -15137, 4213, 9646, -9342, -1992, 8650, -3668, -4581, 5594, 225, -4416, 2393, 1941, -2874, 177, 1981, -1182, -777, 1201, -39, -782, 312, 0 ]
     },
     "pfirRxWbNbChFilterCoeff_D": {
       "numCoeff": 128,
