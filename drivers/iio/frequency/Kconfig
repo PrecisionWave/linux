@@ -174,6 +174,14 @@ config DDC_DUC
 	  To compile this driver as a module, choose M here: the
 	  module will be called ddc_duc.
 
+config DRAS_FM_DAB_ADC_DAC
+	tristate "DRAS FM+DAB ADC/DAC FPGA-IP driver"
+	help
+	  Say yes here to build support for DRAS FM+DAB ADC/DAC FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called dras_fm_dab_adc_dac.
+
 config VBI_FM_DSP
 	tristate "FM Voice break-in (VBI) FPGA-IP driver"
 	help

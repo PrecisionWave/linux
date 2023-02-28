@@ -28,6 +28,7 @@ obj-$(CONFIG_CF_AXI_DDS_AD9172) += ad9172.o ad917x_drv.o
 obj-$(CONFIG_M2K_DAC) += m2k-dac.o
 obj-$(CONFIG_LMK04805) += lmk04805.o
 obj-$(CONFIG_DDC_DUC) += ddc_duc.o
+obj-$(CONFIG_DRAS_FM_DAB_ADC_DAC) += dras_fm_dab_adc_dac.o
 obj-$(CONFIG_VBI_FM_DSP) += vbi_fm_dsp.o
 obj-$(CONFIG_VBI_FSK_DSP) += vbi_fsk_dsp.o
 obj-$(CONFIG_VBI_DAB_DSP) += vbi_dab_dsp.o
