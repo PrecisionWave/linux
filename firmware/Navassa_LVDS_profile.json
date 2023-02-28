@@ -1,12 +1,12 @@
 {
   "clocks": {
-    "deviceClock_kHz": 38400,
+    "deviceClock_kHz": 122880,
     "clkPllVcoFreq_daHz": 884736000,
     "clkPllHsDiv": 0,
     "clkPllMode": 0,
     "clk1105Div": 2,
     "armClkDiv": 6,
-    "armPowerSavingClkDiv": 1,
+    "armPowerSavingClkDiv": 4,
     "refClockOutEnable": true,
     "auxPllPower": 2,
     "clkPllPower": 2,
@@ -55,6 +55,7 @@
           "channelType": 1,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -171,6 +172,7 @@
           "channelType": 2,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -287,6 +289,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -403,6 +406,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -519,6 +523,7 @@
           "channelType": 64,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -635,6 +640,7 @@
           "channelType": 128,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -751,6 +757,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
@@ -867,6 +874,7 @@
           "channelType": 0,
           "adcType": 1,
           "lpAdcCalMode": 0,
+          "gainTableType": 0,
           "rxDpProfile": {
             "rxNbDecTop": {
               "scicBlk23En": 0,
