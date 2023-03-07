@@ -6,7 +6,7 @@
     "clkPllMode": 0,
     "clk1105Div": 2,
     "armClkDiv": 6,
-    "armPowerSavingClkDiv": 1,
+    "armPowerSavingClkDiv": 4,
     "refClockOutEnable": true,
     "auxPllPower": 2,
     "clkPllPower": 2,

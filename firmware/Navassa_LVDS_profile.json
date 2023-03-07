@@ -37,19 +37,19 @@
     "rxInitChannelMask": 195,
     "rxChannelCfg": [ {
         "profile": {
-          "primarySigBandwidth_Hz": 9000000,
-          "rxOutputRate_Hz": 15360000,
-          "rxInterfaceSampleRate_Hz": 15360000,
+          "primarySigBandwidth_Hz": 40000000,
+          "rxOutputRate_Hz": 61440000,
+          "rxInterfaceSampleRate_Hz": 61440000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
-          "filterOrder": 1,
-          "filterOrderLp": 1,
+          "filterOrder": 2,
+          "filterOrderLp": 2,
           "hpAdcCorner": 20000000,
           "lpAdcCorner": 0,
           "adcClk_kHz": 2211840,
-          "rxCorner3dB_kHz": 40000,
-          "rxCorner3dBLp_kHz": 40000,
+          "rxCorner3dB_kHz": 28200,
+          "rxCorner3dBLp_kHz": 28200,
           "tiaPower": 2,
           "tiaPowerLp": 2,
           "channelType": 1,
@@ -73,8 +73,8 @@
               "decBy2Blk25En": 0,
               "decBy2Blk27En": 0,
               "decBy2Blk29En": 0,
-              "decBy2Blk31En": 1,
-              "decBy2Blk33En": 1,
+              "decBy2Blk31En": 0,
+              "decBy2Blk33En": 0,
               "wbLpfBlk33p1En": 0
             },
             "rxDecTop": {
@@ -102,7 +102,7 @@
                 "rxNbNcoEn": 1,
                 "rxNbNcoConfig": {
                   "freq": 0,
-                  "sampleFreq": 15360000,
+                  "sampleFreq": 61440000,
                   "phase": 0,
                   "realOut": 0
                 }
@@ -110,7 +110,7 @@
               "rxWbNbCompPFir": {
                 "bankSel": 0,
                 "rxWbNbCompPFirInMuxSel": 0,
-                "rxWbNbCompPFirEn": 1
+                "rxWbNbCompPFirEn": 0
               },
               "resamp": {
                 "rxResampEn": 0,
@@ -154,19 +154,19 @@
         }
       }, {
         "profile": {
-          "primarySigBandwidth_Hz": 9000000,
-          "rxOutputRate_Hz": 15360000,
-          "rxInterfaceSampleRate_Hz": 15360000,
+          "primarySigBandwidth_Hz": 40000000,
+          "rxOutputRate_Hz": 61440000,
+          "rxInterfaceSampleRate_Hz": 61440000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
-          "filterOrder": 1,
-          "filterOrderLp": 1,
+          "filterOrder": 2,
+          "filterOrderLp": 2,
           "hpAdcCorner": 20000000,
           "lpAdcCorner": 0,
           "adcClk_kHz": 2211840,
-          "rxCorner3dB_kHz": 40000,
-          "rxCorner3dBLp_kHz": 40000,
+          "rxCorner3dB_kHz": 28200,
+          "rxCorner3dBLp_kHz": 28200,
           "tiaPower": 2,
           "tiaPowerLp": 2,
           "channelType": 2,
@@ -190,8 +190,8 @@
               "decBy2Blk25En": 0,
               "decBy2Blk27En": 0,
               "decBy2Blk29En": 0,
-              "decBy2Blk31En": 1,
-              "decBy2Blk33En": 1,
+              "decBy2Blk31En": 0,
+              "decBy2Blk33En": 0,
               "wbLpfBlk33p1En": 0
             },
             "rxDecTop": {
@@ -219,7 +219,7 @@
                 "rxNbNcoEn": 1,
                 "rxNbNcoConfig": {
                   "freq": 0,
-                  "sampleFreq": 15360000,
+                  "sampleFreq": 61440000,
                   "phase": 0,
                   "realOut": 0
                 }
@@ -227,7 +227,7 @@
               "rxWbNbCompPFir": {
                 "bankSel": 2,
                 "rxWbNbCompPFirInMuxSel": 0,
-                "rxWbNbCompPFirEn": 1
+                "rxWbNbCompPFirEn": 0
               },
               "resamp": {
                 "rxResampEn": 0,
@@ -505,19 +505,19 @@
         }
       }, {
         "profile": {
-          "primarySigBandwidth_Hz": 9000000,
-          "rxOutputRate_Hz": 15360000,
-          "rxInterfaceSampleRate_Hz": 15360000,
+          "primarySigBandwidth_Hz": 40000000,
+          "rxOutputRate_Hz": 61440000,
+          "rxInterfaceSampleRate_Hz": 61440000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
-          "filterOrder": 1,
-          "filterOrderLp": 1,
+          "filterOrder": 2,
+          "filterOrderLp": 2,
           "hpAdcCorner": 50000000,
           "lpAdcCorner": 0,
           "adcClk_kHz": 2211840,
-          "rxCorner3dB_kHz": 100000,
-          "rxCorner3dBLp_kHz": 100000,
+          "rxCorner3dB_kHz": 70710,
+          "rxCorner3dBLp_kHz": 70710,
           "tiaPower": 2,
           "tiaPowerLp": 2,
           "channelType": 64,
@@ -541,8 +541,8 @@
               "decBy2Blk25En": 0,
               "decBy2Blk27En": 0,
               "decBy2Blk29En": 0,
-              "decBy2Blk31En": 1,
-              "decBy2Blk33En": 1,
+              "decBy2Blk31En": 0,
+              "decBy2Blk33En": 0,
               "wbLpfBlk33p1En": 0
             },
             "rxDecTop": {
@@ -622,19 +622,19 @@
         }
       }, {
         "profile": {
-          "primarySigBandwidth_Hz": 9000000,
-          "rxOutputRate_Hz": 15360000,
-          "rxInterfaceSampleRate_Hz": 15360000,
+          "primarySigBandwidth_Hz": 40000000,
+          "rxOutputRate_Hz": 61440000,
+          "rxInterfaceSampleRate_Hz": 61440000,
           "rxOffsetLo_kHz": 0,
           "rxNcoEnable": false,
           "outputSignaling": 0,
-          "filterOrder": 1,
-          "filterOrderLp": 1,
+          "filterOrder": 2,
+          "filterOrderLp": 2,
           "hpAdcCorner": 50000000,
           "lpAdcCorner": 0,
           "adcClk_kHz": 2211840,
-          "rxCorner3dB_kHz": 100000,
-          "rxCorner3dBLp_kHz": 100000,
+          "rxCorner3dB_kHz": 70710,
+          "rxCorner3dBLp_kHz": 70710,
           "tiaPower": 2,
           "tiaPowerLp": 2,
           "channelType": 128,
@@ -658,8 +658,8 @@
               "decBy2Blk25En": 0,
               "decBy2Blk27En": 0,
               "decBy2Blk29En": 0,
-              "decBy2Blk31En": 1,
-              "decBy2Blk33En": 1,
+              "decBy2Blk31En": 0,
+              "decBy2Blk33En": 0,
               "wbLpfBlk33p1En": 0
             },
             "rxDecTop": {
@@ -976,9 +976,9 @@
   "tx": {
     "txInitChannelMask": 12,
     "txProfile": [ {
-        "primarySigBandwidth_Hz": 9000000,
-        "txInputRate_Hz": 15360000,
-        "txInterfaceSampleRate_Hz": 15360000,
+        "primarySigBandwidth_Hz": 40000000,
+        "txInputRate_Hz": 61440000,
+        "txInterfaceSampleRate_Hz": 61440000,
         "txOffsetLo_kHz": 0,
         "validDataDelay": 0,
         "txBbf3dBCorner_kHz": 50000,
@@ -1007,8 +1007,8 @@
             "txInterpBy2Blk30En": 0,
             "txInterpBy2Blk28En": 0,
             "txInterpBy2Blk26En": 0,
-            "txInterpBy2Blk24En": 1,
-            "txInterpBy2Blk22En": 1,
+            "txInterpBy2Blk24En": 0,
+            "txInterpBy2Blk22En": 0,
             "txWbLpfBlk22p1En": 0
           },
           "txNbIntTop": {
@@ -1071,9 +1071,9 @@
           "rxMaskStrobeEn": false
         }
       }, {
-        "primarySigBandwidth_Hz": 9000000,
-        "txInputRate_Hz": 15360000,
-        "txInterfaceSampleRate_Hz": 15360000,
+        "primarySigBandwidth_Hz": 40000000,
+        "txInputRate_Hz": 61440000,
+        "txInterfaceSampleRate_Hz": 61440000,
         "txOffsetLo_kHz": 0,
         "validDataDelay": 0,
         "txBbf3dBCorner_kHz": 50000,
@@ -1102,8 +1102,8 @@
             "txInterpBy2Blk30En": 0,
             "txInterpBy2Blk28En": 0,
             "txInterpBy2Blk26En": 0,
-            "txInterpBy2Blk24En": 1,
-            "txInterpBy2Blk22En": 1,
+            "txInterpBy2Blk24En": 0,
+            "txInterpBy2Blk22En": 0,
             "txWbLpfBlk22p1En": 0
           },
           "txNbIntTop": {
@@ -1187,7 +1187,7 @@
       "symmetricSel": 0,
       "tapsSel": 3,
       "gainSel": 2,
-      "coefficients": [ 475, 312, -782, -39, 1201, -777, -1182, 1981, 177, -2874, 1941, 2393, -4416, 225, 5594, -4581, -3668, 8650, -1992, -9342, 9646, 4213, -15137, 6404, 13615, -18199, -2610, 23969, -15142, -17198, 31204, -3269, -34604, 30213, 17955, -49337, 16361, 45636, -53954, -12567, 72920, -40769, -54562, 89506, -4148, -102269, 83183, 57280, -142874, 41767, 139213, -158628, -45955, 231679, -125964, -193870, 320642, -4532, -442087, 390927, 347244, -1055854, 429729, 4391599, 4391599, 429729, -1055854, 347244, 390927, -442087, -4532, 320642, -193870, -125964, 231679, -45955, -158628, 139213, 41767, -142874, 57280, 83183, -102269, -4148, 89506, -54562, -40769, 72920, -12567, -53954, 45636, 16361, -49337, 17955, 30213, -34604, -3269, 31204, -17198, -15142, 23969, -2610, -18199, 13615, 6404, -15137, 4213, 9646, -9342, -1992, 8650, -3668, -4581, 5594, 225, -4416, 2393, 1941, -2874, 177, 1981, -1182, -777, 1201, -39, -782, 312, 0 ]
+      "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8388608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     },
     "pfirRxWbNbChFilterCoeff_B": {
       "numCoeff": 128,
@@ -1201,7 +1201,7 @@
       "symmetricSel": 0,
       "tapsSel": 3,
       "gainSel": 2,
-      "coefficients": [ 475, 312, -782, -39, 1201, -777, -1182, 1981, 177, -2874, 1941, 2393, -4416, 225, 5594, -4581, -3668, 8650, -1992, -9342, 9646, 4213, -15137, 6404, 13615, -18199, -2610, 23969, -15142, -17198, 31204, -3269, -34604, 30213, 17955, -49337, 16361, 45636, -53954, -12567, 72920, -40769, -54562, 89506, -4148, -102269, 83183, 57280, -142874, 41767, 139213, -158628, -45955, 231679, -125964, -193870, 320642, -4532, -442087, 390927, 347244, -1055854, 429729, 4391599, 4391599, 429729, -1055854, 347244, 390927, -442087, -4532, 320642, -193870, -125964, 231679, -45955, -158628, 139213, 41767, -142874, 57280, 83183, -102269, -4148, 89506, -54562, -40769, 72920, -12567, -53954, 45636, 16361, -49337, 17955, 30213, -34604, -3269, 31204, -17198, -15142, 23969, -2610, -18199, 13615, 6404, -15137, 4213, 9646, -9342, -1992, 8650, -3668, -4581, 5594, 225, -4416, 2393, 1941, -2874, 177, 1981, -1182, -777, 1201, -39, -782, 312, 0 ]
+      "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8388608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
     },
     "pfirRxWbNbChFilterCoeff_D": {
       "numCoeff": 128,
@@ -1253,45 +1253,45 @@
       } ],
     "pfirRxMagLowTiaLowSRHp": [ {
         "numCoeff": 21,
-        "coefficients": [ -12, 83, -293, 734, -1489, 2594, -3965, 5403, -6516, 5868, 27957, 5868, -6516, 5403, -3965, 2594, -1489, 734, -293, 83, -12 ]
+        "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8388608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
       }, {
         "numCoeff": 21,
-        "coefficients": [ -12, 83, -293, 734, -1489, 2594, -3965, 5403, -6516, 5868, 27957, 5868, -6516, 5403, -3965, 2594, -1489, 734, -293, 83, -12 ]
+        "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8388608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
       } ],
     "pfirRxMagLowTiaHighSRHp": [ {
         "numCoeff": 21,
-        "coefficients": [ -62, 194, 80, -829, 201, 1857, -179, -4602, -1259, 11431, 19102, 11431, -1259, -4602, -179, 1857, 201, -829, 80, 194, -62 ]
+        "coefficients": [ 171, -893, 1618, -256, -3101, 2284, 6165, -5545, -10776, 11833, 29770, 11833, -10776, -5545, 6165, 2284, -3101, -256, 1618, -893, 171 ]
       }, {
         "numCoeff": 21,
-        "coefficients": [ -62, 194, 80, -829, 201, 1857, -179, -4602, -1259, 11431, 19102, 11431, -1259, -4602, -179, 1857, 201, -829, 80, 194, -62 ]
+        "coefficients": [ 171, -893, 1618, -256, -3101, 2284, 6165, -5545, -10776, 11833, 29770, 11833, -10776, -5545, 6165, 2284, -3101, -256, 1618, -893, 171 ]
       } ],
     "pfirRxMagHighTiaHighSRHp": [ {
         "numCoeff": 21,
-        "coefficients": [ 39, -229, 714, -1485, 2134, -1844, -219, 4147, -8514, 8496, 26292, 8496, -8514, 4147, -219, -1844, 2134, -1485, 714, -229, 39 ]
+        "coefficients": [ -14, 18, -3, -73, 287, -785, 1765, -3570, 7161, -13800, 50783, -13800, 7161, -3570, 1765, -785, 287, -73, -3, 18, -14 ]
       }, {
         "numCoeff": 21,
-        "coefficients": [ 39, -229, 714, -1485, 2134, -1844, -219, 4147, -8514, 8496, 26292, 8496, -8514, 4147, -219, -1844, 2134, -1485, 714, -229, 39 ]
+        "coefficients": [ -14, 18, -3, -73, 287, -785, 1765, -3570, 7161, -13800, 50783, -13800, 7161, -3570, 1765, -785, 287, -73, -3, 18, -14 ]
       } ],
     "pfirRxMagLowTiaLowSRLp": [ {
         "numCoeff": 21,
-        "coefficients": [ -12, 83, -293, 733, -1488, 2593, -3963, 5401, -6514, 5870, 27953, 5870, -6514, 5401, -3963, 2593, -1488, 733, -293, 83, -12 ]
+        "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8388608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
       }, {
         "numCoeff": 21,
-        "coefficients": [ -12, 83, -293, 733, -1488, 2593, -3963, 5401, -6514, 5870, 27953, 5870, -6514, 5401, -3963, 2593, -1488, 733, -293, 83, -12 ]
+        "coefficients": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8388608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
       } ],
     "pfirRxMagLowTiaHighSRLp": [ {
         "numCoeff": 21,
-        "coefficients": [ -62, 194, 80, -828, 201, 1855, -180, -4597, -1254, 11428, 19093, 11428, -1254, -4597, -180, 1855, 201, -828, 80, 194, -62 ]
+        "coefficients": [ 170, -891, 1615, -256, -3096, 2282, 6156, -5541, -10759, 11830, 29748, 11830, -10759, -5541, 6156, 2282, -3096, -256, 1615, -891, 170 ]
       }, {
         "numCoeff": 21,
-        "coefficients": [ -62, 194, 80, -828, 201, 1855, -180, -4597, -1254, 11428, 19093, 11428, -1254, -4597, -180, 1855, 201, -828, 80, 194, -62 ]
+        "coefficients": [ 170, -891, 1615, -256, -3096, 2282, 6156, -5541, -10759, 11830, 29748, 11830, -10759, -5541, 6156, 2282, -3096, -256, 1615, -891, 170 ]
       } ],
     "pfirRxMagHighTiaHighSRLp": [ {
         "numCoeff": 21,
-        "coefficients": [ 39, -229, 712, -1481, 2128, -1841, -215, 4131, -8490, 8497, 26266, 8497, -8490, 4131, -215, -1841, 2128, -1481, 712, -229, 39 ]
+        "coefficients": [ -13, 18, -3, -72, 284, -778, 1752, -3544, 7112, -13701, 50650, -13701, 7112, -3544, 1752, -778, 284, -72, -3, 18, -13 ]
       }, {
         "numCoeff": 21,
-        "coefficients": [ 39, -229, 712, -1481, 2128, -1841, -215, 4131, -8490, 8497, 26266, 8497, -8490, 4131, -215, -1841, 2128, -1481, 712, -229, 39 ]
+        "coefficients": [ -13, 18, -3, -72, 284, -778, 1752, -3544, 7112, -13701, 50650, -13701, 7112, -3544, 1752, -778, 284, -72, -3, 18, -13 ]
       } ],
     "pfirTxMagComp1": {
       "numCoeff": 21,
