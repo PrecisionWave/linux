@@ -27,6 +27,8 @@
 #define DRIVER_NAME			"dexter-dsp-tx"
 #define NB_OF_BLOCKS			1
 #define DDS_PHASEWIDTH			25
+#define MAX_DDS_FREQ 			33000000
+#define MIN_DDS_FREQ 			-33000000
 
 
 #define ADDR_DSP_VERSION		0*4
@@ -36,16 +38,22 @@
 #define ADDR_PPS_DELAY			4*4
 #define ADDR_PPS_CLKS_LSB		5*4
 #define ADDR_PPS_CLKS_MSB		6*4
-#define ADDR_DDS_INC0			16*4
+#define ADDR_CLKS_CNT_LSB		7*4
+#define ADDR_CLKS_CNT_MSB		8*4
+#define ADDR_DDS_INC_FLUSH_FIFO0	16*4
 #define ADDR_GAIN_DC0			17*4
 #define ADDR_BUFF_UFLOWS0		18*4
 #define ADDR_STREAM_START0_LSB		19*4
 #define ADDR_STREAM_START0_MSB		20*4
-#define ADDR_DDS_INC1			32*4
+#define ADDR_NOT_EMPTY_FIFO_CLKS0_LSB	21*4
+#define ADDR_NOT_EMPTY_FIFO_CLKS0_MSB	22*4
+#define ADDR_DDS_INC_FLUSH_FIFO1	32*4
 #define ADDR_GAIN_DC1			33*4
 #define ADDR_BUFF_UFLOWS1		34*4
 #define ADDR_STREAM_START1_LSB		35*4
 #define ADDR_STREAM_START1_MSB		36*4
+#define ADDR_NOT_EMPTY_FIFO_CLKS1_LSB	37*4
+#define ADDR_NOT_EMPTY_FIFO_CLKS1_MSB	38*4
 
 
 enum chan_num{
@@ -53,18 +61,23 @@ enum chan_num{
   	REG_GAIN0,
   	REG_DC0,
 	REG_STREAM0_START_CLKS,
+	REG_FIFO_NOT_EMPTY0_CLKS,
 	REG_BUFFER_UNDERFLOWS0,
+	REG_FLUSH_FIFO0_TRIGGER,
   	REG_FREQUENCY1,
   	REG_GAIN1,
   	REG_DC1,
 	REG_STREAM1_START_CLKS,
+	REG_FIFO_NOT_EMPTY1_CLKS,
 	REG_BUFFER_UNDERFLOWS1,
+	REG_FLUSH_FIFO1_TRIGGER,
 	REG_PPS_DIRECTION_OUT_N_IN,
 	REG_PPS_CLK_ERROR,
 	REG_PPS_CLK_ERROR_NS,
 	REG_PPS_CLK_ERROR_HZ,
 	REG_PPS_CNT,
 	REG_PPS_CLKS,
+	REG_CLKS,
 	REG_PPS_REFERENCE_FREQUENCY,
 	REG_PPS_DELAY,
 	REG_GPSDO_LOCKED,
@@ -148,6 +161,7 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 	int32_t ret;
 	int64_t temp64;
 	uint64_t tempu64;
+	uint64_t tempu64_old;
 	uint32_t temp32;
 
 	unsigned long long readin;
@@ -171,9 +185,14 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 	switch ((uint32_t)this_attr->address) {
 
 	case REG_FREQUENCY0:
-    		temp64 = (int64_t)val  << DDS_PHASEWIDTH;
-    		temp32 = (int32_t)div_s64(temp64,st->fs_if_dac);
-		dexter_dsp_tx_write(st, ADDR_DDS_INC0, temp32);
+		if(val<MIN_DDS_FREQ || val>MAX_DDS_FREQ){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO0) & ~0x1FFFFFF;
+    		temp64 = (int64_t)val << DDS_PHASEWIDTH;
+    		temp32 += (int32_t)div_s64(temp64,st->fs_if_dac) & 0x1FFFFFF;
+		dexter_dsp_tx_write(st, ADDR_DDS_INC_FLUSH_FIFO0, temp32);
 		break;
 
 	case REG_GAIN0:
@@ -189,19 +208,38 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 		break;
 
 	case REG_STREAM0_START_CLKS:
-		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_PPS_CLKS_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_PPS_CLKS_LSB);
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
+		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
+		if(tempu64_old > tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
 		if(readin!=0 && (readin < tempu64 || readin > tempu64+20*(uint64_t)st->fs_if_dac)) // start must be in the future and not more than 10s in the future
 			ret = -EINVAL;
 		temp32 = (uint32_t)readin;
 		dexter_dsp_tx_write(st, ADDR_STREAM_START0_LSB, temp32);
 		temp32 = (uint32_t)(readin>>32);
+		temp32 = temp32 | 0x80000000; //(1<31);
+		dexter_dsp_tx_write(st, ADDR_STREAM_START0_MSB, temp32);
+		temp32 = temp32 & 0x7fffffff; //& ~(1<31);
 		dexter_dsp_tx_write(st, ADDR_STREAM_START0_MSB, temp32);
 		break;
 
+	case REG_FLUSH_FIFO0_TRIGGER:
+		temp32 = dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO0) & ~(1<<25);
+		temp32 += 1<<25;
+		dexter_dsp_tx_write(st, ADDR_DDS_INC_FLUSH_FIFO0, temp32);
+		temp32 &= ~(1<<25);
+		dexter_dsp_tx_write(st, ADDR_DDS_INC_FLUSH_FIFO0, temp32);
+		break;
+
 	case REG_FREQUENCY1:
+		if(val<MIN_DDS_FREQ || val>MAX_DDS_FREQ){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO1) & ~0x1FFFFFF;
     		temp64 = (int64_t)val  << DDS_PHASEWIDTH;
-    		temp32 = (int32_t)div_s64(temp64,st->fs_if_dac);
-		dexter_dsp_tx_write(st, ADDR_DDS_INC1, temp32);
+    		temp32 += (int32_t)div_s64(temp64,st->fs_if_dac) & 0x1FFFFFF;
+		dexter_dsp_tx_write(st, ADDR_DDS_INC_FLUSH_FIFO1, temp32);
 		break;
 
 	case REG_GAIN1:
@@ -217,13 +255,27 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 		break;
 
 	case REG_STREAM1_START_CLKS:
-		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_PPS_CLKS_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_PPS_CLKS_LSB);
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
+		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
+		if(tempu64_old > tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
 		if(readin!=0 && (readin < tempu64 || readin > tempu64+20*(uint64_t)st->fs_if_dac)) // start must be in the future and not more than 10s in the future
 			ret = -EINVAL;
 		temp32 = (uint32_t)readin;
 		dexter_dsp_tx_write(st, ADDR_STREAM_START1_LSB, temp32);
 		temp32 = (uint32_t)(readin>>32);
+		temp32 = temp32 | 0x80000000;
 		dexter_dsp_tx_write(st, ADDR_STREAM_START1_MSB, temp32);
+		temp32 = temp32 & 0x7fffffff;
+		dexter_dsp_tx_write(st, ADDR_STREAM_START1_MSB, temp32);
+		break;
+
+	case REG_FLUSH_FIFO1_TRIGGER:
+		temp32 = dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO1) & ~(1<<25);
+		temp32 += 1<<25;
+		dexter_dsp_tx_write(st, ADDR_DDS_INC_FLUSH_FIFO1, temp32);
+		temp32 &= ~(1<<25);
+		dexter_dsp_tx_write(st, ADDR_DDS_INC_FLUSH_FIFO1, temp32);
 		break;
 
 	case REG_PPS_DIRECTION_OUT_N_IN:
@@ -297,13 +349,14 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 	int32_t val = 0;
 	int64_t temp64;
 	uint64_t tempu64 = 0;
+	uint64_t tempu64_old = 0;
 
 	mutex_lock(&indio_dev->mlock);
 
 	switch ((uint32_t)this_attr->address) {
 
 	case REG_FREQUENCY0:
-		temp64 = (int32_t)dexter_dsp_tx_read(st, ADDR_DDS_INC0);
+		temp64 = (int32_t)dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO0) & 0x1FFFFFF;
 		temp64 = temp64 * st->fs_if_dac;
 		val = (int32_t)(temp64 >> DDS_PHASEWIDTH);
 		break;
@@ -317,7 +370,21 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		break;
 
 	case REG_STREAM0_START_CLKS:
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_STREAM_START0_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_STREAM_START0_LSB);
 		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_STREAM_START0_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_STREAM_START0_LSB);
+		if(tempu64_old != tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_STREAM_START0_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_STREAM_START0_LSB);
+		break;
+
+	case REG_FLUSH_FIFO0_TRIGGER:
+		val = (dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO0) >>25) & 1;
+		break;
+
+	case REG_FIFO_NOT_EMPTY0_CLKS:
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS0_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS0_LSB);
+		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS0_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS0_LSB);
+		if(tempu64_old != tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS0_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS0_LSB);
 		break;
 
 	case REG_BUFFER_UNDERFLOWS0:
@@ -325,7 +392,7 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		break;
 
 	case REG_FREQUENCY1:
-		temp64 = (int32_t)dexter_dsp_tx_read(st, ADDR_DDS_INC1);
+		temp64 = (int32_t)dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO1) & 0x1FFFFFF;
 		temp64 = temp64 * st->fs_if_dac;
 		val = (int32_t)(temp64 >> DDS_PHASEWIDTH);
 		break;
@@ -339,7 +406,21 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		break;
 
 	case REG_STREAM1_START_CLKS:
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_STREAM_START1_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_STREAM_START1_LSB);
 		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_STREAM_START1_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_STREAM_START1_LSB);
+		if(tempu64_old != tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_STREAM_START1_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_STREAM_START1_LSB);
+		break;
+
+	case REG_FLUSH_FIFO1_TRIGGER:
+		val = (dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO1) >>25) & 1;
+		break;
+
+	case REG_FIFO_NOT_EMPTY1_CLKS:
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS1_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS1_LSB);
+		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS1_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS1_LSB);
+		if(tempu64_old != tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS1_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_NOT_EMPTY_FIFO_CLKS1_LSB);
 		break;
 
 	case REG_BUFFER_UNDERFLOWS1:
@@ -375,7 +456,17 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		break;
 
 	case REG_PPS_CLKS:
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_PPS_CLKS_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_PPS_CLKS_LSB);
 		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_PPS_CLKS_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_PPS_CLKS_LSB);
+		if(tempu64_old > tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_PPS_CLKS_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_PPS_CLKS_LSB);
+		break;
+
+	case REG_CLKS:
+		tempu64_old = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
+		tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
+		if(tempu64_old > tempu64)
+			tempu64 = ((uint64_t)dexter_dsp_tx_read(st, ADDR_CLKS_CNT_MSB) << 32) + dexter_dsp_tx_read(st, ADDR_CLKS_CNT_LSB);
 		break;
 
 	case REG_GPSDO_LOCKED:
@@ -397,7 +488,7 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 	mutex_unlock(&indio_dev->mlock);
 
 	if(ret==0){
-		if((uint32_t)this_attr->address == REG_PPS_CLKS || (uint32_t)this_attr->address == REG_STREAM0_START_CLKS || (uint32_t)this_attr->address == REG_STREAM1_START_CLKS)
+		if((uint32_t)this_attr->address == REG_PPS_CLKS || (uint32_t)this_attr->address == REG_STREAM0_START_CLKS || (uint32_t)this_attr->address == REG_STREAM1_START_CLKS || (uint32_t)this_attr->address == REG_FIFO_NOT_EMPTY0_CLKS || (uint32_t)this_attr->address == REG_FIFO_NOT_EMPTY1_CLKS || (uint32_t)this_attr->address == REG_CLKS)
 			ret = sprintf(buf, "%llu\n", tempu64);
 		else
 			ret = sprintf(buf, "%d\n", val);
@@ -427,6 +518,16 @@ static IIO_DEVICE_ATTR(stream0_start_clks, S_IRUGO | S_IWUSR,
 			dexter_dsp_tx_store,
 			REG_STREAM0_START_CLKS);
 
+static IIO_DEVICE_ATTR(stream0_flush_fifo_trigger, S_IRUGO | S_IWUSR,
+			dexter_dsp_tx_show,
+			dexter_dsp_tx_store,
+			REG_FLUSH_FIFO0_TRIGGER);
+
+static IIO_DEVICE_ATTR(stream0_fifo_not_empty_clks, S_IRUGO,
+			dexter_dsp_tx_show,
+			dexter_dsp_tx_store,
+			REG_FIFO_NOT_EMPTY0_CLKS);
+
 static IIO_DEVICE_ATTR(buffer_underflows0, S_IRUGO,
 			dexter_dsp_tx_show,
 			dexter_dsp_tx_store,
@@ -451,6 +552,16 @@ static IIO_DEVICE_ATTR(stream1_start_clks, S_IRUGO | S_IWUSR,
 			dexter_dsp_tx_show,
 			dexter_dsp_tx_store,
 			REG_STREAM1_START_CLKS);
+
+static IIO_DEVICE_ATTR(stream1_flush_fifo_trigger, S_IRUGO | S_IWUSR,
+			dexter_dsp_tx_show,
+			dexter_dsp_tx_store,
+			REG_FLUSH_FIFO1_TRIGGER);
+
+static IIO_DEVICE_ATTR(stream1_fifo_not_empty_clks, S_IRUGO,
+			dexter_dsp_tx_show,
+			dexter_dsp_tx_store,
+			REG_FIFO_NOT_EMPTY1_CLKS);
 
 static IIO_DEVICE_ATTR(buffer_underflows1, S_IRUGO,
 			dexter_dsp_tx_show,
@@ -507,6 +618,11 @@ static IIO_DEVICE_ATTR(pps_clks, S_IRUGO,
 			dexter_dsp_tx_store,
 			REG_PPS_CLKS);
 
+static IIO_DEVICE_ATTR(clks, S_IRUGO,
+			dexter_dsp_tx_show,
+			dexter_dsp_tx_store,
+			REG_CLKS);
+
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dexter_dsp_tx_show,
 			dexter_dsp_tx_store,
@@ -519,11 +635,15 @@ static struct attribute *dexter_dsp_tx_attributes[] = {
 	&iio_dev_attr_gain0.dev_attr.attr,
 	&iio_dev_attr_dc0.dev_attr.attr,
 	&iio_dev_attr_stream0_start_clks.dev_attr.attr,
+	&iio_dev_attr_stream0_flush_fifo_trigger.dev_attr.attr,
+	&iio_dev_attr_stream0_fifo_not_empty_clks.dev_attr.attr,
 	&iio_dev_attr_buffer_underflows0.dev_attr.attr,
 	&iio_dev_attr_frequency1.dev_attr.attr,
 	&iio_dev_attr_gain1.dev_attr.attr,
 	&iio_dev_attr_dc1.dev_attr.attr,
 	&iio_dev_attr_stream1_start_clks.dev_attr.attr,
+	&iio_dev_attr_stream1_flush_fifo_trigger.dev_attr.attr,
+	&iio_dev_attr_stream1_fifo_not_empty_clks.dev_attr.attr,
 	&iio_dev_attr_buffer_underflows1.dev_attr.attr,
 	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,
 	&iio_dev_attr_pps_clk_error.dev_attr.attr,
@@ -533,6 +653,7 @@ static struct attribute *dexter_dsp_tx_attributes[] = {
 	&iio_dev_attr_pps_delay.dev_attr.attr,
 	&iio_dev_attr_pps_cnt.dev_attr.attr,
 	&iio_dev_attr_pps_clks.dev_attr.attr,
+	&iio_dev_attr_clks.dev_attr.attr,
 	&iio_dev_attr_gpsdo_locked.dev_attr.attr,
 	&iio_dev_attr_pps_loss_of_signal.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
