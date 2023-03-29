@@ -122,6 +122,7 @@ enum chan_num{
 	CH_RX_DDS_RESET_OFFSET_10G,
   	CH_RX_OVERFLOWS,
 	CH_RX_CHANNEL_ENABLE_10G,
+	CH_CAMERA_ENABLE,
 	CH_MARKER_SIM,
 	CH_PPS_DIRECTION_OUT_N_IN,
 	CH_PPS_CLK_ERROR,
@@ -453,7 +454,19 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		zebu_fmcw_dsp_write(st, ADDR_RX_CHANNEL_ENABLE_10G, val);
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_RX_CHANNEL_ENABLE_10G) & 0x100;
+		temp32 += (uint32_t)val;
+		zebu_fmcw_dsp_write(st, ADDR_RX_CHANNEL_ENABLE_10G, temp32);
+		break;
+
+	case CH_CAMERA_ENABLE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = zebu_fmcw_dsp_read(st, ADDR_RX_CHANNEL_ENABLE_10G) & 0xff;
+		temp32 += (uint32_t)val << 8;
+		zebu_fmcw_dsp_write(st, ADDR_RX_CHANNEL_ENABLE_10G, temp32);
 		break;
 
 	case CH_RX_STREAM_ENABLE_10G:
@@ -713,7 +726,11 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		break;
 
 	case CH_RX_CHANNEL_ENABLE_10G:
-		val = zebu_fmcw_dsp_read(st, ADDR_RX_CHANNEL_ENABLE_10G);
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_CHANNEL_ENABLE_10G) & 0xff;
+		break;
+
+	case CH_CAMERA_ENABLE:
+		val = zebu_fmcw_dsp_read(st, ADDR_RX_CHANNEL_ENABLE_10G) >> 8;
 		break;
 
 	case CH_RX_STREAM_ENABLE_10G:
@@ -982,6 +999,11 @@ static IIO_DEVICE_ATTR(rx_channel_enable_10g, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_store,
 			CH_RX_CHANNEL_ENABLE_10G);
 
+static IIO_DEVICE_ATTR(camera_enable, S_IRUGO | S_IWUSR,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_CAMERA_ENABLE);
+
 static IIO_DEVICE_ATTR(rx_en_streaming_10g, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -1095,6 +1117,7 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_burst_offset_10g.dev_attr.attr,
 	&iio_dev_attr_rx_dds_reset_offset_10g.dev_attr.attr,
 	&iio_dev_attr_rx_channel_enable_10g.dev_attr.attr,
+	&iio_dev_attr_camera_enable.dev_attr.attr,
 	&iio_dev_attr_rx_en_streaming_10g.dev_attr.attr,
 	&iio_dev_attr_marker_simulation.dev_attr.attr,
 	&iio_dev_attr_pps_direction_out_n_in.dev_attr.attr,
