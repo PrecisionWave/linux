@@ -43,6 +43,10 @@
 #define ADDR_CHIRP_GAIN01		9*4
 #define ADDR_CHIRP_SETTINGS		10*4
 #define ADDR_CHIRP_DELAY_TX2		11*4
+#define ADDR_RX_ADC01_PEAK		12*4
+#define ADDR_RX_ADC23_PEAK		13*4
+#define ADDR_RX_ADC45_PEAK		14*4
+#define ADDR_RX_ADC67_PEAK		15*4
 
 #define ADDR_RX_DDS_INC			16*4
 #define ADDR_RX_DECIMATION		17*4
@@ -121,6 +125,14 @@ enum chan_num{
   	CH_RX_DDS_RESET_OFFSET,
 	CH_RX_DDS_RESET_OFFSET_10G,
   	CH_RX_OVERFLOWS,
+	CH_RX_ADC1_PEAK_HOLD_VAL,
+	CH_RX_ADC2_PEAK_HOLD_VAL,
+	CH_RX_ADC3_PEAK_HOLD_VAL,
+	CH_RX_ADC4_PEAK_HOLD_VAL,
+	CH_RX_ADC5_PEAK_HOLD_VAL,
+	CH_RX_ADC6_PEAK_HOLD_VAL,
+	CH_RX_ADC7_PEAK_HOLD_VAL,
+	CH_RX_ADC8_PEAK_HOLD_VAL,
 	CH_RX_CHANNEL_ENABLE_10G,
 	CH_CAMERA_ENABLE,
 	CH_MARKER_SIM,
@@ -702,6 +714,38 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		val = zebu_fmcw_dsp_read(st, ADDR_RX_OVERFLOWS);
 		break;
 
+	case CH_RX_ADC1_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC01_PEAK) & 0xFFFF);
+		break;
+
+	case CH_RX_ADC2_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC01_PEAK) >> 16);
+		break;
+
+	case CH_RX_ADC3_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC23_PEAK) & 0xFFFF);
+		break;
+
+	case CH_RX_ADC4_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC23_PEAK) >> 16);
+		break;
+
+	case CH_RX_ADC5_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC45_PEAK) & 0xFFFF);
+		break;
+
+	case CH_RX_ADC6_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC45_PEAK) >> 16);
+		break;
+
+	case CH_RX_ADC7_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC67_PEAK) & 0xFFFF);
+		break;
+
+	case CH_RX_ADC8_PEAK_HOLD_VAL:
+		val = (zebu_fmcw_dsp_read(st, ADDR_RX_ADC67_PEAK) >> 16);
+		break;
+
 	case CH_RX_FREQ_10G:
 		temp64 = (int32_t)zebu_fmcw_dsp_read(st, ADDR_RX_DDS_INC_10G);
 		temp64 = temp64 * st->fs_if_adc;
@@ -969,6 +1013,46 @@ static IIO_DEVICE_ATTR(rx_overflows, S_IRUGO,
 			zebu_fmcw_dsp_store,
 			CH_RX_OVERFLOWS);
 
+static IIO_DEVICE_ATTR(rx_adc1_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC1_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc2_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC2_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc3_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC3_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc4_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC4_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc5_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC5_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc6_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC6_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc7_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC7_PEAK_HOLD_VAL);
+
+static IIO_DEVICE_ATTR(rx_adc8_peak_hold_val, S_IRUGO,
+			zebu_fmcw_dsp_show,
+			zebu_fmcw_dsp_store,
+			CH_RX_ADC8_PEAK_HOLD_VAL);
+
 static IIO_DEVICE_ATTR(rx_frequency_10g, S_IRUGO | S_IWUSR,
 			zebu_fmcw_dsp_show,
 			zebu_fmcw_dsp_store,
@@ -1111,6 +1195,14 @@ static struct attribute *zebu_fmcw_dsp_attributes[] = {
 	&iio_dev_attr_rx_burst_offset.dev_attr.attr,
 	&iio_dev_attr_rx_dds_reset_offset.dev_attr.attr,
 	&iio_dev_attr_rx_overflows.dev_attr.attr,
+	&iio_dev_attr_rx_adc1_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc2_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc3_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc4_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc5_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc6_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc7_peak_hold_val.dev_attr.attr,
+	&iio_dev_attr_rx_adc8_peak_hold_val.dev_attr.attr,
 	&iio_dev_attr_rx_frequency_10g.dev_attr.attr,
 	&iio_dev_attr_rx_decimation_10g.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length_10g.dev_attr.attr,
