@@ -3,12 +3,8 @@
 #include "zynqmp.dtsi"
 #include "zynqmp-clk-ccf.dtsi"
 #include "zynqmp_enclustra_common.dtsi"
-#include "zynq-enclustra-qspi64-parts.dtsi"
 #include "zynqmp_enclustra_mercury_xu5.dtsi"
-#include <dt-bindings/input/input.h>
-#include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/pinctrl/pinctrl-zynqmp.h>
-#include <dt-bindings/phy/phy.h>
+#include "zynq-enclustra-qspi64-parts.dtsi"
 #include <dt-bindings/interrupt-controller/irq.h>
 
 /*
@@ -905,7 +901,158 @@
 &i2c0 {
 	clock-frequency = <400000>;
 
-	ad5593r@10 {
+	/* PA-1 */
+	i2c-mux@40 {
+		reg = <0x40>;
+		compatible = "nxp,pca9547";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		i2c@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			eeprom@41 {
+				compatible = "atmel,24cs02";
+				reg = <0x41>;
+			};
+		};
+		i2c@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			eeprom@41 {
+				compatible = "atmel,24c32";
+				reg = <0x41>;
+			};
+		};
+		i2c@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			eeprom@41 {
+				compatible = "atmel,24c02";
+				reg = <0x41>;
+			};
+		};
+		i2c@3 {
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ad5593r-PA1-1@41 {
+				#size-cells = <0>;
+				#address-cells = <1>;
+				#gpio-cells = <2>;
+				compatible = "adi,ad5593r";
+				reg = <0x41>;
+				gpio-controller;
+				channel@0 {
+					reg = <0>;
+					adi,mode = <8>;
+					adi,off-state = <0>;
+					label = "GPO_EN_BIAS";
+				};
+				channel@1 {
+					reg = <1>;
+					adi,mode = <8>;
+					adi,off-state = <0>;
+					label = "GPO_EN_Drain";
+				};
+				channel@2 {
+					reg = <2>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "VTemp";
+				};
+				channel@3 {
+					reg = <3>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "IDrain";
+				};
+				channel@4 {
+					reg = <4>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "Vdrain";
+				};
+				channel@5 {
+					reg = <5>;
+					adi,mode = <2>;
+					adi,off-state = <0>;
+					label = "PWM_Gate";
+				};
+				channel@6 {
+					reg = <6>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+				channel@7 {
+					reg = <7>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+			};
+		};
+		i2c@4 {
+			reg = <4>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ad5593r-PA1-2@41 {
+				#size-cells = <0>;
+				#address-cells = <1>;
+				#gpio-cells = <2>;
+				compatible = "adi,ad5593r";
+				reg = <0x41>;
+				gpio-controller;
+				channel@0 {
+					reg = <0>;
+					adi,mode = <8>;
+					adi,off-state = <0>;
+					label = "GPO_SEL_FWD_nREF";
+				};
+				channel@1 {
+					reg = <1>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "P_FWD";
+				};
+				channel@2 {
+					reg = <2>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "P_REV";
+				};
+				channel@3 {
+					reg = <3>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "P_VSWR";
+				};
+				channel@4 {
+					reg = <4>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+				channel@5 {
+						reg = <5>;
+						adi,mode = <0>;
+						adi,off-state = <0>;
+				};
+				channel@6 {
+					reg = <6>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+				channel@7 {
+					reg = <7>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+			};
+		};
+	};
+
+	ad5593r-10@10 {
 		#size-cells = <0>;
 		#address-cells = <1>;
 		#gpio-cells = <2>;
@@ -927,7 +1074,7 @@
 		 */
 		channel@0 {
 			reg = <0>;
-			adi,mode = <0>;        // CH_MODE_UNUSED
+			adi,mode = <8>;        // CH_MODE_GPIO
 			adi,off-state = <0>;   // CH_OFFSTATE_PULLDOWN
 		};
 		channel@1 {
@@ -967,7 +1114,7 @@
 		};
 	};
 
-	ad5593r@11 {
+	ad5593r-11@11 {
 		#size-cells = <0>;
 		#address-cells = <1>;
 		#gpio-cells = <2>;
@@ -989,7 +1136,7 @@
 		 */
 		channel@0 {
 			reg = <0>;
-			adi,mode = <0>;        // CH_MODE_UNUSED
+			adi,mode = <8>;        // CH_MODE_GPIO
 			adi,off-state = <0>;   // CH_OFFSTATE_PULLDOWN
 		};
 		channel@1 {
@@ -1034,11 +1181,162 @@
 		reg = <0x18>;
 	};
 
+	/* PA-0 */
+	i2c-mux@20 {
+		reg = <0x20>;
+		compatible = "nxp,pca9547";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		i2c@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			eeprom@21 {
+				compatible = "atmel,24cs02";
+				reg = <0x21>;
+			};
+		};
+		i2c@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			eeprom@21 {
+				compatible = "atmel,24c32";
+				reg = <0x21>;
+			};
+		};
+		i2c@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			eeprom@21 {
+				compatible = "atmel,24c02";
+				reg = <0x21>;
+			};
+		};
+		i2c@3 {
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ad5593r-PA0-1@21 {
+				#size-cells = <0>;
+				#address-cells = <1>;
+				#gpio-cells = <2>;
+				compatible = "adi,ad5593r";
+				reg = <0x21>;
+				gpio-controller;
+				channel@0 {
+					reg = <0>;
+					adi,mode = <8>;
+					adi,off-state = <0>;
+					label = "GPO_EN_BIAS";
+				};
+				channel@1 {
+					reg = <1>;
+					adi,mode = <8>;
+					adi,off-state = <0>;
+					label = "GPO_EN_Drain";
+				};
+				channel@2 {
+					reg = <2>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "VTemp";
+				};
+				channel@3 {
+					reg = <3>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "IDrain";
+				};
+				channel@4 {
+					reg = <4>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "Vdrain";
+				};
+				channel@5 {
+					reg = <5>;
+					adi,mode = <2>;
+					adi,off-state = <0>;
+					label = "PWM_Gate";
+				};
+				channel@6 {
+					reg = <6>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+				channel@7 {
+					reg = <7>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+			};
+		};
+		i2c@4 {
+			reg = <4>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ad5593r-PA0-2@21 {
+				#size-cells = <0>;
+				#address-cells = <1>;
+				#gpio-cells = <2>;
+				compatible = "adi,ad5593r";
+				reg = <0x21>;
+				gpio-controller;
+				channel@0 {
+					reg = <0>;
+					adi,mode = <8>;
+					adi,off-state = <0>;
+					label = "GPO_SEL_FWD_nREF";
+				};
+				channel@1 {
+					reg = <1>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "P_FWD";
+				};
+				channel@2 {
+					reg = <2>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "P_REV";
+				};
+				channel@3 {
+					reg = <3>;
+					adi,mode = <1>;
+					adi,off-state = <0>;
+					label = "P_VSWR";
+				};
+				channel@4 {
+					reg = <4>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+				channel@5 {
+						reg = <5>;
+						adi,mode = <0>;
+						adi,off-state = <0>;
+				};
+				channel@6 {
+					reg = <6>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+				channel@7 {
+					reg = <7>;
+					adi,mode = <0>;
+					adi,off-state = <0>;
+				};
+			};
+		};
+	};
+
 	ad7992: ad799x@23 {
-            compatible = "ad7992";
-            reg = <0x23>;
-            adi,reference-voltage-mv = <3300>;
-       };
+		compatible = "ad7992";
+		reg = <0x23>;
+		adi,reference-voltage-mv = <3300>;
+	};
 
 	lm96080@2f {
 		compatible = "national,lm80";
@@ -1117,10 +1415,10 @@
 
 /* SD1 with level shifter */
 &sdhci1 {
-        status = "okay";
-        no-1-8-v;       /* for 1.0 silicon */
-        wp-inverted;
-        xlnx,mio_bank = <1>;
+	status = "okay";
+	no-1-8-v;       /* for 1.0 silicon */
+	wp-inverted;
+	xlnx,mio_bank = <1>;
 };
 
 /* ULPI SMSC USB3320 */
@@ -1129,21 +1427,21 @@
 };
 
 &usb1 {
-        status = "disabled";
+	status = "disabled";
 };
 
 &dwc3_0 {
-        status = "okay";
-        dr_mode = "host";
-        snps,usb3_lpm_capable;
-        maximum-speed = "high-speed";
+	status = "okay";
+	dr_mode = "host";
+	snps,usb3_lpm_capable;
+	maximum-speed = "high-speed";
 };
 
 &dwc3_1 {
-        status = "disabled";
-        dr_mode = "host";
-        snps,usb3_lpm_capable;
-        maximum-speed = "high-speed";
+	status = "disabled";
+	dr_mode = "host";
+	snps,usb3_lpm_capable;
+	maximum-speed = "high-speed";
 };
 
 #if SPI_ENABLED
