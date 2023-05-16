@@ -2,11 +2,10 @@
 
 #include "zynqmp.dtsi"
 #include "zynqmp-clk-ccf.dtsi"
+#include "zynqmp_enclustra_common.dtsi"
+#include "zynqmp_enclustra_mercury_xu5.dtsi"
 #include "zynq-enclustra-qspi64-parts.dtsi"
-#include <dt-bindings/input/input.h>
-#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/pinctrl-zynqmp.h>
-#include <dt-bindings/phy/phy.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 
 /*
