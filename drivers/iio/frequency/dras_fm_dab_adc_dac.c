@@ -183,7 +183,6 @@ struct dras_fm_dab_adc_dac_state {
 	bool			gpsdo_locked;
   	uint32_t		pps_clk_error_ns;
   	uint32_t		pps_clk_error_hz;
-	uint32_t		nb_of_blocks;
 };
 
 static void dras_fm_dab_adc_dac_write(struct dras_fm_dab_adc_dac_state *st, unsigned reg, u32 val)
@@ -1002,14 +1001,6 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	}
 	if(st->fs_adc == 0){
 		printk("DRAS-FM-DAB-ADC-DAC: ***ERROR! \"required,fs-adc\" equal to 0 Hz\n");
-		goto err_iio_device_free;
-	}
-	if(of_property_read_u32(np, "required,nb-of-blocks", &st->nb_of_blocks)){
-		printk("DRAS-FM-DAB-ADC-DAC: ***ERROR! \"required,nb-of-blocks\" missing in devicetree?\n");
-		goto err_iio_device_free;
-	}
-	if(st->nb_of_blocks == 0){
-		printk("DRAS-FM-DAB-ADC-DAC: ***ERROR! \"required,nb-of-blocks\" equal to 0\n");
 		goto err_iio_device_free;
 	}
 
