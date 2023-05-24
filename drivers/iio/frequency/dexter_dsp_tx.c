@@ -359,6 +359,8 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		temp64 = (int32_t)dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO0) & 0x1FFFFFF;
 		temp64 = temp64 * st->fs_if_dac;
 		val = (int32_t)(temp64 >> DDS_PHASEWIDTH);
+		if(val > (st->fs_if_dac >>1))
+			val -= st->fs_if_dac;
 		break;
 
 	case REG_GAIN0:
@@ -395,6 +397,8 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		temp64 = (int32_t)dexter_dsp_tx_read(st, ADDR_DDS_INC_FLUSH_FIFO1) & 0x1FFFFFF;
 		temp64 = temp64 * st->fs_if_dac;
 		val = (int32_t)(temp64 >> DDS_PHASEWIDTH);
+		if(val > (st->fs_if_dac >>1))
+			val -= st->fs_if_dac;
 		break;
 
 	case REG_GAIN1:
