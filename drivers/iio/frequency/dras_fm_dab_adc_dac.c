@@ -171,7 +171,8 @@ enum chan_num{
 	REG_GPSDO_LOCKED,
 	REG_PPS_REFERENCE_FREQUENCY,
 	REG_PPS_CLKS,
-	REG_PPS_CNT
+	REG_PPS_CNT,
+	REG_RF_MUTE
 };
 
 struct dras_fm_dab_adc_dac_state {
@@ -183,6 +184,12 @@ struct dras_fm_dab_adc_dac_state {
 	bool			gpsdo_locked;
   	uint32_t		pps_clk_error_ns;
   	uint32_t		pps_clk_error_hz;
+
+	u32				gain_dab_tx1;
+	u32				gain_dab_tx2;
+	u32				gain_fm_tx1;
+	u32				gain_fm_tx2;
+	bool			rf_mute;
 };
 
 static void dras_fm_dab_adc_dac_write(struct dras_fm_dab_adc_dac_state *st, unsigned reg, u32 val)
@@ -298,18 +305,22 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_BAND_GAIN) & 0xFFFF0000;
-		temp32 += (u32)val;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN, temp32);
+		st->gain_dab_tx1 = val;
+		if(st->rf_mute)
+			break;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN,
+				(st->gain_dab_tx2 << 16) | st->gain_dab_tx1);
 		break;
 	case REG_TX2_DAB_BAND_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_BAND_GAIN) & 0xFFFF;
-		temp32 += (u32)val << 16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN, temp32);
+		st->gain_dab_tx2 = val;
+		if(st->rf_mute)
+			break;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN,
+				(st->gain_dab_tx2 << 16) | st->gain_dab_tx1);
 		break;
 	case REG_RX_DAB_CHANNEL_FREQUENCY:
 		if(val<MIN_DAB_FREQUENCY || val>MAX_DAB_FREQUENCY){
@@ -333,18 +344,22 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_BAND_GAIN) & 0xFFFF0000;
-		temp32 += (u32)val;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN, temp32);
+		st->gain_fm_tx1 = val;
+		if(st->rf_mute)
+			break;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN,
+				(st->gain_fm_tx2 << 16) | st->gain_fm_tx1);
 		break;
 	case REG_TX2_FM_BAND_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_BAND_GAIN) & 0xFFFF;
-		temp32 += (u32)val << 16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN, temp32);
+		st->gain_fm_tx2 = val;
+		if(st->rf_mute)
+			break;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN,
+				(st->gain_fm_tx2 << 16) | st->gain_fm_tx1);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY0:
 		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
@@ -500,6 +515,22 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 	case REG_GPSDO_LOCKED:
 		st->gpsdo_locked = (u32)val & 0x1;
 		break;
+	case REG_RF_MUTE:
+		if((bool)val == st->rf_mute){
+			break;
+		}
+		st->rf_mute = (bool)val;
+		if(st->rf_mute){
+			dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN, 0);
+			dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN, 0);
+		}
+		else{
+			dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN,
+					(st->gain_dab_tx2 << 16) | st->gain_dab_tx1);
+			dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN,
+					(st->gain_fm_tx2 << 16) | st->gain_fm_tx1);
+		}
+		break;
 	default:
 		ret = -ENODEV;
 		break;
@@ -575,10 +606,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = st->fs_adc - val;
 		break;
 	case REG_TX1_DAB_BAND_GAIN:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_BAND_GAIN) & 0xFFFF;
+		val = st->gain_dab_tx1;
 		break;
 	case REG_TX2_DAB_BAND_GAIN:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_BAND_GAIN) >> 16;
+		val = st->gain_dab_tx2;
 		break;
 	case REG_RX_DAB_BAND_BURST_LENGTH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH);
@@ -593,10 +624,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_PERIOD);
 		break;
 	case REG_TX1_FM_BAND_GAIN:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_BAND_GAIN) & 0xFFFF;
+		val = st->gain_fm_tx1;
 		break;
 	case REG_TX2_FM_BAND_GAIN:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_BAND_GAIN) >> 16;
+		val = st->gain_fm_tx2;
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY0:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC21) & 0xFFFF;
@@ -695,6 +726,9 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		break;
 	case REG_GPSDO_LOCKED:
 		val = st->gpsdo_locked;
+		break;
+	case REG_RF_MUTE:
+		val = st->rf_mute;
 		break;
 	default:
 		ret = -ENODEV;
@@ -884,6 +918,11 @@ static IIO_DEVICE_ATTR(rx_samp_rate_adc, S_IRUGO,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_SAMP_RATE_ADC);
 
+static IIO_DEVICE_ATTR(rf_mute, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RF_MUTE);
+
 
 static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	IIO_ATTR_ALL_CH(tx_dab_testtone_amplitude),
@@ -921,6 +960,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_pps_reference_frequency.dev_attr.attr,
 	&iio_dev_attr_pps_cnt.dev_attr.attr,
 	&iio_dev_attr_gpsdo_locked.dev_attr.attr,
+	&iio_dev_attr_rf_mute.dev_attr.attr,
 	NULL,
 };
 
@@ -1010,6 +1050,11 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	indio_dev->num_channels = ARRAY_SIZE(dras_fm_dab_adc_dac_channels);
 	indio_dev->info = &dras_fm_dab_adc_dac_info;
 	indio_dev->modes = INDIO_DIRECT_MODE;
+
+	/* initially mute TX of both RF bands */
+	st->rf_mute = true;
+   	// dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_BAND_GAIN, 0);
+   	// dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN, 0);
 
 	//dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, 2389333); 	// Fs/10 > 10Hz update rate
 	//dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, 2048);	// 11.7kHz RBW @ 2k FFT
