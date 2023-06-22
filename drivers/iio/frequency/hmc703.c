@@ -263,7 +263,7 @@ static int hmc703_parse_dt(struct device *dev, struct hmc703_state *st){
 	/* try to get initial value for charge pump output current */
 	if(of_property_read_u32(np, "optional,CP-Current", &val)){
 		val = (st->hmc703_reg[9] >> (0+8)) & 0x7F;	// If not defined, take default value out of register
-		pr_warning(DRIVER_NAME" >> CP-Current: using default value = %d\n", val);
+		pr_warn(DRIVER_NAME" >> CP-Current: using default value = %d\n", val);
 	}
 	st->hmc703_reg[9] = (st->hmc703_reg[9] & ~(0x7F << (0+8))) | (val << (0+8)); // HMC703 Reg09h, Bit0...6, CPIdn, Same value for pos and neg Charge Pump
 	st->hmc703_reg[9] = (st->hmc703_reg[9] & ~(0x7F << (7+8))) | (val << (7+8)); // HMC703 Reg09h, Bit7...13, CPIup
@@ -271,14 +271,14 @@ static int hmc703_parse_dt(struct device *dev, struct hmc703_state *st){
 	/* try to get initial value for N Divider VCO-Input */
 	if(of_property_read_u32(np, "optional,N-DIV-VCO", &val)){
 		val = (st->hmc703_reg[3] >> (0+8)) & 0xFFFF;	// If not defined, take default value out of register
-		pr_warning(DRIVER_NAME" >> N-DIV-VCO: using default value = %d\n", val);
+		pr_warn(DRIVER_NAME" >> N-DIV-VCO: using default value = %d\n", val);
 	}
 	st->hmc703_reg[3] = (st->hmc703_reg[3] & ~(0xFFFF << (0+8))) | (val << (0+8)); // HMC703 Reg03h, Bit0...15, intg
 
 	/* try to get initial value for R Divider REF-Input */
 	if(of_property_read_u32(np, "optional,R-DIV-REF", &val)){
 		val = (st->hmc703_reg[2] >> (0+8)) & 0x3FFF;	// If not defined, take default value out of register
-		pr_warning(DRIVER_NAME" >> R-DIV-REF: using default value = %d\n", val);
+		pr_warn(DRIVER_NAME" >> R-DIV-REF: using default value = %d\n", val);
 	}
 	st->hmc703_reg[2] = (st->hmc703_reg[2] & ~(0x3FFF << (0+8))) | (val << (0+8)); // HMC703 Reg02h, Bit0...13, rDiv
 
@@ -352,11 +352,11 @@ static int hmc703_probe(struct spi_device *spi)
 
 	/* set IIO device name */
 	if(!strlen(st->unique_id)){
-		pr_warning(DRIVER_NAME" >> unique-id not found! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> unique-id not found! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else if(strlen(st->unique_id) > 59){
-		pr_warning(DRIVER_NAME" >> unique-id is too long! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> unique-id is too long! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else

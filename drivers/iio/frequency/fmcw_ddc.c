@@ -5,15 +5,15 @@
  * Copyright 2018 PrecisionWave AG
  *
  * Licensed under the GPL-2.
- * 
+ *
  * Device Parameters
  * -----------------
- 
+
  */
 
 #include <linux/module.h>
-#include <linux/errno.h> 
-#include <linux/platform_device.h> 
+#include <linux/errno.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/of_device.h>
@@ -129,7 +129,7 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	
+
 	mutex_lock(&indio_dev->mlock);
 	switch ((u32)this_attr->address) {
 	case CH_VALID_SELECT:
@@ -313,7 +313,7 @@ static int vbi_fm_dsp_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -334,7 +334,6 @@ static int vbi_fm_dsp_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = vbi_fm_dsp_channels;
 	indio_dev->num_channels = ARRAY_SIZE(vbi_fm_dsp_channels);
@@ -383,4 +382,3 @@ MODULE_AUTHOR("Andreas Zutter <zutter@precisionwave.com>");
 MODULE_DESCRIPTION("FMCW DDC FPGA-IP driver");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:"DRIVER_NAME);
-

@@ -279,7 +279,7 @@ static ssize_t pcw_fmcw_dsp_store(struct device *dev,
 		ret = -EINVAL;
 		break;
 	}
-	
+
 	st->fs_adc = val;
 
     // recalculate downconverter frequency
@@ -562,7 +562,7 @@ static ssize_t pcw_fmcw_dsp_store(struct device *dev,
 	 	temp32 += (u32)val << 16;
 	 	pcw_fmcw_dsp_write(st, ADDR_SETTINGS_COMMON, temp32); // write settings
 	 	break;
- 
+
 	case CH_RX_ENABLE_MATCHED_FMCW_FILTER:
 	 	if(val<0 || val>1){
 	 		ret = -EINVAL;
@@ -1641,7 +1641,7 @@ static int pcw_fmcw_dsp_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -1696,7 +1696,6 @@ static int pcw_fmcw_dsp_probe(struct platform_device *pdev)
 	//for(i=0; i<st->nb_of_blocks; i++)
 		pcw_fmcw_dsp_write(st, ADDR_SETTINGS_COMMON, 1<<15); // enable baseband IQ swapping
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = pcw_fmcw_dsp_channels;
 	indio_dev->num_channels = ARRAY_SIZE(pcw_fmcw_dsp_channels);
