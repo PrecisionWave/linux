@@ -5,20 +5,20 @@
  * Copyright 2018 PrecisionWave AG
  *
  * Licensed under the GPL-2.
- * 
+ *
  * Device Parameters
  * -----------------
  * sel: selection of channel 0..4*number_of_blocks from devicetree
  * frequency: channel frequency in Hz
  * gain_tx1: output gain TX1 0..65536, 512=0dB
  * gain_tx2: output gain TX1 0..65536, 512=0dB
- * rf_input_selection: select 
- 
+ * rf_input_selection: select
+
  */
 
 #include <linux/module.h>
-#include <linux/errno.h> 
-#include <linux/platform_device.h> 
+#include <linux/errno.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/of_device.h>
@@ -199,7 +199,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 	u32 temp32;
 	u32 block_nb;
 	unsigned long long readin;
-	
+
 
 	/* convert to long
 	 * auto-detect decimal,
@@ -217,7 +217,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 	}
 
 	block_nb = st->ch_nb;
-	
+
 	mutex_lock(&indio_dev->mlock);
 	switch ((u32)this_attr->address) {
 	case CH_SEL:
@@ -256,7 +256,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 			tempint += 1<<DDS_PHASEWIDTH;
 
 		pcw_sdr_dsp_write(st, ADDR_RX_SETTINGS_DDC(block_nb), temp32); // write settings
-		
+
 		pcw_sdr_dsp_write(st, ADDR_RX_INC(block_nb), (u32)tempint & 0xFFFFFF); // write phase increment word
 
 		// recalculate frequency
@@ -506,7 +506,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 		break;
 
 	case CH_RX_SAMPLES_PER_PATTERN: // antenna switch delay fix related to channel 0 decimation factor
-		pcw_sdr_dsp_write(st, ADDR_RX_SAMPLES_PER_PATTERN, (u32)val);	
+		pcw_sdr_dsp_write(st, ADDR_RX_SAMPLES_PER_PATTERN, (u32)val);
 
 		if(( pcw_sdr_dsp_read(st, ADDR_RX_SETTINGS_DDC(block_nb)) >> 13 ) & 1){ // correct antenna switching delay
 			rx_stream_decimation = pcw_sdr_dsp_read(st, ADDR_RX_DECIMATION_STREAM_CIC(block_nb)) >> 16;
@@ -520,7 +520,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 
 		break;
 
-	case CH_RX_OVERFLOW_COUNT: // reset when write a 0 
+	case CH_RX_OVERFLOW_COUNT: // reset when write a 0
 		if(val!=0){
 			ret = -EINVAL;
 			break;
@@ -531,7 +531,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 		pcw_sdr_dsp_write(st, ADDR_RX_SETTINGS_DDC(block_nb), temp32);
 		break;
 
-	case CH_RX_ADC1_OVERRANGE_COUNT: // reset when write a 0 
+	case CH_RX_ADC1_OVERRANGE_COUNT: // reset when write a 0
 		if(val!=0){
 			ret = -EINVAL;
 			break;
@@ -539,7 +539,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 		st->rx_adc_overrange_count[0] = pcw_sdr_dsp_read(st, ADDR_RX_ADC_OVERRANGE_COUNT) & 0xFFFF;
 		break;
 
-	case CH_RX_ADC2_OVERRANGE_COUNT: // reset when write a 0 
+	case CH_RX_ADC2_OVERRANGE_COUNT: // reset when write a 0
 		if(val!=0){
 			ret = -EINVAL;
 			break;
@@ -551,7 +551,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 		if(val<0 || val>MAX_ANTENNA_PATTERNS-1){
 			ret = -EINVAL;
 			break;
-		}		
+		}
 		temp32 = pcw_sdr_dsp_read(st, ADDR_ENOUT_PATTERNLENGTH) & 0xFFFF0000;
 		temp32 += (u32)val;
 		pcw_sdr_dsp_write(st, ADDR_ENOUT_PATTERNLENGTH, temp32);
@@ -583,7 +583,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 		if(val<0 || val>65535){
 			ret = -EINVAL;
 			break;
-		}		
+		}
 		temp32 = pcw_sdr_dsp_read(st, ADDR_ENOUT_PATTERNLENGTH) & 0xFFFF;
 		temp32 += (u32)val << 16;
 		pcw_sdr_dsp_write(st, ADDR_ENOUT_PATTERNLENGTH, temp32);
@@ -593,7 +593,7 @@ static ssize_t pcw_sdr_dsp_store(struct device *dev,
 		if(val<0 || val>65535){
 			ret = -EINVAL;
 			break;
-		}		
+		}
 		temp32 = pcw_sdr_dsp_read(st, ADDR_GPO) & 0xFFFF0000;
 		temp32 += (u32)val;
 		pcw_sdr_dsp_write(st, ADDR_GPO, temp32);
@@ -775,30 +775,30 @@ static ssize_t pcw_sdr_dsp_show(struct device *dev,
 	case CH_PPS_COUNTER:
 		val = pcw_sdr_dsp_read(st, ADDR_PPS_SETTINGS) & 0x1;
 		if(val==0){
-			val = pcw_sdr_dsp_read(st, ADDR_PPS_GPS_CNT);		
+			val = pcw_sdr_dsp_read(st, ADDR_PPS_GPS_CNT);
 		}else{
-			val = pcw_sdr_dsp_read(st, ADDR_PPS_EXT_CNT);	
+			val = pcw_sdr_dsp_read(st, ADDR_PPS_EXT_CNT);
 		}
 		break;
 	case CH_PPS_CLOCK_CYCLES:
 		val = pcw_sdr_dsp_read(st, ADDR_PPS_SETTINGS) & 0x1;
-		
+
 		if(val==0){
-			ppsval = (u64) pcw_sdr_dsp_read(st, ADDR_PPS_GPS_LSB) & 0x00000000FFFFFFFF;		
+			ppsval = (u64) pcw_sdr_dsp_read(st, ADDR_PPS_GPS_LSB) & 0x00000000FFFFFFFF;
 			ppsval += (((u64)pcw_sdr_dsp_read(st, ADDR_PPS_GPS_MSB) << 32) & 0xFFFFFFFF00000000);
 		}else{
-			ppsval = (u64) pcw_sdr_dsp_read(st, ADDR_PPS_EXT_LSB) & 0x00000000FFFFFFFF;		
+			ppsval = (u64) pcw_sdr_dsp_read(st, ADDR_PPS_EXT_LSB) & 0x00000000FFFFFFFF;
 			ppsval += (((u64)pcw_sdr_dsp_read(st, ADDR_PPS_EXT_MSB) << 32) & 0xFFFFFFFF00000000);
-		}		
+		}
 		break;
 	case CH_PPS_SOURCE:
-		val = pcw_sdr_dsp_read(st, ADDR_PPS_SETTINGS) & 0x1;		
+		val = pcw_sdr_dsp_read(st, ADDR_PPS_SETTINGS) & 0x1;
 		break;
 	case CH_GPO_MASK:
 		val = pcw_sdr_dsp_read(st, ADDR_ENOUT_PATTERNLENGTH) >> 16;
 		break;
 	case CH_GPO_VALUE:
-		val = pcw_sdr_dsp_read(st, ADDR_GPO) & 0xFFFF;		
+		val = pcw_sdr_dsp_read(st, ADDR_GPO) & 0xFFFF;
 		break;
 	case CH_INT_TO_VOLT_SCALAR:
 		temp64 = st->int_to_volt_scalar;
@@ -1116,7 +1116,7 @@ static int pcw_sdr_dsp_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -1160,7 +1160,7 @@ static int pcw_sdr_dsp_probe(struct platform_device *pdev)
 		printk("PCW-SDR-DSP: ***ERROR! \"required,nb-of-blocks\" equal to 0\n");
 		goto err_iio_device_free;
 	}
-	
+
 	of_property_read_u32(np, "gpo_init_value", &temp32);
 	of_property_read_u32(np, "en_arm_gpo", &temp32_1);
 	temp32 = (temp32 & 0xffff) | ((temp32_1 << 16) & 0xffff0000);
@@ -1171,7 +1171,6 @@ static int pcw_sdr_dsp_probe(struct platform_device *pdev)
 	for(i=0; i<st->nb_of_blocks; i++)
 		pcw_sdr_dsp_write(st, ADDR_RX_SETTINGS_DDC(i), 1<<15); // enable baseband IQ swapping
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = pcw_sdr_dsp_channels;
 	indio_dev->num_channels = ARRAY_SIZE(pcw_sdr_dsp_channels);

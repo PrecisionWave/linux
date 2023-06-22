@@ -363,11 +363,11 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 				break;
 			}
 			vbi_br_dsp_write(st, ADDR_RX_DECIMATION(ch), (u32)val);
-			
+
 			for(i=0; i<180; i++){
 				vbi_br_dsp_write(st, ADDR_RX_FIR_COEFS(ch), (u32)fir_coefs[(u32)(val - 1)][i] + (u32)((i+1)<<16));
 			}
-			
+
 			break;
 		}
 		if((u32)this_attr->address == REG_CH(ch, REG_RX_FIR_COEFFICIENTS)){
@@ -386,9 +386,9 @@ static ssize_t vbi_br_dsp_store(struct device *dev,
 	case REG_INT_TO_VOLT_SCALAR:
 		st->int_to_volt_scalar = readin;
 		break;
-	
+
   	case REG_RX_SAMP_RATE_ADC:
-		match = 1;		
+		match = 1;
 		if(val<1){
 			ret = -EINVAL;
 			break;
@@ -985,7 +985,7 @@ static int vbi_br_dsp_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -1022,7 +1022,6 @@ static int vbi_br_dsp_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = vbi_br_dsp_channels;
 	indio_dev->num_channels = ARRAY_SIZE(vbi_br_dsp_channels);

@@ -1171,7 +1171,6 @@ static int axiadc_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = pdev->dev.of_node->name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->available_scan_masks = conv->chip_info->scan_masks;

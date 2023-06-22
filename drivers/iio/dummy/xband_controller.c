@@ -445,7 +445,7 @@ static int xband_controller_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev){
 		printk("\nx-band controller: -ENOMEM\n");
 		return -ENOMEM;
@@ -453,7 +453,6 @@ static int xband_controller_probe(struct platform_device *pdev)
 
 	st = iio_priv(indio_dev);
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &xband_controller_info;

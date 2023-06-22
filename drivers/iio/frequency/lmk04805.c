@@ -1075,7 +1075,7 @@ static int lmk04805_read_raw(struct iio_dev *indio_dev,
 			*val = st->oscin_freq / LMK04805_GET_CLK_DIVIDER(reg);
 		else
 			*val = st->vco_out_freq / LMK04805_GET_CLK_DIVIDER(reg);
-		
+
 		ret = IIO_VAL_INT;
 		break;
 	default:
@@ -1366,7 +1366,7 @@ static struct clk *lmk04805_clk_register(struct iio_dev *indio_dev, unsigned num
 	init.ops = &lmk04805_clk_ops;
 
 	init.num_parents = 0;
-	init.flags = CLK_IS_BASIC | CLK_GET_RATE_NOCACHE | CLK_RECALC_NEW_RATES;
+	init.flags = CLK_GET_RATE_NOCACHE | CLK_RECALC_NEW_RATES;
 	output->hw.init = &init;
 	output->indio_dev = indio_dev;
 	output->num = num;
@@ -1731,7 +1731,7 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 		}
 
 		ret = of_property_read_string(chan_np, "lmk,extended-name", &str);
-		if(ret < 0){pr_warning("lmk04805: CH[%d] - extended-name of clock channel not found! Please check devicetree ..\n", pdata->channels[cnt].channel_num);}
+		if(ret < 0){pr_warn("lmk04805: CH[%d] - extended-name of clock channel not found! Please check devicetree ..\n", pdata->channels[cnt].channel_num);}
 		if(ret >= 0){strlcpy(pdata->channels[cnt].extended_name, str, sizeof(pdata->channels[cnt].extended_name));}
 		cnt++;
 	}

@@ -226,7 +226,7 @@ static int gen_shiftreg_parse_dt(struct device *dev, struct gen_shiftreg_state *
 
 	/* try to get number of bits */
 	if(of_property_read_u32(np, "optional,num-bits", &st->nbits)){
-		pr_warning(DRIVER_NAME" >> num-bits: using default value = %d\n", DEFAULT_NUM_BITS);
+		pr_warn(DRIVER_NAME" >> num-bits: using default value = %d\n", DEFAULT_NUM_BITS);
 		st->nbits = DEFAULT_NUM_BITS;
 	}
 
@@ -300,7 +300,7 @@ static int gen_shiftreg_probe(struct spi_device *spi)
 	if(!st->device_name)
 		indio_dev->name = np->name;									// set platform name of the device
 	else if(strlen(st->device_name) > 59){
-		pr_warning(DRIVER_NAME" >> device-name is too long! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> device-name is too long! check devicetree ..\n");
 		indio_dev->name = np->name;									// set platform name of the device
 	}
 	else

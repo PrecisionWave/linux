@@ -333,31 +333,31 @@ static int lmx2594_parse_dt(struct device *dev, struct lmx2594_state *st){
 
 	/* try to get initial value for Output1_Frequency_Hz */
 	if(of_property_read_u64(np, "optional,output1-frequency-hz", &st->output1_frequency_hz)){
-		pr_warning(DRIVER_NAME" >> output1-frequency-hz: using default value = %d\n", DEFAULT_OUTPUT1_FREQUENCY_HZ);
+		pr_warn(DRIVER_NAME" >> output1-frequency-hz: using default value = %d\n", DEFAULT_OUTPUT1_FREQUENCY_HZ);
 		st->output1_frequency_hz = DEFAULT_OUTPUT1_FREQUENCY_HZ;
 	}
 
 	/* try to get initial value for Output2_Frequency_Hz */
 	if(of_property_read_u64(np, "optional,output2-frequency-hz", &st->output2_frequency_hz)){
-		pr_warning(DRIVER_NAME" >> output2-frequency-hz: using default value = %d\n", DEFAULT_OUTPUT2_FREQUENCY_HZ);
+		pr_warn(DRIVER_NAME" >> output2-frequency-hz: using default value = %d\n", DEFAULT_OUTPUT2_FREQUENCY_HZ);
 		st->output2_frequency_hz = DEFAULT_OUTPUT2_FREQUENCY_HZ;
 	}
 
 	/* try to get initial value for VCO_Frequency_Hz */
 	if(of_property_read_u64(np, "optional,vco-frequency-hz", &st->vco_frequency_hz)){
-		pr_warning(DRIVER_NAME" >> vco-frequency-hz: using default value = %d\n", DEFAULT_VCO_FREQUENCY_HZ);
+		pr_warn(DRIVER_NAME" >> vco-frequency-hz: using default value = %d\n", DEFAULT_VCO_FREQUENCY_HZ);
 		st->vco_frequency_hz = DEFAULT_VCO_FREQUENCY_HZ;
 	}
 
 	/* try to get initial value for Output1_Enable */
 	if(of_property_read_u32(np, "optional,output1-enable", &st->output1_enable)){
-		pr_warning(DRIVER_NAME" >> output1-enable: using default value = %d\n", DEFAULT_OUTPUT1_ENABLE);
+		pr_warn(DRIVER_NAME" >> output1-enable: using default value = %d\n", DEFAULT_OUTPUT1_ENABLE);
 		st->output1_enable = DEFAULT_OUTPUT1_ENABLE;
 	}
 
 	/* try to get initial value for Output2_Enable */
 	if(of_property_read_u32(np, "optional,output2-enable", &st->output2_enable)){
-		pr_warning(DRIVER_NAME" >> output2-enable: using default value = %d\n", DEFAULT_OUTPUT2_ENABLE);
+		pr_warn(DRIVER_NAME" >> output2-enable: using default value = %d\n", DEFAULT_OUTPUT2_ENABLE);
 		st->output2_enable = DEFAULT_OUTPUT2_ENABLE;
 	}
 
@@ -394,11 +394,11 @@ static int lmx2594_probe(struct spi_device *spi)
 
 	/* set IIO device name */
 	if(!strlen(st->unique_id)){
-		pr_warning(DRIVER_NAME" >> unique-id not found! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> unique-id not found! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else if(strlen(st->unique_id) > 59){
-		pr_warning(DRIVER_NAME" >> unique-id is too long! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> unique-id is too long! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else

@@ -7,6 +7,7 @@
 #include "zynq-enclustra-qspi64-parts.dtsi"
 #include <dt-bindings/pinctrl/pinctrl-zynqmp.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/gpio.h>
 
 /*
  * pg201-zynq-ultrascale-plus-processing-system.pdf (PG201 January 6, 2020), Table 2-1
@@ -536,7 +537,8 @@
 	xlnx,mio_bank = <0>;
 };
 
-&serdes {
+/* serdes */
+&psgtr {
 	status = "okay";
 };
 

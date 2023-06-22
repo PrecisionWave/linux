@@ -700,7 +700,7 @@ static int dac_clk_clock_notifier(struct notifier_block *nb,
 	if (event == POST_RATE_CHANGE) {
 		st->fs_if_dac = ndata->new_rate;
 	}
-	
+
 	return NOTIFY_DONE;
 }
 
@@ -729,7 +729,7 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -783,7 +783,6 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = dexter_dsp_tx_channels;
 	indio_dev->num_channels = ARRAY_SIZE(dexter_dsp_tx_channels);

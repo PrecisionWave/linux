@@ -756,7 +756,7 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		temps32 = zebu_fmcw_dsp_read(st, ADDR_RX_STREAM_ENABLE_DECIMATION_10G) & 0x7;
 		val = 1<<temps32;
 		break;
-		
+
   	case CH_RX_BURST_LENGTH_10G:
 		val = zebu_fmcw_dsp_read(st, ADDR_RX_BURST_LENGTH_10G);
 		break;
@@ -1275,7 +1275,7 @@ static int zebu_fmcw_dsp_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -1313,7 +1313,6 @@ static int zebu_fmcw_dsp_probe(struct platform_device *pdev)
 		printk("ZEBU-FMCW-DSP: ***ERROR! \"required,fs-if-adc\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = zebu_fmcw_dsp_channels;
 	indio_dev->num_channels = ARRAY_SIZE(zebu_fmcw_dsp_channels);

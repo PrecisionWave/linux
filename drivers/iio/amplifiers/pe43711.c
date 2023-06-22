@@ -170,11 +170,11 @@ static int pe43711_probe(struct spi_device *spi)
 
 	/* try to get unique id */
 	if(!strlen(st->unique_id)){
-		pr_warning("PE43711 >> unique-id not found! check devicetree ..\n");
+		pr_warn("PE43711 >> unique-id not found! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else if(strlen(st->unique_id) > 59){
-		pr_warning("PE43711 >> unique-id is too long! check devicetree ..\n");
+		pr_warn("PE43711 >> unique-id is too long! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else

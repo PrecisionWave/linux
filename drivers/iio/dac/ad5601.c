@@ -97,7 +97,7 @@ static ssize_t NAME_(store)(struct device *dev,
 	ret = kstrtol(buf, 0, &val);
 	if (ret < 0)
 		return ret;
-	
+
 	mutex_lock(&indio_dev->mlock);
 	switch ((u32)this_attr->address) {
 	case RESERVED_SPI:
@@ -190,11 +190,11 @@ static int NAME_(probe)(struct spi_device *spi)
 
 	/* try to get unique id */
 	if(!strlen(st->unique_id)){
-		pr_warning(DRIVER_NAME" >> unique-id not found! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> unique-id not found! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else if(strlen(st->unique_id) > 59){
-		pr_warning(DRIVER_NAME" >> unique-id is too long! check devicetree ..\n");
+		pr_warn(DRIVER_NAME" >> unique-id is too long! check devicetree ..\n");
 		indio_dev->name = np->name;									// set non-unique id of the device
 	}
 	else

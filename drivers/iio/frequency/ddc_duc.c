@@ -7,8 +7,8 @@
  */
 
 #include <linux/module.h>
-#include <linux/errno.h> 
-#include <linux/platform_device.h> 
+#include <linux/errno.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/of_device.h>
@@ -1254,7 +1254,7 @@ static int ddc_duc_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -1298,7 +1298,6 @@ static int ddc_duc_probe(struct platform_device *pdev)
 	if(of_property_read_u32(np, "optional,gain-rx", &st->gain_rx))
 		st->gain_rx = 0xFF;	// default = 0dB
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = ddc_duc_channels;
 	indio_dev->num_channels = ARRAY_SIZE(ddc_duc_channels);
@@ -1412,4 +1411,3 @@ MODULE_AUTHOR("Cyril Zwahlen <zlc3@bfh.ch>");
 MODULE_DESCRIPTION("Digital Down Converter (DDC) and Digital Up Converter (DUC) FPGA-IP driver");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:"DRIVER_NAME);
-

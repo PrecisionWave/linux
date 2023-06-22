@@ -29,7 +29,7 @@
 
 
 #define DRIVER_NAME			"vbi-fembms-dsp"
-#define NB_OF_BLOCKS			4 
+#define NB_OF_BLOCKS			4
 #define ADDR_PER_BLOCK			4*16
 #define ADDR_START_BLOCK		4*16
 #define ADDR_START_MONITOR		ADDR_START_BLOCK+ADDR_PER_BLOCK*NB_OF_BLOCKS
@@ -128,7 +128,7 @@
 	static IIO_DEVICE_ATTR(ch0_##ATTR, RW, SHOW, STORE, CH0_##REG); \
 	static IIO_DEVICE_ATTR(ch1_##ATTR, RW, SHOW, STORE, CH1_##REG); \
 	static IIO_DEVICE_ATTR(ch2_##ATTR, RW, SHOW, STORE, CH2_##REG); \
-	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); 
+	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG);
 	// static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
 	// static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
 	// static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
@@ -730,7 +730,7 @@ static int vbi_fembms_dsp_probe(struct platform_device *pdev)
 	 *               or the driver for the device is unloaded,
 	 *               that memory is freed automatically
 	 */
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&pdev->dev, sizeof(*st));
 	if (!indio_dev)
 		return -ENOMEM;
 
@@ -771,7 +771,6 @@ static int vbi_fembms_dsp_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = vbi_fembms_dsp_channels;
 	indio_dev->num_channels = ARRAY_SIZE(vbi_fembms_dsp_channels);
