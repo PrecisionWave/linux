@@ -92,7 +92,7 @@
 	static IIO_DEVICE_ATTR(ch0_##ATTR, RW, SHOW, STORE, CH0_##REG); \
 	static IIO_DEVICE_ATTR(ch1_##ATTR, RW, SHOW, STORE, CH1_##REG); \
 	static IIO_DEVICE_ATTR(ch2_##ATTR, RW, SHOW, STORE, CH2_##REG); \
-	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); 
+	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG);
 //	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
 //	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
 //	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
@@ -136,7 +136,8 @@ enum chan_num{
 	REG_RX_BURST_PERIOD,
 	REG_RX_DMA_FULLRATE_ADC,
 	REG_RX_DMA_FULLRATE_ADC_SELECTION,
-	REG_DSP_VERSION
+	REG_DSP_VERSION,
+	REG_RF_MUTE
 };
 
 struct dras_tetra_state {
@@ -145,6 +146,9 @@ struct dras_tetra_state {
 	struct mutex		lock;
 
 	uint32_t		fs_adc;
+	u32				gain_tx1;
+	u32				gain_tx2;
+	bool			rf_mute;
 };
 
 static void dras_tetra_write(struct dras_tetra_state *st, unsigned reg, u32 val)
@@ -330,18 +334,22 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF0000;
-		temp32 += ((uint32_t)val);
-		dras_tetra_write(st, ADDR_TX21_GAIN, temp32);
+		st->gain_tx1 = val;
+		if(st->rf_mute)
+			break;
+		dras_tetra_write(st, ADDR_TX21_GAIN,
+			(st->gain_tx2 << 16) | st->gain_tx1);
 		break;
 	case REG_TX2_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF;
-		temp32 += ((uint32_t)val) << 16;
-		dras_tetra_write(st, ADDR_TX21_GAIN, temp32);
+		st->gain_tx2 = val;
+		if(st->rf_mute)
+			break;
+		dras_tetra_write(st, ADDR_TX21_GAIN,
+			(st->gain_tx2 << 16) | st->gain_tx1);
 		break;
 	case REG_RX_BURST_LENGTH:
 		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, (uint32_t)val);
@@ -366,6 +374,19 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<13);
 		temp32 += ((uint32_t)val-1)<<13;
 		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		break;
+	case REG_RF_MUTE:
+		if((bool)val == st->rf_mute){
+			break;
+		}
+		st->rf_mute = (bool)val;
+		if(st->rf_mute){
+			dras_tetra_write(st, ADDR_TX21_GAIN, 0);
+		}
+		else{
+			dras_tetra_write(st, ADDR_TX21_GAIN,
+				(st->gain_tx2 << 16) | st->gain_tx1);
+		}
 		break;
 	default:
 		ret = -ENODEV;
@@ -455,10 +476,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
 		break;
 	case REG_TX1_GAIN:
-		val = (uint32_t)dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF;
+		val = st->gain_tx1;
 		break;
 	case REG_TX2_GAIN:
-		val = ((uint32_t)dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF0000) >> 16;
+		val = st->gain_tx2;
 		break;
 	case REG_RX_BURST_LENGTH:
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH);
@@ -474,6 +495,9 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_DSP_VERSION:
 		val = dras_tetra_read(st, ADDR_DSP_VERSION);
+		break;
+	case REG_RF_MUTE:
+		val = st->rf_mute;
 		break;
 	default:
 		ret = -ENODEV;
@@ -567,6 +591,11 @@ static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_tetra_store,
 			REG_DSP_VERSION);
 
+static IIO_DEVICE_ATTR(rf_mute, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RF_MUTE);
+
 
 static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_tetra_frequency),
@@ -585,6 +614,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_rx_dma_fullrate_adc.dev_attr.attr,
 	&iio_dev_attr_rx_dma_fullrate_adc_selection.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
+	&iio_dev_attr_rf_mute.dev_attr.attr,
 	NULL,
 };
 
@@ -674,6 +704,9 @@ static int dras_tetra_probe(struct platform_device *pdev)
 	indio_dev->num_channels = ARRAY_SIZE(dras_tetra_channels);
 	indio_dev->info = &dras_tetra_info;
 	indio_dev->modes = INDIO_DIRECT_MODE;
+
+	/* initially mute TX of both TX */
+	st->rf_mute = true;
 
 	//dras_tetra_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, 2389333); 	// Fs/10 > 10Hz update rate
 	//dras_tetra_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, 2048);	// 11.7kHz RBW @ 2k FFT
