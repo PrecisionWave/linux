@@ -21,11 +21,14 @@
 
 
 #define DRIVER_NAME			"dras-tetra"
-#define NB_OF_TETRA_CHANNELS		8
+#define NB_OF_TETRA_CHANNELS		4
 
 // common DSP addresses
 #define ADDR_DSP_VERSION		(0*4)
 #define ADDR_CHANNEL_ASSIGNMENT		(1*4)
+#define ADDR_TX21_GAIN			(2*4)
+#define ADDR_RX_BURST_LENGTH		(3*4)
+#define ADDR_RX_BURST_PERIOD		(4*4)
 
 // TETRA channels
 #define ADDR_PER_TETRA_CHANNELS		16
@@ -67,11 +70,11 @@
 	CH0_##REG, \
 	CH1_##REG, \
 	CH2_##REG, \
-	CH3_##REG, \
-	CH4_##REG, \
-	CH5_##REG, \
-	CH6_##REG, \
-	CH7_##REG
+	CH3_##REG
+//	CH4_##REG, \
+//	CH5_##REG, \
+//	CH6_##REG, \
+//	CH7_##REG
 
 // expands to:
 //   static IIO_DEVICE_ATTR(ch0_<ATTR>, <RW>, <SHOW>, <STORE>, CH0_<REG>);
@@ -89,11 +92,11 @@
 	static IIO_DEVICE_ATTR(ch0_##ATTR, RW, SHOW, STORE, CH0_##REG); \
 	static IIO_DEVICE_ATTR(ch1_##ATTR, RW, SHOW, STORE, CH1_##REG); \
 	static IIO_DEVICE_ATTR(ch2_##ATTR, RW, SHOW, STORE, CH2_##REG); \
-	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); \
-	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
-	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
-	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
-	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
+	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); 
+//	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
+//	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
+//	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
+//	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
 
 // expands to:
 //   &iio_dev_attr_ch0_<ATTR>.dev_attr.attr,
@@ -111,11 +114,11 @@
 	&iio_dev_attr_ch0_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch1_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch2_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch3_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
+	&iio_dev_attr_ch3_##ATTR.dev_attr.attr
+//	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
+//	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
+//	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
+//	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
 
 enum chan_num{
 	REG_ALL_CH(REG_RX_TETRA_CHANNEL_FREQUENCY),	// being expanded for all channels
@@ -125,6 +128,14 @@ enum chan_num{
 	REG_ALL_CH(REG_RX_TETRA_CHANNEL_SELECTION),	// being expanded for all channels
 	REG_ALL_CH(REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE),	// being expanded for all channels
 	REG_ALL_CH(REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE),	// being expanded for all channels
+	REG_TX1_GAIN,
+	REG_TX2_GAIN,
+	REG_CH0_WIDEBAND_MODE,
+	REG_CH2_WIDEBAND_MODE,
+	REG_RX_BURST_LENGTH,
+	REG_RX_BURST_PERIOD,
+	REG_RX_DMA_FULLRATE_ADC,
+	REG_RX_DMA_FULLRATE_ADC_SELECTION,
 	REG_DSP_VERSION
 };
 
@@ -272,8 +283,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<(ch+4));
-			temp32 += ((uint32_t)val)<<(ch+4);
+			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<(ch+16));
+			temp32 += ((uint32_t)val)<<(ch+16);
 			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 			break;
 		}
@@ -283,8 +294,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<(ch+8));
-			temp32 += ((uint32_t)val)<<(ch+8);
+			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<(ch+24));
+			temp32 += ((uint32_t)val)<<(ch+24);
 			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 			break;
 		}
@@ -295,12 +306,71 @@ static ssize_t dras_tetra_store(struct device *dev,
 	}
 
 	/* unique registers */
-	//switch ((u32)this_attr->address) {
-	//
-	//default:
-	//	ret = -ENODEV;
-	//	break;
-	//}
+	switch ((u32)this_attr->address) {
+	case REG_CH0_WIDEBAND_MODE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<8);
+		temp32 += ((uint32_t)val)<<8;
+		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		break;
+	case REG_CH2_WIDEBAND_MODE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<10);
+		temp32 += ((uint32_t)val)<<10;
+		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		break;
+	case REG_TX1_GAIN:
+		if(val<MIN_GAIN || val>MAX_GAIN){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF0000;
+		temp32 += ((uint32_t)val);
+		dras_tetra_write(st, ADDR_TX21_GAIN, temp32);
+		break;
+	case REG_TX2_GAIN:
+		if(val<MIN_GAIN || val>MAX_GAIN){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF;
+		temp32 += ((uint32_t)val) << 16;
+		dras_tetra_write(st, ADDR_TX21_GAIN, temp32);
+		break;
+	case REG_RX_BURST_LENGTH:
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, (uint32_t)val);
+		break;
+	case REG_RX_BURST_PERIOD:
+		dras_tetra_write(st, ADDR_RX_BURST_PERIOD, (uint32_t)val);
+		break;
+	case REG_RX_DMA_FULLRATE_ADC:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<12);
+		temp32 += ((uint32_t)val)<<12;
+		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		break;
+	case REG_RX_DMA_FULLRATE_ADC_SELECTION:
+		if(val<1 || val>2){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<13);
+		temp32 += ((uint32_t)val-1)<<13;
+		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		break;
+	default:
+		ret = -ENODEV;
+		break;
+	}
 	mutex_unlock(&indio_dev->mlock);
 
 	return ret ? ret : len;
@@ -360,12 +430,12 @@ static ssize_t dras_tetra_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE)){
 			match = 1;
-			val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> (ch+4)) & 1;
+			val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> (ch+16)) & 1;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE)){
 			match = 1;
-			val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> (ch+8)) & 1;
+			val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> (ch+24)) & 1;
 			break;
 		}
 	}
@@ -378,6 +448,30 @@ static ssize_t dras_tetra_show(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
+	case REG_CH0_WIDEBAND_MODE:
+		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 8) & 1;
+		break;
+	case REG_CH2_WIDEBAND_MODE:
+		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
+		break;
+	case REG_TX1_GAIN:
+		val = (uint32_t)dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF;
+		break;
+	case REG_TX2_GAIN:
+		val = ((uint32_t)dras_tetra_read(st, ADDR_TX21_GAIN) & 0xFFFF0000) >> 16;
+		break;
+	case REG_RX_BURST_LENGTH:
+		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH);
+		break;
+	case REG_RX_BURST_PERIOD:
+		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_PERIOD);
+		break;
+	case REG_RX_DMA_FULLRATE_ADC:
+		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 12) & 1;
+		break;
+	case REG_RX_DMA_FULLRATE_ADC_SELECTION:
+		val = 1+((dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 13) & 1);
+		break;
 	case REG_DSP_VERSION:
 		val = dras_tetra_read(st, ADDR_DSP_VERSION);
 		break;
@@ -428,6 +522,46 @@ IIO_DEVICE_ATTR_ALL_CH(tx2_tetra_channel_output_enable, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE);
 
+static IIO_DEVICE_ATTR(tx1_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_GAIN);
+
+static IIO_DEVICE_ATTR(tx2_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_GAIN);
+
+static IIO_DEVICE_ATTR(ch0_wideband_mode, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_CH0_WIDEBAND_MODE);
+
+static IIO_DEVICE_ATTR(ch2_wideband_mode, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_CH2_WIDEBAND_MODE);
+
+static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_LENGTH);
+
+static IIO_DEVICE_ATTR(rx_burst_period, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_PERIOD);
+
+static IIO_DEVICE_ATTR(rx_dma_fullrate_adc, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_DMA_FULLRATE_ADC);
+
+static IIO_DEVICE_ATTR(rx_dma_fullrate_adc_selection, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_DMA_FULLRATE_ADC_SELECTION);
+
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -442,6 +576,14 @@ static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_tetra_channel_input_selection),
 	IIO_ATTR_ALL_CH(tx1_tetra_channel_output_enable),
 	IIO_ATTR_ALL_CH(tx2_tetra_channel_output_enable),
+	&iio_dev_attr_tx1_gain.dev_attr.attr,
+	&iio_dev_attr_tx2_gain.dev_attr.attr,
+	&iio_dev_attr_ch0_wideband_mode.dev_attr.attr,
+	&iio_dev_attr_ch2_wideband_mode.dev_attr.attr,
+	&iio_dev_attr_rx_burst_length.dev_attr.attr,
+	&iio_dev_attr_rx_burst_period.dev_attr.attr,
+	&iio_dev_attr_rx_dma_fullrate_adc.dev_attr.attr,
+	&iio_dev_attr_rx_dma_fullrate_adc_selection.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	NULL,
 };
