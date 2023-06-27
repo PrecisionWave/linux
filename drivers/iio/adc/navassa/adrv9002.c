@@ -3371,8 +3371,10 @@ int adrv9002_post_init(struct adrv9002_rf_phy *phy)
 		return ret;
 
 	ret = adrv9002_init(phy, &phy->profile);
-	if (ret)
+	if (ret) {
+		adrv9002_of_clk_del_provider(&spi->dev);
 		return ret;
+	}
 
 	indio_dev->dev.parent = &spi->dev;
 	indio_dev->name = spi->dev.of_node->name;
