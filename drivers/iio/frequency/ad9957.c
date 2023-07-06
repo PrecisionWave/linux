@@ -16,9 +16,11 @@
  #include <linux/iio/sysfs.h>
  #include <linux/iio/buffer-dma.h>
  #include <linux/iio/buffer-dmaengine.h>
+ #include <linux/iio/buffer.h>
 
 
 #define NUM_TX_CH       4
+#define to_clk_fixed_rate(_hw) container_of(_hw, struct clk_fixed_rate, hw)
 
 struct ad9957_state {
 	struct device		*dev;
@@ -445,10 +447,10 @@ static int ad9957_probe(struct spi_device *spi)
 		indio_dev_tx[i]->direction = IIO_DEVICE_DIRECTION_OUT;
 		indio_dev_tx[i]->info = &ad9957_tx_info;
 
-		buffer[i] = iio_dmaengine_buffer_alloc(indio_dev_tx[i]->dev.parent, dma_ch,
+		buffer[i] = devm_iio_dmaengine_buffer_alloc(indio_dev_tx[i]->dev.parent, dma_ch,
 							&dma_buffer_ops, indio_dev_tx[i]);
 		if (IS_ERR(buffer[i])) {
-			dev_err(&spi->dev, "iio_dmaengine_buffer_alloc failed");
+			dev_err(&spi->dev, "devm_iio_dmaengine_buffer_alloc failed");
 			ret = PTR_ERR(buffer[i]);
 			goto error_disable_buf;
 		}
@@ -493,8 +495,6 @@ error_disable_clk:
 	clk_disable_unprepare(st->ref_clk);
 error_disable_buf:
 	i--;
-	for(;i>=0;i--)
-		iio_dmaengine_buffer_free(indio_dev_tx[i]->buffer);
 
 	return ret;
 }
@@ -504,7 +504,6 @@ static int ad9957_remove(struct spi_device *spi)
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 	struct ad9957_state *st = iio_priv(indio_dev);
 
-	iio_dmaengine_buffer_free(indio_dev->buffer);
 	clk_disable_unprepare(st->ref_clk);
 
 	return 0;
