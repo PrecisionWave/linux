@@ -863,7 +863,7 @@ static ssize_t lmk04805_store(struct device *dev,
 			if(ret)
 				break;
 			lmk04805_inject_register_value(&reg, 31, 1, val);
-			ret = lmk04805_write_all(indio_dev, reg_num, reg);
+			ret = lmk04805_write(indio_dev, reg_num, reg);
 			break;
 		}
 		else if((u32)this_attr->address == CLK_ATTR(ch, ATTR_CLK_DIV)){
@@ -891,7 +891,7 @@ static ssize_t lmk04805_store(struct device *dev,
 			if(ret)
 				break;
 			lmk04805_inject_register_value(&reg, 16 + 4*(ch%4), 4, val);
-			ret = lmk04805_write_all(indio_dev, reg_num, reg);
+			ret = lmk04805_write(indio_dev, reg_num, reg);
 			break;
 		}
 	}
@@ -1459,7 +1459,11 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	}
 
 	/* write all registers to the chip */
-	lmk04805_sync_all_registers(indio_dev);
+	// lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x01);  // set POWERDOWN
+	// lmk04805_sync_all_registers(indio_dev);
+	// msleep(1000);	// give the lmk04805 some time to setup the clocks
+	// lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x00);  // reset POWERDOWN
+	lmk04805_spi_write(indio_dev, st->pdata->reg_map[1]);
 	msleep(300);	// give the lmk04805 some time to setup the clocks
 
 	st->clk_data.clks = st->clks;
@@ -1486,7 +1490,8 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 //				BIT(IIO_CHAN_INFO_PHASE) |
 				BIT(IIO_CHAN_INFO_FREQUENCY);
 
-			clk = lmk04805_clk_register(indio_dev, chan->channel_num, !chan->powerdown);
+			clk = lmk04805_clk_register(indio_dev, chan->channel_num,
+				!chan->powerdown & (!chan->out_type != 0));
 			if (IS_ERR(clk))
 				return PTR_ERR(clk);
 		}
@@ -1841,6 +1846,12 @@ static int lmk04805_remove(struct spi_device *spi)
 	return 0;
 }
 
+static void lmk04805_shutdown(struct spi_device *spi)
+{
+	struct iio_dev *indio_dev = spi_get_drvdata(spi);
+	lmk04805_spi_write(indio_dev, 0x80160140); // perform RESET
+}
+
 static const struct spi_device_id lmk04805_id[] = {	//TODO
 	{"lmk04805-1", 0},
 	{}
@@ -1854,6 +1865,7 @@ static struct spi_driver lmk04805_driver = {
 	},
 	.probe		= lmk04805_probe,
 	.remove		= lmk04805_remove,
+	.shutdown	= lmk04805_shutdown,
 	.id_table	= lmk04805_id,
 };
 module_spi_driver(lmk04805_driver);
