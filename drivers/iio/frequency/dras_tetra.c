@@ -234,7 +234,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			temp64 = val << 24;
+			temp64 = (u64)val << 24;
 			temp64 = div_s64(temp64,st->fs_adc);
 			val = (int)temp64 & 0xFFFFFF;
 			dras_tetra_write(st, ADDR_RX_TETRA_DDSINC(ch), val);
@@ -246,7 +246,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			temp64 = val << 24;
+			temp64 = (u64)val << 24;
 			temp64 = div_s64(temp64,st->fs_adc);
 			val = (int)temp64 & 0xFFFFFF;
 			dras_tetra_write(st, ADDR_TX_TETRA_DDSINC(ch), val);
