@@ -181,6 +181,7 @@ struct dras_fm_dab_adc_dac_state {
 	struct mutex		lock;
 
 	uint32_t		fs_adc;
+	uint32_t		dab_band_ddc_phase;
 	bool			gpsdo_locked;
   	uint32_t		pps_clk_error_ns;
   	uint32_t		pps_clk_error_hz;
@@ -331,6 +332,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = (u64)val << 24;
 		temp64 = div_s64(temp64,st->fs_adc);
 		val = (int)temp64 & 0xFFFFFF;
+		val = val | ((st->dab_band_ddc_phase & 0x3)<<24);
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_CHANNEL_FREQUENCY, val);
 		break;
 	case REG_RX_DAB_BAND_BURST_LENGTH:
@@ -1043,6 +1045,10 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 		printk("DRAS-FM-DAB-ADC-DAC: ***ERROR! \"required,fs-adc\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
+	if(of_property_read_u32(np, "optional,dab-band-ddc-phase", &st->dab_band_ddc_phase)){
+		st->dab_band_ddc_phase = 0;
+	}
+	printk("DRAS-FM-DAB-ADC-DAC: dab-band-ddc-phase = %d\n", st->dab_band_ddc_phase);
 
 	indio_dev->name = np->name;
 	indio_dev->channels = dras_fm_dab_adc_dac_channels;
