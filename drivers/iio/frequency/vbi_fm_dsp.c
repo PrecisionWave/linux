@@ -336,7 +336,7 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 	int ret;
 	u64 temp64;
 	int tempint;
-	u32 temp32;
+	u32 temp32, switching_word, hw_gain;
 	int subchannel;
 	int block_nb;
 	u32 ch;
@@ -648,45 +648,52 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
+			// prepare switching word
 			st->vbi_mode_tx1[ch] = (u32)val;
-			temp32 = vbi_fm_dsp_read(st, ADDR_ROUTING(block_nb)) & ~(1<<(10+subchannel));
-			temp32 += st->vbi_mode_tx1[ch] << (10+subchannel);
-			vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), temp32);
+			switching_word = vbi_fm_dsp_read(st, ADDR_ROUTING(block_nb)) & ~(1<<(10+subchannel));
+			switching_word += st->vbi_mode_tx1[ch] << (10+subchannel);
+			// prepare hardware gain word
+			if(st->vbi_mode_tx1[ch]){
+				hw_gain = st->modulator_gain_tx1[ch];
+			}else{
+				hw_gain = st->gain_tx1[ch];
+			}
+			// important to take into account this writing sequence to have power drops instead of overshoots: 
+			// 1. activate break-in before setting gain if mod_gain >= repeater_gain
+			// 2. deactivate break-in before setting gain if mod_gain < repeater_gain
+			if((st->vbi_mode_tx1[ch]==1 && st->gain_tx1[ch] >= st->modulator_gain_tx1[ch]) \
+			|| (st->vbi_mode_tx1[ch]==0 && st->gain_tx1[ch] <  st->modulator_gain_tx1[ch])){
+				vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), switching_word);
+			}
 			switch(subchannel){
 			case 0:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF0000;
-				if(st->vbi_mode_tx1[ch])
-					temp32 += st->modulator_gain_tx1[ch];
-				else
-					temp32 += st->gain_tx1[ch];
+				temp32 += hw_gain;
 				vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
 				break;
 			case 1:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_0(block_nb)) & 0xFFFF;
-				if(st->vbi_mode_tx1[ch])
-					temp32 += st->modulator_gain_tx1[ch] << 16;
-				else
-					temp32 += st->gain_tx1[ch] << 16;
+				temp32 += hw_gain << 16;
 				vbi_fm_dsp_write(st, ADDR_GAIN01_0(block_nb), temp32);
 				break;
 			case 2:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF0000;
-				if(st->vbi_mode_tx1[ch])
-					temp32 += st->modulator_gain_tx1[ch];
-				else
-					temp32 += st->gain_tx1[ch];
+				temp32 += hw_gain;
 				vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
 				break;
 			case 3:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_0(block_nb)) & 0xFFFF;
-				if(st->vbi_mode_tx1[ch])
-					temp32 += st->modulator_gain_tx1[ch] << 16;
-				else
-					temp32 += st->gain_tx1[ch] << 16;
+				temp32 += hw_gain << 16;
 				vbi_fm_dsp_write(st, ADDR_GAIN23_0(block_nb), temp32);
 				break;
 			default:
 				break;
+			}
+			// 1. activate break-in after setting gain if mod_gain < repeater_gain
+			// 2. deactivate break-in after setting gain if mod_gain >= repeater_gain
+			if((st->vbi_mode_tx1[ch]==1 && st->gain_tx1[ch] <  st->modulator_gain_tx1[ch]) \
+			|| (st->vbi_mode_tx1[ch]==0 && st->gain_tx1[ch] >= st->modulator_gain_tx1[ch])){
+				vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), switching_word);
 			}
 			break;
 		}
@@ -696,45 +703,52 @@ static ssize_t vbi_fm_dsp_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
+			// prepare switching word
 			st->vbi_mode_tx2[ch] = (u32)val;
-			temp32 = vbi_fm_dsp_read(st, ADDR_ROUTING(block_nb)) & ~(1<<(20+subchannel));
-			temp32 += st->vbi_mode_tx2[ch] << (20+subchannel);
-			vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), temp32);
+			switching_word = vbi_fm_dsp_read(st, ADDR_ROUTING(block_nb)) & ~(1<<(20+subchannel));
+			switching_word += st->vbi_mode_tx2[ch] << (20+subchannel);
+			// prepare hardware gain word
+			if(st->vbi_mode_tx2[ch]){
+				hw_gain = st->modulator_gain_tx2[ch];
+			}else{
+				hw_gain = st->gain_tx2[ch];
+			}
+			// important to take into account this writing sequence to have power drops instead of overshoots: 
+			// 1. activate break-in before setting gain if mod_gain >= repeater_gain
+			// 2. deactivate break-in before setting gain if mod_gain < repeater_gain
+			if((st->vbi_mode_tx2[ch]==1 && st->gain_tx2[ch] >= st->modulator_gain_tx2[ch]) \
+			|| (st->vbi_mode_tx2[ch]==0 && st->gain_tx2[ch] <  st->modulator_gain_tx2[ch])){
+				vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), switching_word);
+			}
 			switch(subchannel){
 			case 0:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF0000;
-				if(st->vbi_mode_tx2[ch])
-					temp32 += st->modulator_gain_tx2[ch];
-				else
-					temp32 += st->gain_tx2[ch];
+				temp32 += hw_gain;
 				vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
 				break;
 			case 1:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN01_1(block_nb)) & 0xFFFF;
-				if(st->vbi_mode_tx2[ch])
-					temp32 += st->modulator_gain_tx2[ch] << 16;
-				else
-					temp32 += st->gain_tx2[ch] << 16;
+				temp32 += hw_gain << 16;
 				vbi_fm_dsp_write(st, ADDR_GAIN01_1(block_nb), temp32);
 				break;
 			case 2:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF0000;
-				if(st->vbi_mode_tx2[ch])
-					temp32 += st->modulator_gain_tx2[ch];
-				else
-					temp32 += st->gain_tx2[ch];
+				temp32 += hw_gain;
 				vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
 				break;
 			case 3:
 				temp32 = vbi_fm_dsp_read(st, ADDR_GAIN23_1(block_nb)) & 0xFFFF;
-				if(st->vbi_mode_tx2[ch])
-					temp32 += st->modulator_gain_tx2[ch] << 16;
-				else
-					temp32 += st->gain_tx2[ch] << 16;
+				temp32 += hw_gain << 16;
 				vbi_fm_dsp_write(st, ADDR_GAIN23_1(block_nb), temp32);
 				break;
 			default:
 				break;
+			}
+			// 1. activate break-in after setting gain if mod_gain < repeater_gain
+			// 2. deactivate break-in after setting gain if mod_gain >= repeater_gain
+			if((st->vbi_mode_tx2[ch]==1 && st->gain_tx2[ch] <  st->modulator_gain_tx2[ch]) \
+			|| (st->vbi_mode_tx2[ch]==0 && st->gain_tx2[ch] >= st->modulator_gain_tx2[ch])){
+				vbi_fm_dsp_write(st, ADDR_ROUTING(block_nb), switching_word);
 			}
 			break;
 		}
