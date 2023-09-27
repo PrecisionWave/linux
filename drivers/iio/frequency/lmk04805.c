@@ -210,20 +210,20 @@ struct lmk04805_platform_data {
 //	uint8_t						LD_TYPE;
 //	bool						SYNC_PLL2_DLD;
 //	bool						SYNC_PLL1_DLD;
-//	bool						EN_TRACK;
-//	uint8_t						HOLDOVER_MODE;
+	bool						EN_TRACK;       // 1 bit
+	uint8_t						HOLDOVER_MODE;  // 2 bits
 //	uint8_t						HOLDOVER_MUX;
 //	uint8_t						HOLDOVER_TYPE;
 //	uint8_t						Status_CLKin1_MUX;
 //	uint8_t						Status_CLKin0_TYPE;
 //	bool						DISABLE_DLD1_DET;
 //	uint8_t						Status_CLKin0_MUX;
-//	uint8_t						CLKin_SELECT_MODE;
+	uint8_t						CLKin_SELECT_MODE;
 //	bool						CLKin_Sel_INV;
 //
 //	/* CLKin Control */
-//	bool						EN_CLKin1;
-//	bool						EN_CLKin0;
+	bool						EN_CLKin1;  // 1 bit
+	bool						EN_CLKin0;  // 1 bit
 //	uint8_t						LOS_TIMEOUT;
 //	bool						EN_LOS;
 //	uint8_t						Status_CLKin1_TYPE;
@@ -237,7 +237,7 @@ struct lmk04805_platform_data {
 //	uint16_t					MAN_DAC;
 //	bool						EN_MAN_DAC;
 //
-//	uint16_t					HOLDOVER_DLD_CNT;
+	uint16_t					HOLDOVER_DLD_CNT;   // 14 bit
 //	bool						FORCE_HOLDOVER;
 //	uint8_t						XTAL_LVL;
 //
@@ -249,7 +249,7 @@ struct lmk04805_platform_data {
 //	uint8_t						PLL1_N_DLY;
 //	uint8_t						PLL1_R_DLY;
 //	uint8_t						PLL1_WND_SIZE;
-//	uint16_t					DAC_CLK_DIV;
+	uint16_t					DAC_CLK_DIV;        // 9 bits
 //	uint16_t					PLL1_DLD_CNT;
 //	uint8_t						PLL2_WND_SIZE;
 	bool						EN_PLL2_REF_2X;
@@ -1413,6 +1413,17 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
 
+	lmk04805_inject_register_value(&st->pdata->reg_map[12], 6, 2, pdata->HOLDOVER_MODE);
+	lmk04805_inject_register_value(&st->pdata->reg_map[12], 8, 1, pdata->EN_TRACK);
+
+	lmk04805_inject_register_value(&st->pdata->reg_map[13], 5, 1, pdata->EN_CLKin0);
+	lmk04805_inject_register_value(&st->pdata->reg_map[13], 6, 1, pdata->EN_CLKin1);
+	lmk04805_inject_register_value(&st->pdata->reg_map[13], 9, 3, pdata->CLKin_SELECT_MODE);
+
+	lmk04805_inject_register_value(&st->pdata->reg_map[15], 6, 14, pdata->HOLDOVER_DLD_CNT);
+
+	lmk04805_inject_register_value(&st->pdata->reg_map[25], 22, 10, pdata->DAC_CLK_DIV);
+
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3 << 26)) | ((pdata->PLL1_CP_GAIN & 0x3) << 26);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3FFF << 6)) | ((pdata->PLL1_R & 0x3FFF) << 6);
@@ -1677,6 +1688,56 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 	}
 	else{
 		pdata->OSCout1_LVPECL_AMP = attr;
+	}
+
+	/* CLKin Enables */
+	pdata->EN_CLKin0 = of_property_read_bool(np, "lmk,en-clkin0");
+	pdata->EN_CLKin1 = of_property_read_bool(np, "lmk,en-clkin1");
+
+	/* setting: CLKin_SELECT_MODE */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,clkin-select-mode", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,clkin-select-mode=0\n");
+		pdata->CLKin_SELECT_MODE = 0;
+	}
+	else{
+		pdata->CLKin_SELECT_MODE = attr;
+	}
+
+	/* setting: HOLDOVER_DLD_CNT */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,holdover-dld-count", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,holdover-dld-count=10000\n");
+		pdata->HOLDOVER_DLD_CNT = 10000;
+	}
+	else{
+		pdata->HOLDOVER_DLD_CNT = attr;
+	}
+
+	/* setting: DAC_CLK_DIV */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,dac-clk-div", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,dac-clk-div=1\n");
+		pdata->DAC_CLK_DIV = 1;
+	}
+	else{
+		pdata->DAC_CLK_DIV = attr;
+	}
+
+	pdata->EN_TRACK = of_property_read_bool(np, "lmk,en-track");
+
+	/* setting: HOLDOVER_MODE */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,holdover-mode", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,holdover-mode=1\n");
+		pdata->HOLDOVER_MODE = 1;
+	}
+	else{
+		pdata->HOLDOVER_MODE = attr;
 	}
 
 	/* Output Channel Configuration */
