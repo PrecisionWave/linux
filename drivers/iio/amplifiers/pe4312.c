@@ -61,8 +61,13 @@ static int pe4312_read_raw(struct iio_dev *indio_dev,
 	switch (m) {
 	case IIO_CHAN_INFO_HARDWAREGAIN:
 		/* Values in dB */
-		*val = -st->gain/2;
-		*val2 = -(st->gain%2)*500000;
+		if(st->gain == 127){
+			*val = -100;
+			*val2 = 0;
+		}else{
+			*val = -(st->gain - 128)/2;
+			*val2 = -((st->gain - 128)%2)*500000;
+		}
 
 		ret = IIO_VAL_INT_PLUS_MICRO_DB;
 		break;
@@ -85,7 +90,7 @@ static int pe4312_write_raw(struct iio_dev *indio_dev,
 	int ret;
 
 	val2 = abs(val2);
-	if(val<-31 || val>0)
+	if((val<-31 || val>0) && val!=-100)
 		return -EINVAL;
 	if(val2!=0 && val2!=500000)
 		return -EINVAL;
@@ -95,9 +100,11 @@ static int pe4312_write_raw(struct iio_dev *indio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_HARDWAREGAIN:
 		if(val == 0)
-			st->gain = (2*val2)/1000000;
+			st->gain = (2*val2)/1000000 + 128;
+		else if (val == -100)
+			st->gain = 127;
 		else
-			st->gain = 2*(-val) + (2*val2)/1000000;
+			st->gain = 2*(-val) + (2*val2)/1000000 + 128;
 		ret = pe4312_write(indio_dev, st->gain);
 		break;
 	default:
@@ -184,7 +191,8 @@ static int pe4312_probe(struct spi_device *spi)
 //	if (ret < 0)
 //		goto error_disable_reg;
 //	pe4312_write_raw(indio_dev, &indio_dev->channels[0], 0, 0, IIO_CHAN_INFO_HARDWAREGAIN);
-	pe4312_write_raw(indio_dev, &indio_dev->channels[0], -31, 500000, IIO_CHAN_INFO_HARDWAREGAIN);
+//	pe4312_write_raw(indio_dev, &indio_dev->channels[0], -31, 500000, IIO_CHAN_INFO_HARDWAREGAIN);
+	pe4312_write_raw(indio_dev, &indio_dev->channels[0], -100, 0, IIO_CHAN_INFO_HARDWAREGAIN);
 
 	ret = iio_device_register(indio_dev);
 	if (ret)
