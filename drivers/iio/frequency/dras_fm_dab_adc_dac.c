@@ -40,6 +40,7 @@
 #define ADDR_TX_FM_TESTTONE_DDSINC43	(1*16+5)*4
 #define ADDR_TX_FM_TESTTONE_AMPL21	(1*16+6)*4
 #define ADDR_TX_FM_TESTTONE_AMPL43	(1*16+7)*4
+#define ADDR_TX_FM_SEL			(1*16+8)*4
 
 // DAB Band
 #define ADDR_RX_DAB_CHANNEL_FREQUENCY	(2*16+0)*4
@@ -152,6 +153,8 @@ enum chan_num{
 	REG_RX_FM_BAND_BURST_PERIOD,
 	REG_TX1_FM_BAND_GAIN,
 	REG_TX2_FM_BAND_GAIN,
+	REG_TX1_FM_SEL_REP_MOD1_MOD2,
+	REG_TX2_FM_SEL_REP_MOD1_MOD2,
 	REG_TX_FM_TESTTONE_FREQUENCY0,
 	REG_TX_FM_TESTTONE_FREQUENCY1,
 	REG_TX_FM_TESTTONE_FREQUENCY2,
@@ -362,6 +365,28 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			break;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN,
 				(st->gain_fm_tx2 << 16) | st->gain_fm_tx1);
+		break;
+	case REG_TX1_FM_SEL_REP_MOD1_MOD2:
+		if(val<0 || val>2){
+			ret = -EINVAL;
+			break;
+		}
+		if(val>=1)
+			val+=1;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_SEL) & ~0x3;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_SEL, temp32);
+		break;
+	case REG_TX2_FM_SEL_REP_MOD1_MOD2:
+		if(val<0 || val>2){
+			ret = -EINVAL;
+			break;
+		}
+		if(val>=1)
+			val+=1;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_SEL) & ~(0x3 << 2);
+		temp32 += (u32)val << 2;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_SEL, temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY0:
 		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
@@ -631,6 +656,16 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_TX2_FM_BAND_GAIN:
 		val = st->gain_fm_tx2;
 		break;
+	case REG_TX1_FM_SEL_REP_MOD1_MOD2:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_SEL) & 0x3;
+		if(val>1)
+			val-=1;
+		break;
+	case REG_TX2_FM_SEL_REP_MOD1_MOD2:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_SEL) >> 2) & 0x3;
+		if(val>1)
+			val-=1;
+		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY0:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC21) & 0xFFFF;
 		if(val>1<<15){
@@ -825,6 +860,16 @@ static IIO_DEVICE_ATTR(tx2_fm_band_gain, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_TX2_FM_BAND_GAIN);
 
+static IIO_DEVICE_ATTR(tx1_fm_sel_rep_mod1_mod2, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_FM_SEL_REP_MOD1_MOD2);
+
+static IIO_DEVICE_ATTR(tx2_fm_sel_rep_mod1_mod2, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_FM_SEL_REP_MOD1_MOD2);
+
 static IIO_DEVICE_ATTR(ch0_tx_fm_testtone_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -943,6 +988,8 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_rx_fm_band_burst_period.dev_attr.attr,
 	&iio_dev_attr_tx1_fm_band_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_fm_band_gain.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_sel_rep_mod1_mod2.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_sel_rep_mod1_mod2.dev_attr.attr,
 	&iio_dev_attr_ch0_tx_fm_testtone_frequency.dev_attr.attr,
 	&iio_dev_attr_ch1_tx_fm_testtone_frequency.dev_attr.attr,
 	&iio_dev_attr_ch2_tx_fm_testtone_frequency.dev_attr.attr,

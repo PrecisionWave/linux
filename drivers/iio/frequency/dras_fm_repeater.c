@@ -384,8 +384,7 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 			val = dras_fm_repeater_read(st, ADDR_CHANNEL_EN);
 			val = (val >> ch) & 1;
 			break;
-		}
-		if((u32)this_attr->address == REG_CH(ch, REG_RSSI)){
+		}else if((u32)this_attr->address == REG_CH(ch, REG_RSSI)){
 			match = 1;
 			regoffset = ch >> 1;
 			subchannel = ch & 1;
@@ -394,8 +393,7 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 			else
 				val = dras_fm_repeater_read(st, ADDR_RSSI(regoffset)) >> 16;
 			break;
-		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
+		}else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
 			match = 1;
 			regoffset = ch >> 1;
 			subchannel = ch & 1;
