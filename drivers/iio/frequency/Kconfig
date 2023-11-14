@@ -210,6 +210,14 @@ config DRAS_FM_REPEATER
 	  To compile this driver as a module, choose M here: the
 	  module will be called dras_fm_repeater.
 
+config DRAS_FM_MOD_RDS
+	tristate "DRAS FM MOD RDS FPGA-IP driver"
+	help
+	  Say yes here to build support for DRAS FM MOD RDS FPGA-IP driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called dras_fm_mod_rds.
+
 config DRAS_TETRA
 	tristate "DRAS TETRA FPGA-IP driver"
 	help
