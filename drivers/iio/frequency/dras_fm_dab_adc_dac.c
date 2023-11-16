@@ -614,11 +614,11 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_RX_SAMP_RATE_ADC:
 		val = st->fs_adc;
 		break;
-	case REG_ADC1_PEAK_HOLD_VAL:
-		val = (dras_fm_dab_adc_dac_read(st, ADDR_ADC_PEAK) & 0xFFFF);
-		break;
-	case REG_ADC2_PEAK_HOLD_VAL:
+	case REG_ADC1_PEAK_HOLD_VAL: // swap channels wrong on dras_fm_dab_adc_dac DSP
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_ADC_PEAK) >> 16);
+		break;
+	case REG_ADC2_PEAK_HOLD_VAL: // swap channels wrong on dras_fm_dab_adc_dac DSP
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_ADC_PEAK) & 0xFFFF);
 		break;
 	case REG_ADC_BER_ALTERNATE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_ADC_BER_TESTER) & 0xFFFF);
