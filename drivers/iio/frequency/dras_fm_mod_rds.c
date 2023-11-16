@@ -316,10 +316,12 @@ static ssize_t dras_fm_mod_rds_store(struct device *dev,
 			if(subchannel==0){
 				temp32 = dras_fm_mod_rds_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF0000;
 				temp32 += (u32)val;
+				dras_fm_mod_rds_write(st, ADDR_DDSINC(regoffset), temp32+1);
 				dras_fm_mod_rds_write(st, ADDR_DDSINC(regoffset), temp32);
 			}else{
 				temp32 = dras_fm_mod_rds_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF;
 				temp32 += (u32)val << 16;
+				dras_fm_mod_rds_write(st, ADDR_DDSINC(regoffset), temp32+1);
 				dras_fm_mod_rds_write(st, ADDR_DDSINC(regoffset), temp32);
 			}
 			break;
