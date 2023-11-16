@@ -29,6 +29,13 @@
 #define ADDR_AUDIO_RDS_GAIN		2*4
 #define ADDR_PILOT_MOD_GAIN		3*4
 #define ADDR_CHANNEL_EN			4*4
+#define ADDR_DDSINC(x)			(5+x)*4 
+// DDSINC channel interleaving:
+// 32 channels, ch range 0..31, two 16bit channels per address
+// for ch range 0..3,8..11,16..19,24..27 use lower 16bit of address: 
+// for ch range 4..7,12..15,20..23,28..31 use upper 16bit of address: 
+// x=4*mod(ch,4)+mod(ch>>3,4)
+// if((ch>>2) & 1) then higher 16bit else lower 16bit
 
 #define MAX_FM_FREQUENCY		108100000
 #define MIN_FM_FREQUENCY		87400000
@@ -182,8 +189,7 @@
 	&iio_dev_attr_ch31_##ATTR.dev_attr.attr
 
 enum chan_num{
-	//REG_ALL_CH(REG_FREQUENCY),	// being expanded for all channels
-	//REG_ALL_CH(REG_RSSI),	// being expanded for all channels
+	REG_ALL_CH(REG_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_CHANNEL_ENABLE),	// being expanded for all channels
 	REG_DSP_VERSION,
 	REG_AUDIO_METER,
@@ -198,7 +204,8 @@ struct dras_fm_mod_rds_state {
 	void __iomem		*regs;
 	struct mutex		lock;
 
-	uint32_t		fs_adc;
+	uint32_t		mod_clk;
+	uint32_t		rep_clk;
 };
 
 static void dras_fm_mod_rds_write(struct dras_fm_mod_rds_state *st, unsigned reg, u32 val)
@@ -266,6 +273,8 @@ static ssize_t dras_fm_mod_rds_store(struct device *dev,
 	int match;
 	int regoffset;
 	int subchannel;
+	const uint8_t inc_addroff[32]={0,7,11,14,0,4,11,15,1,4,8,15,1,5,8,12,2,5,9,12,2,6,9,13,3,6,10,13,3,7,10,14};
+	const bool inc_msb[32]={0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0};
 
 	/* convert to long
 	 * auto-detect decimal,
@@ -293,16 +302,16 @@ static ssize_t dras_fm_mod_rds_store(struct device *dev,
 			dras_fm_mod_rds_write(st, ADDR_CHANNEL_EN, temp32);
 			break;
 		}
-/*		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
 			match = 1;
-			regoffset = ch >> 1;
-			subchannel = ch & 1;
-			temp64 = (u64)st->fs_adc * 15;
+			regoffset = inc_addroff[ch];
+			subchannel = inc_msb[ch];
+
+			temp64 = (u64)st->rep_clk * 15;
 			temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 			val -= (int)temp64;
-			val = 3*val;
-			temp64 = (u64)val << 18;
-			temp64 = div_s64(temp64,st->fs_adc);
+			temp64 = (u64)val << 19;
+			temp64 = div_s64(temp64,st->mod_clk);
 			val = (int)temp64 & 0xFFFF;
 			if(subchannel==0){
 				temp32 = dras_fm_mod_rds_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF0000;
@@ -315,7 +324,6 @@ static ssize_t dras_fm_mod_rds_store(struct device *dev,
 			}
 			break;
 		}
-*/
 	}
 	if(match){
 		mutex_unlock(&indio_dev->mlock);
@@ -385,6 +393,8 @@ static ssize_t dras_fm_mod_rds_show(struct device *dev,
 	int regoffset;
 	int subchannel;
 	int match;
+	const uint8_t inc_addroff[32]={0,7,11,14,0,4,11,15,1,4,8,15,1,5,8,12,2,5,9,12,2,6,9,13,3,6,10,13,3,7,10,14};
+	const bool inc_msb[32]={0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0};
 
 	/* channel registers */
 	mutex_lock(&indio_dev->mlock);
@@ -396,28 +406,28 @@ static ssize_t dras_fm_mod_rds_show(struct device *dev,
 			val = (val >> ch) & 1;
 			break;
 		}
-/*		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
 			match = 1;
-			regoffset = ch >> 1;
-			subchannel = ch & 1;
+			regoffset = inc_addroff[ch];
+			subchannel = inc_msb[ch];
+
 			if(subchannel==0)
 				val = dras_fm_mod_rds_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF;
 			else
 				val = dras_fm_mod_rds_read(st, ADDR_DDSINC(regoffset)) >> 16;
 			if(val>1<<15){
-				temp64 = (u64)val * st->fs_adc;
-				val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
+				temp64 = (u64)val * st->mod_clk;
+				val = ((int)(temp64 >> 19)) - (st->mod_clk>>3); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
 			}else{
-				temp64 = (u64)val * st->fs_adc;
-				val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
+				temp64 = (u64)val * st->mod_clk;
+				val = (u32)(temp64 >> 19); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
 			}
-			val = val/3;
-			temp64 = (u64)st->fs_adc * 15;
+			temp64 = (u64)st->rep_clk * 15;
 			temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 			val += (int)temp64;
 			break;
 		}
-*/
+
 	}
 	if(match){
 		mutex_unlock(&indio_dev->mlock);
@@ -459,10 +469,10 @@ static ssize_t dras_fm_mod_rds_show(struct device *dev,
 }
 
 
-//IIO_DEVICE_ATTR_ALL_CH(frequency, S_IRUGO | S_IWUSR,
-//			dras_fm_mod_rds_show,
-//			dras_fm_mod_rds_store,
-//			REG_FREQUENCY);
+IIO_DEVICE_ATTR_ALL_CH(frequency, S_IRUGO | S_IWUSR,
+			dras_fm_mod_rds_show,
+			dras_fm_mod_rds_store,
+			REG_FREQUENCY);
 
 IIO_DEVICE_ATTR_ALL_CH(channel_enable, S_IRUGO | S_IWUSR,
 			dras_fm_mod_rds_show,
@@ -501,7 +511,7 @@ static IIO_DEVICE_ATTR(mod_gain, S_IRUGO | S_IWUSR,
 
 
 static struct attribute *dras_fm_mod_rds_attributes[] = {
-//	IIO_ATTR_ALL_CH(frequency),
+	IIO_ATTR_ALL_CH(frequency),
 	IIO_ATTR_ALL_CH(channel_enable),
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_audio_meter.dev_attr.attr,
@@ -580,12 +590,21 @@ static int dras_fm_mod_rds_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	if(of_property_read_u32(np, "required,fs-adc", &st->fs_adc)){
-		printk("DRAS-FM-MOD-RDS: ***ERROR! \"required,fs-adc\" missing in devicetree?\n");
+	if(of_property_read_u32(np, "required,mod-clk", &st->mod_clk)){
+		printk("DRAS-FM-MOD-RDS: ***ERROR! \"required,mod-clk\" missing in devicetree?\n");
 		goto err_iio_device_free;
 	}
-	if(st->fs_adc == 0){
-		printk("DRAS-FM-MOD-RDS: ***ERROR! \"required,fs-adc\" equal to 0 Hz\n");
+	if(st->mod_clk == 0){
+		printk("DRAS-FM-MOD-RDS: ***ERROR! \"required,mod-clk\" equal to 0 Hz\n");
+		goto err_iio_device_free;
+	}
+
+	if(of_property_read_u32(np, "required,rep-clk", &st->rep_clk)){
+		printk("DRAS-FM-MOD-RDS: ***ERROR! \"required,rep-clk\" missing in devicetree?\n");
+		goto err_iio_device_free;
+	}
+	if(st->rep_clk == 0){
+		printk("DRAS-FM-MOD-RDS: ***ERROR! \"required,rep-clk\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
 
