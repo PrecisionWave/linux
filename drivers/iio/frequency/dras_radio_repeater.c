@@ -32,7 +32,7 @@
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_BEST_SOURCE		(8+x)*4
+#define ADDR_BEST_SOURCE(x)		(8+x)*4
 
 
 // expands to:
