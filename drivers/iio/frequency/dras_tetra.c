@@ -21,7 +21,7 @@
 
 
 #define DRIVER_NAME			"dras-tetra"
-#define NB_OF_TETRA_CHANNELS		4
+#define NB_OF_TETRA_CHANNELS		8
 
 // common DSP addresses
 #define ADDR_DSP_VERSION		(0*4)
@@ -70,11 +70,11 @@
 	CH0_##REG, \
 	CH1_##REG, \
 	CH2_##REG, \
-	CH3_##REG
-//	CH4_##REG, \
-//	CH5_##REG, \
-//	CH6_##REG, \
-//	CH7_##REG
+	CH3_##REG, \
+	CH4_##REG, \
+	CH5_##REG, \
+	CH6_##REG, \
+	CH7_##REG
 
 // expands to:
 //   static IIO_DEVICE_ATTR(ch0_<ATTR>, <RW>, <SHOW>, <STORE>, CH0_<REG>);
@@ -92,11 +92,11 @@
 	static IIO_DEVICE_ATTR(ch0_##ATTR, RW, SHOW, STORE, CH0_##REG); \
 	static IIO_DEVICE_ATTR(ch1_##ATTR, RW, SHOW, STORE, CH1_##REG); \
 	static IIO_DEVICE_ATTR(ch2_##ATTR, RW, SHOW, STORE, CH2_##REG); \
-	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG);
-//	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
-//	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
-//	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
-//	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
+	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); \
+	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
+	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
+	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
+	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
 
 // expands to:
 //   &iio_dev_attr_ch0_<ATTR>.dev_attr.attr,
@@ -114,11 +114,11 @@
 	&iio_dev_attr_ch0_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch1_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch2_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch3_##ATTR.dev_attr.attr
-//	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
+	&iio_dev_attr_ch3_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
 
 enum chan_num{
 	REG_ALL_CH(REG_RX_TETRA_CHANNEL_FREQUENCY),	// being expanded for all channels
@@ -131,7 +131,7 @@ enum chan_num{
 	REG_TX1_GAIN,
 	REG_TX2_GAIN,
 	REG_CH0_WIDEBAND_MODE,
-	REG_CH2_WIDEBAND_MODE,
+	REG_CH4_WIDEBAND_MODE,
 	REG_RX_BURST_LENGTH,
 	REG_RX_BURST_PERIOD,
 	REG_RX_DMA_FULLRATE_ADC,
@@ -320,7 +320,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<8;
 		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 		break;
-	case REG_CH2_WIDEBAND_MODE:
+	case REG_CH4_WIDEBAND_MODE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
 			break;
@@ -472,7 +472,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_CH0_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 8) & 1;
 		break;
-	case REG_CH2_WIDEBAND_MODE:
+	case REG_CH4_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
 		break;
 	case REG_TX1_GAIN:
@@ -561,10 +561,10 @@ static IIO_DEVICE_ATTR(ch0_wideband_mode, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_CH0_WIDEBAND_MODE);
 
-static IIO_DEVICE_ATTR(ch2_wideband_mode, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch4_wideband_mode, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_CH2_WIDEBAND_MODE);
+			REG_CH4_WIDEBAND_MODE);
 
 static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -608,7 +608,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx1_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_gain.dev_attr.attr,
 	&iio_dev_attr_ch0_wideband_mode.dev_attr.attr,
-	&iio_dev_attr_ch2_wideband_mode.dev_attr.attr,
+	&iio_dev_attr_ch4_wideband_mode.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_dma_fullrate_adc.dev_attr.attr,
