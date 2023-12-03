@@ -312,11 +312,11 @@ static ssize_t dras_tetra_store(struct device *dev,
 	/* unique registers */
 	switch ((u32)this_attr->address) {
 	case REG_CH0_WIDEBAND_MODE:
-		if(val<0 || val>1){
+		if(val<0 || val>2){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<8);
+		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(3<<8);
 		temp32 += ((uint32_t)val)<<8;
 		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 		break;
@@ -470,7 +470,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 	/* unique registers */
 	switch ((u32)this_attr->address) {
 	case REG_CH0_WIDEBAND_MODE:
-		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 8) & 1;
+		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 8) & 3;
 		break;
 	case REG_CH4_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
