@@ -29,6 +29,7 @@
 #define ADDR_TX21_GAIN			(2*4)
 #define ADDR_RX_BURST_LENGTH		(3*4)
 #define ADDR_RX_BURST_PERIOD		(4*4)
+#define ADDR_CHANNEL_ASSIGNMENT2	(5*4)
 
 // TETRA channels
 #define ADDR_PER_TETRA_CHANNELS		16
@@ -272,10 +273,16 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_SELECTION)){
 			match = 1;
-			if(val<1 || val>2){
+			if(val<1 || val>3){
 				ret = -EINVAL;
 				break;
 			}
+			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT2) & ~(1<<ch);
+			if(val==3)
+				temp32 += 1<<ch;
+			else
+				temp32 += 0<<ch;
+			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT2, temp32);
 			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<ch);
 			temp32 += ((uint32_t)val-1)<<ch;
 			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
@@ -446,7 +453,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_SELECTION)){
 			match = 1;
-			val = ((dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> ch) & 1)+1;
+			if((dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT2) >> ch) & 1)
+				val = 3;
+			else
+				val = ((dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> ch) & 1)+1;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE)){
