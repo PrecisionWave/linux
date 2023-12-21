@@ -24,15 +24,16 @@
 #define NB_OF_CHANNELS			32
 
 // global attributes
-#define ADDR_CHANNEL_EN			32*4
-#define ADDR_TARGET_PWR			33*4
-#define ADDR_SQUELCH			34*4
-#define ADDR_MAXGAIN			35*4
-#define ADDR_DSP_VERSION		36*4
+#define ADDR_TARGET_PWR			48*4
+#define ADDR_SQUELCH			49*4
+#define ADDR_MAXGAIN			50*4
+#define ADDR_CHANNEL_EN			51*4
+#define ADDR_DSP_VERSION		52*4
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_DDSINC(x)			(16+x)*4 // 16bit LSB first channel, second 16bit second channel
+#define ADDR_DDSINC_RX(x)		(16+x)*4 // 16bit LSB first channel, second 16bit second channel
+#define ADDR_DDSINC_TX(x)		(32+x)*4 // 16bit LSB first channel, second 16bit second channel
 
 #define MAX_FM_FREQUENCY		108100000
 #define MIN_FM_FREQUENCY		87400000
@@ -186,7 +187,8 @@
 	&iio_dev_attr_ch31_##ATTR.dev_attr.attr
 
 enum chan_num{
-	REG_ALL_CH(REG_FREQUENCY),	// being expanded for all channels
+	REG_ALL_CH(REG_RX_FREQUENCY),	// being expanded for all channels
+	REG_ALL_CH(REG_TX_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_RSSI),	// being expanded for all channels
 	REG_ALL_CH(REG_CHANNEL_ENABLE),	// being expanded for all channels
 	REG_DSP_VERSION,
@@ -293,7 +295,7 @@ static ssize_t dras_fm_repeater_store(struct device *dev,
 			dras_fm_repeater_write(st, ADDR_CHANNEL_EN, temp32);
 			break;
 		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_RX_FREQUENCY)){
 			match = 1;
 			regoffset = ch >> 1;
 			subchannel = ch & 1;
@@ -305,13 +307,35 @@ static ssize_t dras_fm_repeater_store(struct device *dev,
 			temp64 = div_s64(temp64,st->fs_adc);
 			val = (int)temp64 & 0xFFFF;
 			if(subchannel==0){
-				temp32 = dras_fm_repeater_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF0000;
+				temp32 = dras_fm_repeater_read(st, ADDR_DDSINC_RX(regoffset)) & 0xFFFF0000;
 				temp32 += (u32)val;
-				dras_fm_repeater_write(st, ADDR_DDSINC(regoffset), temp32);
+				dras_fm_repeater_write(st, ADDR_DDSINC_RX(regoffset), temp32);
 			}else{
-				temp32 = dras_fm_repeater_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF;
+				temp32 = dras_fm_repeater_read(st, ADDR_DDSINC_RX(regoffset)) & 0xFFFF;
 				temp32 += (u32)val << 16;
-				dras_fm_repeater_write(st, ADDR_DDSINC(regoffset), temp32);
+				dras_fm_repeater_write(st, ADDR_DDSINC_RX(regoffset), temp32);
+			}
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_TX_FREQUENCY)){
+			match = 1;
+			regoffset = ch >> 1;
+			subchannel = ch & 1;
+			temp64 = (u64)st->fs_adc * 15;
+			temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
+			val -= (int)temp64;
+			val = 3*val;
+			temp64 = (u64)val << 18;
+			temp64 = div_s64(temp64,st->fs_adc);
+			val = (int)temp64 & 0xFFFF;
+			if(subchannel==0){
+				temp32 = dras_fm_repeater_read(st, ADDR_DDSINC_TX(regoffset)) & 0xFFFF0000;
+				temp32 += (u32)val;
+				dras_fm_repeater_write(st, ADDR_DDSINC_TX(regoffset), temp32);
+			}else{
+				temp32 = dras_fm_repeater_read(st, ADDR_DDSINC_TX(regoffset)) & 0xFFFF;
+				temp32 += (u32)val << 16;
+				dras_fm_repeater_write(st, ADDR_DDSINC_TX(regoffset), temp32);
 			}
 			break;
 		}
@@ -393,14 +417,34 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 			else
 				val = dras_fm_repeater_read(st, ADDR_RSSI(regoffset)) >> 16;
 			break;
-		}else if((u32)this_attr->address == REG_CH(ch, REG_FREQUENCY)){
+		}else if((u32)this_attr->address == REG_CH(ch, REG_RX_FREQUENCY)){
 			match = 1;
 			regoffset = ch >> 1;
 			subchannel = ch & 1;
 			if(subchannel==0)
-				val = dras_fm_repeater_read(st, ADDR_DDSINC(regoffset)) & 0xFFFF;
+				val = dras_fm_repeater_read(st, ADDR_DDSINC_RX(regoffset)) & 0xFFFF;
 			else
-				val = dras_fm_repeater_read(st, ADDR_DDSINC(regoffset)) >> 16;
+				val = dras_fm_repeater_read(st, ADDR_DDSINC_RX(regoffset)) >> 16;
+			if(val>1<<15){
+				temp64 = (u64)val * st->fs_adc;
+				val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
+			}else{
+				temp64 = (u64)val * st->fs_adc;
+				val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
+			}
+			val = val/3;
+			temp64 = (u64)st->fs_adc * 15;
+			temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
+			val += (int)temp64;
+			break;
+		}else if((u32)this_attr->address == REG_CH(ch, REG_TX_FREQUENCY)){
+			match = 1;
+			regoffset = ch >> 1;
+			subchannel = ch & 1;
+			if(subchannel==0)
+				val = dras_fm_repeater_read(st, ADDR_DDSINC_TX(regoffset)) & 0xFFFF;
+			else
+				val = dras_fm_repeater_read(st, ADDR_DDSINC_TX(regoffset)) >> 16;
 			if(val>1<<15){
 				temp64 = (u64)val * st->fs_adc;
 				val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
@@ -454,10 +498,15 @@ IIO_DEVICE_ATTR_ALL_CH(channel_enable, S_IRUGO | S_IWUSR,
 			dras_fm_repeater_store,
 			REG_CHANNEL_ENABLE);
 
-IIO_DEVICE_ATTR_ALL_CH(frequency, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(rx_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_repeater_show,
 			dras_fm_repeater_store,
-			REG_FREQUENCY);
+			REG_RX_FREQUENCY);
+
+IIO_DEVICE_ATTR_ALL_CH(tx_frequency, S_IRUGO | S_IWUSR,
+			dras_fm_repeater_show,
+			dras_fm_repeater_store,
+			REG_TX_FREQUENCY);
 
 IIO_DEVICE_ATTR_ALL_CH(rssi, S_IRUGO,
 			dras_fm_repeater_show,
@@ -487,7 +536,8 @@ static IIO_DEVICE_ATTR(max_gain, S_IRUGO | S_IWUSR,
 
 static struct attribute *dras_fm_repeater_attributes[] = {
 	IIO_ATTR_ALL_CH(channel_enable),
-	IIO_ATTR_ALL_CH(frequency),
+	IIO_ATTR_ALL_CH(rx_frequency),
+	IIO_ATTR_ALL_CH(tx_frequency),
 	IIO_ATTR_ALL_CH(rssi),
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_target_power.dev_attr.attr,
