@@ -424,8 +424,9 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		val = val*2;
 		temp32 = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & ~(0xF<<12);
-		temp32 += ((uint32_t)val*2)<<12;
+		temp32 += ((uint32_t)val)<<12;
 		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
 		break;
 	default:
@@ -444,7 +445,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	struct dras_tetra_state *st = iio_priv(indio_dev);
-	int val;
+	int val = 0;
 	int ret = 0;
 	int power10 = 1;
 	int64_t temp64;
@@ -552,7 +553,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & 0xFFF;
 		break;
 	case REG_DL_OFFSET_TLAST:
-		val = (dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>12) & 0xF;
+		val = ((dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>12) & 0xF)/2;
 		break;
 	case REG_DL_ORDER:
 		temp32 = dras_tetra_read(st, ADDR_DL_ORDER);
