@@ -30,6 +30,8 @@
 #define ADDR_RX_BURST_LENGTH		(3*4)
 #define ADDR_RX_BURST_PERIOD		(4*4)
 #define ADDR_CHANNEL_ASSIGNMENT2	(5*4)
+#define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
+#define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
 
 // TETRA channels
 #define ADDR_PER_TETRA_CHANNELS		16
@@ -137,6 +139,10 @@ enum chan_num{
 	REG_RX_BURST_PERIOD,
 	REG_RX_DMA_FULLRATE_ADC,
 	REG_RX_DMA_FULLRATE_ADC_SELECTION,
+	REG_EN_UL_TEST,
+	REG_UL_ID,
+	REG_DL_ORDER,
+	REG_DL_OFFSET_TLAST,
 	REG_DSP_VERSION,
 	REG_RF_MUTE
 };
@@ -147,8 +153,8 @@ struct dras_tetra_state {
 	struct mutex		lock;
 
 	uint32_t		fs_adc;
-	u32				gain_tx1;
-	u32				gain_tx2;
+	u32			gain_tx1;
+	u32			gain_tx2;
 	bool			rf_mute;
 };
 
@@ -395,6 +401,33 @@ static ssize_t dras_tetra_store(struct device *dev,
 				(st->gain_tx2 << 16) | st->gain_tx1);
 		}
 		break;
+	case REG_EN_UL_TEST:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & ~(1<<16);
+		temp32 += ((uint32_t)val)<<16;
+		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
+		break;
+	case REG_UL_ID:
+		if(val<0 || val>0xFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & ~(0xFFF);
+		temp32 += (uint32_t)val;
+		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
+		break;
+	case REG_DL_OFFSET_TLAST:
+		if(val<0 || val>0x7){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & ~(0xF<<12);
+		temp32 += ((uint32_t)val*2)<<12;
+		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
+		break;
 	default:
 		ret = -ENODEV;
 		break;
@@ -413,7 +446,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 	struct dras_tetra_state *st = iio_priv(indio_dev);
 	int val;
 	int ret = 0;
+	int power10 = 1;
 	int64_t temp64;
+	u32 temp32;
+	int shift;
 	u32 ch;
 	int match;
 
@@ -508,6 +544,22 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_RF_MUTE:
 		val = st->rf_mute;
+		break;
+	case REG_EN_UL_TEST:
+		val = (dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>16) & 1;
+		break;
+	case REG_UL_ID:
+		val = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & 0xFFF;
+		break;
+	case REG_DL_OFFSET_TLAST:
+		val = (dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>12) & 0xF;
+		break;
+	case REG_DL_ORDER:
+		temp32 = dras_tetra_read(st, ADDR_DL_ORDER);
+		for(shift=0; shift<8; shift++){
+			val += power10 * (((temp32>>(4*shift)) & 0xF)/2); // register contains 4bits per channel, but only each 2nd channel is used
+			power10 = power10 * 10;
+		}
 		break;
 	default:
 		ret = -ENODEV;
@@ -606,6 +658,26 @@ static IIO_DEVICE_ATTR(rf_mute, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_RF_MUTE);
 
+static IIO_DEVICE_ATTR(enable_uplink_test, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_EN_UL_TEST);
+
+static IIO_DEVICE_ATTR(uplink_id, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_UL_ID);
+
+static IIO_DEVICE_ATTR(downlink_order, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_DL_ORDER);
+
+static IIO_DEVICE_ATTR(downlink_offset_tlast, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_DL_OFFSET_TLAST);
+
 
 static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_tetra_frequency),
@@ -625,6 +697,10 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_rx_dma_fullrate_adc_selection.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_rf_mute.dev_attr.attr,
+	&iio_dev_attr_enable_uplink_test.dev_attr.attr,
+	&iio_dev_attr_uplink_id.dev_attr.attr,
+	&iio_dev_attr_downlink_order.dev_attr.attr,
+	&iio_dev_attr_downlink_offset_tlast.dev_attr.attr,
 	NULL,
 };
 
