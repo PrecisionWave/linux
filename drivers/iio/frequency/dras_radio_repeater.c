@@ -287,11 +287,12 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 	for(port=0; port<NB_OF_TETRA_PORTS; port++){
 		if((u32)this_attr->address == REG_PORT(port, REG_OFFSET_TLAST)){
 			match = 1;
-			if(val<0 || val>7){
+			//if(val<0 || val>7){
+			if(val<0 || val>0xF){
 				ret = -EINVAL;
 				break;
 			}
-			val = val*2; // only odd channels used
+			//val = val*2; // only odd channels used
 			if(port<8){
 				shift = port*4;
 				temp32 = dras_radio_repeater_read(st, ADDR_OFFSET_TLAST0) & ~(0xF<<shift);
@@ -368,7 +369,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	u32 ch;
 	u32 port;
 	u32 temp32;
-	int power10 = 1;
+	//int power10 = 1;
 	int match;
 
 	/* channel registers */
@@ -399,7 +400,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 				shift = (port-8)*4;
 				val = (dras_radio_repeater_read(st, ADDR_OFFSET_TLAST1)>>shift) & 0xF;
 			}
-			val = val/2; // only odd channels used
+			//val = val/2; // only odd channels used
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
 			match = 1;
@@ -408,10 +409,11 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_PORT(port, REG_UL_ORDER)){
 			match = 1;
 			temp32 = dras_radio_repeater_read(st, ADDR_UL_ORDER(port));
-			for(shift=0; shift<8; shift++){
-				val += power10 * (((temp32>>(4*shift)) & 0xF)/2); // register contains 4bits per channel, but only each 2nd channel is used
-				power10 = power10 * 10;
-			}
+			//for(shift=0; shift<8; shift++){
+			//	val += power10 * (((temp32>>(4*shift)) & 0xF)/2); // register contains 4bits per channel, but only each 2nd channel is used
+			//	power10 = power10 * 10;
+			//}
+			ret = sprintf(buf, "%08x\n", temp32);
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_PORT_ID)){
 			match = 1;

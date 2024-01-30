@@ -422,11 +422,12 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
 		break;
 	case REG_DL_OFFSET_TLAST:
-		if(val<0 || val>0x7){
+		//if(val<0 || val>0x7){
+		if(val<0 || val>0xF){
 			ret = -EINVAL;
 			break;
 		}
-		val = val*2;
+		//val = val*2;
 		temp32 = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & ~(0xF<<12);
 		temp32 += ((uint32_t)val)<<12;
 		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
@@ -449,10 +450,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 	struct dras_tetra_state *st = iio_priv(indio_dev);
 	int val = 0;
 	int ret = 0;
-	int power10 = 1;
+	//int power10 = 1;
 	int64_t temp64;
 	u32 temp32;
-	int shift;
+	//int shift;
 	u32 ch;
 	int match;
 
@@ -555,14 +556,16 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET) & 0xFFF;
 		break;
 	case REG_DL_OFFSET_TLAST:
-		val = ((dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>12) & 0xF)/2;
+		//val = ((dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>12) & 0xF)/2;
+		val = (dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>12) & 0xF;
 		break;
 	case REG_DL_ORDER:
 		temp32 = dras_tetra_read(st, ADDR_DL_ORDER);
-		for(shift=0; shift<8; shift++){
-			val += power10 * (((temp32>>(4*shift)) & 0xF)/2); // register contains 4bits per channel, but only each 2nd channel is used
-			power10 = power10 * 10;
-		}
+		//for(shift=0; shift<8; shift++){
+		//	val += power10 * (((temp32>>(4*shift)) & 0xF)/2); // register contains 4bits per channel, but only each 2nd channel is used
+		//	power10 = power10 * 10;
+		//}
+		ret = sprintf(buf, "%08x\n", temp32);
 		break;
 	case REG_DL_SYNC:
 		val = dras_tetra_read(st, ADDR_DL_SYNC) & 1;
