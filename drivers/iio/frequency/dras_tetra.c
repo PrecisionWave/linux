@@ -32,6 +32,7 @@
 #define ADDR_CHANNEL_ASSIGNMENT2	(5*4)
 #define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
 #define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
+#define ADDR_DL_SYNC			(8*4) // sync
 
 // TETRA channels
 #define ADDR_PER_TETRA_CHANNELS		16
@@ -143,6 +144,7 @@ enum chan_num{
 	REG_UL_ID,
 	REG_DL_ORDER,
 	REG_DL_OFFSET_TLAST,
+	REG_DL_SYNC,
 	REG_DSP_VERSION,
 	REG_RF_MUTE
 };
@@ -562,6 +564,9 @@ static ssize_t dras_tetra_show(struct device *dev,
 			power10 = power10 * 10;
 		}
 		break;
+	case REG_DL_SYNC:
+		val = dras_tetra_read(st, ADDR_DL_SYNC) & 1;
+		break;
 	default:
 		ret = -ENODEV;
 		break;
@@ -679,6 +684,11 @@ static IIO_DEVICE_ATTR(downlink_offset_tlast, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_DL_OFFSET_TLAST);
 
+static IIO_DEVICE_ATTR(downlink_sync, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_DL_SYNC);
+
 
 static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_tetra_frequency),
@@ -702,6 +712,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_uplink_id.dev_attr.attr,
 	&iio_dev_attr_downlink_order.dev_attr.attr,
 	&iio_dev_attr_downlink_offset_tlast.dev_attr.attr,
+	&iio_dev_attr_downlink_sync.dev_attr.attr,
 	NULL,
 };
 

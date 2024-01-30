@@ -180,6 +180,7 @@ enum chan_num{
 	REG_ALL_PORT(REG_ENABLE_DL_TEST),	// being expanded for all channels
 	REG_ALL_PORT(REG_UL_ORDER),	// being expanded for all channels
 	REG_ALL_PORT(REG_PORT_ID),	// being expanded for all channels
+	REG_ALL_PORT(REG_UL_SYNC),	// being expanded for all channels
 	REG_DSP_VERSION,
 	REG_TARGET_POWER,
 	REG_SQUELCH,
@@ -190,8 +191,6 @@ struct dras_radio_repeater_state {
 	struct iio_info		iio_info;
 	void __iomem		*regs;
 	struct mutex		lock;
-
-	uint32_t		en_dl_test;
 };
 
 static void dras_radio_repeater_write(struct dras_radio_repeater_state *st, unsigned reg, u32 val)
@@ -311,12 +310,8 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->en_dl_test &= ~(1<<port);
-			st->en_dl_test += ((uint32_t)val) << port;
-			if(st->en_dl_test != 0)
-				temp32 = dras_radio_repeater_read(st, ADDR_CHANNEL_EN) | (1<<8);
-			else
-				temp32 = dras_radio_repeater_read(st, ADDR_CHANNEL_EN) & ~(1<<8);
+			temp32 = dras_radio_repeater_read(st, ADDR_CHANNEL_EN) & ~(1<<(port+8));
+			temp32 += ((uint32_t)val)<<(port+8);
 			dras_radio_repeater_write(st, ADDR_CHANNEL_EN, temp32);
 		}
 	}
@@ -408,7 +403,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
 			match = 1;
-			val = (st->en_dl_test >> port) & 1;
+			val = (dras_radio_repeater_read(st, ADDR_CHANNEL_EN) >> (port+8)) & 1;
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_UL_ORDER)){
 			match = 1;
@@ -421,6 +416,10 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_PORT(port, REG_PORT_ID)){
 			match = 1;
 			val = dras_radio_repeater_read(st, ADDR_PORT_ID(port)) & 0xFFF;
+		}
+		else if((u32)this_attr->address == REG_PORT(port, REG_UL_SYNC)){
+			match = 1;
+			val = (dras_radio_repeater_read(st, ADDR_PORT_ID(port))>>12) & 0x1;
 		}
 	}
 
@@ -492,6 +491,11 @@ IIO_DEVICE_ATTR_ALL_PORT(id, S_IRUGO,
 			dras_radio_repeater_store,
 			REG_PORT_ID);
 
+IIO_DEVICE_ATTR_ALL_PORT(uplink_sync, S_IRUGO,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_UL_SYNC);
+
 static IIO_DEVICE_ATTR(target_power, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -521,6 +525,7 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	IIO_ATTR_ALL_PORT(enable_downlink_test),
 	IIO_ATTR_ALL_PORT(uplink_order),
 	IIO_ATTR_ALL_PORT(id),
+	IIO_ATTR_ALL_PORT(uplink_sync),
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_target_power.dev_attr.attr,
 	&iio_dev_attr_squelch.dev_attr.attr,
