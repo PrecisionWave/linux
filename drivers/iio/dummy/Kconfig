@@ -56,5 +56,11 @@ config IIO_AXI_FPGA_REG
 	  Driver intended mainly as quick and dirty FPGA memory access
 	  over iio. Useful to read hardware ID and such.
 
+config PCW_AXSS_VER
+	tristate "FPGA bitstream timestamp readout device"
+	help
+	  Driver intended to read out the AXSS value that is memory
+	  mapped onto AXI bus over iio.
+
 endmenu
 
