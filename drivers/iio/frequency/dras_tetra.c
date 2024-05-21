@@ -33,6 +33,7 @@
 #define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
 #define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
 #define ADDR_DL_SYNC			(8*4) // sync
+#define ADDR_UL_GAIN			(9*4) // 16bit MSB CH1 + 16bit LSB CH0
 
 // TETRA channels
 #define ADDR_PER_TETRA_CHANNELS		16
@@ -136,6 +137,8 @@ enum chan_num{
 	REG_TX2_GAIN,
 	REG_CH0_WIDEBAND_MODE,
 	REG_CH4_WIDEBAND_MODE,
+	REG_CH0_UL_GAIN,
+	REG_CH4_UL_GAIN,
 	REG_RX_BURST_LENGTH,
 	REG_RX_BURST_PERIOD,
 	REG_RX_DMA_FULLRATE_ADC,
@@ -344,6 +347,24 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<10;
 		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 		break;
+	case REG_CH0_UL_GAIN:
+		if(val<0 || val>65535){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF0000;
+		temp32 += ((uint32_t)val);
+		dras_tetra_write(st, ADDR_UL_GAIN, temp32);
+		break;
+	case REG_CH4_UL_GAIN:
+		if(val<0 || val>65535){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF;
+		temp32 += ((uint32_t)val)<<16;
+		dras_tetra_write(st, ADDR_UL_GAIN, temp32);
+		break;
 	case REG_TX1_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
@@ -525,6 +546,12 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_CH4_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
 		break;
+	case REG_CH0_UL_GAIN:
+		val = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF;
+		break;
+	case REG_CH4_UL_GAIN:
+		val = (dras_tetra_read(st, ADDR_UL_GAIN)>>16) & 0xFFFF;
+		break;
 	case REG_TX1_GAIN:
 		val = st->gain_tx1;
 		break;
@@ -637,6 +664,16 @@ static IIO_DEVICE_ATTR(ch4_wideband_mode, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_CH4_WIDEBAND_MODE);
 
+static IIO_DEVICE_ATTR(ch0_ul_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_CH0_UL_GAIN);
+
+static IIO_DEVICE_ATTR(ch4_ul_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_CH4_UL_GAIN);
+
 static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -705,6 +742,8 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx2_gain.dev_attr.attr,
 	&iio_dev_attr_ch0_wideband_mode.dev_attr.attr,
 	&iio_dev_attr_ch4_wideband_mode.dev_attr.attr,
+	&iio_dev_attr_ch0_ul_gain.dev_attr.attr,
+	&iio_dev_attr_ch4_ul_gain.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_dma_fullrate_adc.dev_attr.attr,
