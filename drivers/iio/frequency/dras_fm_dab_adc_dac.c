@@ -85,13 +85,17 @@
 //     CH31_REG_GAIN_TX1
 #define REG_ALL_CH(REG) \
 	CH0_##REG, \
-	CH1_##REG
-//	CH2_##REG, \
-//	CH3_##REG, \
-//	CH4_##REG, \
-//	CH5_##REG, \
-//	CH6_##REG, \
-//	CH7_##REG
+	CH1_##REG, \
+	CH2_##REG, \
+	CH3_##REG, \
+	CH4_##REG, \
+	CH5_##REG, \
+	CH6_##REG, \
+	CH7_##REG, \
+	CH8_##REG, \
+	CH9_##REG, \
+	CH10_##REG, \
+	CH11_##REG
 
 // expands to:
 //   static IIO_DEVICE_ATTR(ch0_<ATTR>, <RW>, <SHOW>, <STORE>, CH0_<REG>);
@@ -107,13 +111,17 @@
 //     static IIO_DEVICE_ATTR(ch31_gain_tx1, S_IRUGO | S_IWUSR, dras_fm_dab_adc_dac_show, dras_fm_dab_adc_dac_store, CH31_REG_GAIN_TX1);
 #define IIO_DEVICE_ATTR_ALL_CH(ATTR, RW, SHOW, STORE, REG) \
 	static IIO_DEVICE_ATTR(ch0_##ATTR, RW, SHOW, STORE, CH0_##REG); \
-	static IIO_DEVICE_ATTR(ch1_##ATTR, RW, SHOW, STORE, CH1_##REG); 
-//	static IIO_DEVICE_ATTR(ch2_##ATTR, RW, SHOW, STORE, CH2_##REG); \
-//	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); \
-//	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
-//	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
-//	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
-//	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
+	static IIO_DEVICE_ATTR(ch1_##ATTR, RW, SHOW, STORE, CH1_##REG); \
+	static IIO_DEVICE_ATTR(ch2_##ATTR, RW, SHOW, STORE, CH2_##REG); \
+	static IIO_DEVICE_ATTR(ch3_##ATTR, RW, SHOW, STORE, CH3_##REG); \
+	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
+	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
+	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
+	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG); \
+	static IIO_DEVICE_ATTR(ch8_##ATTR, RW, SHOW, STORE, CH8_##REG); \
+	static IIO_DEVICE_ATTR(ch9_##ATTR, RW, SHOW, STORE, CH9_##REG); \
+	static IIO_DEVICE_ATTR(ch10_##ATTR, RW, SHOW, STORE, CH10_##REG); \
+	static IIO_DEVICE_ATTR(ch11_##ATTR, RW, SHOW, STORE, CH11_##REG); 
 
 // expands to:
 //   &iio_dev_attr_ch0_<ATTR>.dev_attr.attr,
@@ -129,13 +137,17 @@
 //     &iio_dev_attr_ch31_gain_tx1.dev_attr.attr
 #define IIO_ATTR_ALL_CH(ATTR) \
 	&iio_dev_attr_ch0_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch1_##ATTR.dev_attr.attr
-//	&iio_dev_attr_ch2_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch3_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
-//	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
+	&iio_dev_attr_ch1_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch2_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch3_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch7_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch8_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch9_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch10_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch11_##ATTR.dev_attr.attr
 
 enum chan_num{
 	REG_ALL_CH(REG_TX_DAB_CHANNEL_FREQUENCY),	// being expanded for all channels
