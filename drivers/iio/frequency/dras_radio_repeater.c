@@ -18,6 +18,7 @@
 #include <linux/of_address.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
+#include <linux/clk.h>
 
 
 #define DRIVER_NAME			"dras-radio-repeater"
@@ -191,6 +192,11 @@ struct dras_radio_repeater_state {
 	struct iio_info		iio_info;
 	void __iomem		*regs;
 	struct mutex		lock;
+
+	struct device		*dev;
+	struct clk		*adrv_clk;
+	struct notifier_block	adrv_clk_rate_change_nb;
+	uint32_t		adrv_clk_rate;
 };
 
 static void dras_radio_repeater_write(struct dras_radio_repeater_state *st, unsigned reg, u32 val)
@@ -557,6 +563,21 @@ static const struct of_device_id dras_radio_repeater_of_match[] = {
 
 MODULE_DEVICE_TABLE(of, dras_radio_repeater_of_match);
 
+static int adrv_clk_clock_notifier(struct notifier_block *nb,
+				   unsigned long event, void *data)
+{
+	struct clk_notifier_data *ndata = data;
+	struct dras_radio_repeater_state *st = container_of(nb, struct dras_radio_repeater_state, adrv_clk_rate_change_nb);
+
+	dev_info(st->dev, "adrv_clk rate change: new rate = %lu Hz\n", ndata->new_rate);
+
+	if (event == POST_RATE_CHANGE) {
+		st->adrv_clk_rate = ndata->new_rate;
+	}
+
+	return NOTIFY_DONE;
+}
+
 static int dras_radio_repeater_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *id;						// return of of_match_node()
@@ -587,8 +608,32 @@ static int dras_radio_repeater_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	st = iio_priv(indio_dev);
+	st->dev = &pdev->dev;
 
-//	st->adc_freq = pdata->adc_freq;
+	st->adrv_clk = devm_clk_get(&pdev->dev, "adrv_clk");
+	if (IS_ERR_OR_NULL(st->adrv_clk)) {
+		ret = PTR_ERR(st->adrv_clk);
+		dev_err(&pdev->dev, "Failed to get ADRV clock (%d)\n", ret);
+		goto err_iio_device_free;
+	}
+
+	ret = clk_prepare_enable(st->adrv_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable ADRV clock\n");
+		goto err_iio_device_free;
+	}
+
+	st->adrv_clk_rate = clk_get_rate(st->adrv_clk);
+	if (st->adrv_clk_rate == 0) {
+		dev_warn(&pdev->dev, "ADRV clk equal to 0 Hz\n");
+		//ret = -EINVAL;
+		//goto err_iio_device_free;
+	}
+
+	dev_info(&pdev->dev, "ADRV clk rate is %u Hz", st->adrv_clk_rate);
+
+	st->adrv_clk_rate_change_nb.notifier_call = adrv_clk_clock_notifier;
+	clk_notifier_register(st->adrv_clk, &st->adrv_clk_rate_change_nb);
 
 	/* get information about the structure of the device resource,
 	 * map device resource to kernel space
