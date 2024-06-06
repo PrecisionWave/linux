@@ -751,14 +751,7 @@ static int dexter_dsp_tx_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	ret = clk_get_rate(st->dac_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Unable to query DAC clock\n");
-		goto err_iio_device_free;
-	}
-
-	st->fs_if_dac = ret;
-
+	st->fs_if_dac = clk_get_rate(st->dac_clk);
 	if (st->fs_if_dac == 0) {
 		dev_warn(&pdev->dev, "dac_clk equal to 0 Hz\n");
 		//ret = -EINVAL;
