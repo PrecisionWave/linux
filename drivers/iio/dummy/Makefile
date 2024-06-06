@@ -12,3 +12,4 @@ obj-$(CONFIG_IIO_DUMMY_EVGEN) += iio_dummy_evgen.o
 obj-$(CONFIG_XBAND_CONTROLLER) += xband_controller.o
 obj-$(CONFIG_IIO_AXI_FPGA_REG) += iio_axi_fpga_reg.o
 obj-$(CONFIG_PCW_AXSS_VER) += pcw_axss_ver.o
+obj-$(CONFIG_PCW_ZEBU_UDP) += pcw_zebu_udp.o
