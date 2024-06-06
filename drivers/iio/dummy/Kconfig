@@ -62,5 +62,10 @@ config PCW_AXSS_VER
 	  Driver intended to read out the AXSS value that is memory
 	  mapped onto AXI bus over iio.
 
+config PCW_ZEBU_UDP
+	tristate "Zebu UDP generator config acceess"
+	help
+	  Driver to configure and manipulate the Zebu UDP generator
+
 endmenu
 
