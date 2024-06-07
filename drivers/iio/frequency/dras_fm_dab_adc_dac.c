@@ -48,11 +48,18 @@
 #define ADDR_RX_DAB_BAND_BURST_PERIOD	(2*16+2)*4
 #define ADDR_TX_DAB_DDS_BI		(2*16+4)*4
 #define ADDR_DL_ORDER_SYNC		(2*16+7)*4 // 5bits per channel, 24 channels
+#define ADDR_TX_DAB_GAIN		(2*16+8)*4
+#define ADDR_RX_DAB_SYNC_SETTINGS	(2*16+9)*4
+#define ADDR_RX_DAB_MONITOR_BURST_LENGTH	(2*16+10)*4
+#define ADDR_RX_DAB_MONITOR_BURST_PERIOD	(2*16+11)*4
+#define ADDR_RX_DAB_FREQ_ERR_0TO3	(2*16+12)*4
+#define ADDR_RX_DAB_FREQ_ERR_4TO7	(2*16+13)*4
+#define ADDR_RX_DAB_FREQ_ERR_8TO11	(2*16+14)*4
 
 // DAB channels
 #define ADDR_PER_DAB_CHANNELS		2
 #define ADDR_TX_DAB_DDSINC(x)		(3*16+0+x*ADDR_PER_DAB_CHANNELS)*4
-#define ADDR_TX_DAB_GAIN		(3*16+1)*4
+#define ADDR_RX_DAB_SYNC_RSSI(x)	(3*16+1+x*ADDR_PER_DAB_CHANNELS)*4
 
 #define MIN_GAIN			0x0000
 #define MAX_GAIN			0xFFFF
@@ -153,6 +160,10 @@ enum chan_num{
 	REG_ALL_CH(REG_TX_DAB_CHANNEL_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_TX1_DAB_CHANNEL_GAIN),	// being expanded for all channels
 	REG_ALL_CH(REG_TX2_DAB_CHANNEL_GAIN),	// being expanded for all channels
+	REG_ALL_CH(REG_DAB_RSSI),	// being expanded for all channels
+	REG_ALL_CH(REG_DAB_RESYNCS),	// being expanded for all channels
+	REG_ALL_CH(REG_DAB_SYNC_CORR),	// being expanded for all channels
+	REG_ALL_CH(REG_DAB_FREQ_ERR),	// being expanded for all channels
 	REG_DSP_VERSION,
 	REG_ADC1_PEAK_HOLD_VAL,
 	REG_ADC2_PEAK_HOLD_VAL,
@@ -160,6 +171,16 @@ enum chan_num{
 	REG_ADC_BER_CHECKER,
 	REG_RX_DAB_BAND_BURST_LENGTH,
 	REG_RX_DAB_BAND_BURST_PERIOD,
+	REG_RX_DAB_MONITOR_BURST_LENGTH,
+	REG_RX_DAB_MONITOR_BURST_PERIOD,
+	REG_RX_DAB_MONITOR_DISABLE_SYNC,
+	REG_DAB_RESYNC_THRESHOLD,
+	REG_DAB_SYNC_MAX_COUNTS,
+	REG_DAB_SYNC_RELEASE_COUNTS,
+	REG_DAB_SYNC_SATURATION_LPF,
+	REG_DAB_SYNC_SATURATION_PROPORTIONAL,
+	REG_DAB_SYNC_STROBE_ADJUST,
+	REG_DAB_SYNC_FREQ_SCALAR,
 	REG_RX_DAB_CHANNEL_FREQUENCY,
 	REG_TX_DAB_DDS_ENABLE,
 	REG_TX1_DAB_SEL_REP_MOD1_MOD2_MOD12,
@@ -322,9 +343,9 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 				break;
 			}
 			val += st->fs_adc>>1;
-			temp64 = (u64)val << 24;
+			temp64 = (u64)val << 25;
 			temp64 = div_s64(temp64,st->fs_adc);
-			val = (int)temp64 & 0xFFFFFF;
+			val = (int)temp64 & 0x1FFFFFF;
 			dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDSINC(ch), val);
 			break;
 		}
@@ -381,6 +402,52 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		break;
 	case REG_RX_DAB_BAND_BURST_PERIOD:
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_PERIOD, (u32)val);
+		break;
+	case REG_RX_DAB_MONITOR_BURST_LENGTH:
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_MONITOR_BURST_LENGTH, (u32)val);
+		break;
+	case REG_RX_DAB_MONITOR_BURST_PERIOD:
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_MONITOR_BURST_PERIOD, (u32)val);
+		break;
+	case REG_RX_DAB_MONITOR_DISABLE_SYNC:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) & ~(0x1 << 6);
+		temp32 += ((u32)val & 0x1) << 6;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
+		break;
+	case REG_DAB_RESYNC_THRESHOLD:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0x7 << 0);
+		temp32 += ((u32)val & 0x7) << 0;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
+		break;
+	case REG_DAB_SYNC_MAX_COUNTS:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0x7F << 3);
+		temp32 += ((u32)val & 0x7F) << 3;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
+		break;
+	case REG_DAB_SYNC_RELEASE_COUNTS:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0x3F << 10);
+		temp32 += ((u32)val & 0x3F) << 10;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
+		break;
+	case REG_DAB_SYNC_SATURATION_LPF:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0xF << 16);
+		temp32 += ((u32)val & 0xF) << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
+		break;
+	case REG_DAB_SYNC_SATURATION_PROPORTIONAL:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0xF << 20);
+		temp32 += ((u32)val & 0xF) << 20;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
+		break;
+	case REG_DAB_SYNC_STROBE_ADJUST:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0xFF << 24);
+		temp32 += (u32)(((int8_t)val & 0xFF) << 24);
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
+		break;
+	case REG_DAB_SYNC_FREQ_SCALAR:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) & ~(0xFFFF << 7);
+		temp32 += (u32)(((int16_t)val & 0xFFFF) << 7);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_TX1_FM_BAND_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
@@ -632,6 +699,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	u64 temp64;
 	u32 ch, temp32;
 	int match;
+	int64_t freq_err;
 
 	/* channel registers */
 	mutex_lock(&indio_dev->mlock);
@@ -642,18 +710,52 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = st->gain_dab_tx[ch];
 			break;
 		}
-		if((u32)this_attr->address == REG_CH(ch, REG_TX2_DAB_CHANNEL_GAIN)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_TX2_DAB_CHANNEL_GAIN)){
 			match = 1;
 			val = st->gain_dab_tx[ch+NB_OF_DAB_CHANNELS];
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_DAB_CHANNEL_FREQUENCY)){
 			match = 1;
-			val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDSINC(ch));
+			val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDSINC(ch)) & 0x1FFFFFF;
 
 			temp64 = (u64)val * st->fs_adc;
-			val = (u32)(temp64 >> 24);
+			val = (u32)(temp64 >> 25);
 			val += st->fs_adc>>1;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_RSSI)){
+			match = 1;
+			val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_RSSI(ch)) & 0xFFFFF;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_RESYNCS)){
+			match = 1;
+			val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_RSSI(ch)) >>20) & 0xF;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_SYNC_CORR)){
+			match = 1;
+			val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_RSSI(ch)) >>24) & 0xFF);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_FREQ_ERR)){
+			match = 1;
+			switch(ch / 3){
+			case 0:
+				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_0TO3) >>((ch % 3)*8)) & 0xFF);
+				break;
+			case 1:
+				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_4TO7) >>((ch % 3)*8)) & 0xFF);
+				break;
+			case 2:
+				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_8TO11) >>((ch % 3)*8)) & 0xFF);
+				break;
+			default:
+				break;
+			}
+			freq_err = (int64_t)val * st->fs_adc;
+			val = (int)(freq_err >> 25);
 			break;
 		}
 	}
@@ -704,6 +806,36 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		break;
 	case REG_RX_DAB_BAND_BURST_PERIOD:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_PERIOD);
+		break;
+	case REG_RX_DAB_MONITOR_BURST_LENGTH:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_MONITOR_BURST_LENGTH);
+		break;
+	case REG_RX_DAB_MONITOR_BURST_PERIOD:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_MONITOR_BURST_PERIOD);
+		break;
+	case REG_RX_DAB_MONITOR_DISABLE_SYNC:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 6) & 0x1;
+		break;
+	case REG_DAB_RESYNC_THRESHOLD:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 0) & 0x7;
+		break;
+	case REG_DAB_SYNC_MAX_COUNTS:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 3) & 0x7F;
+		break;
+	case REG_DAB_SYNC_RELEASE_COUNTS:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 10) & 0x3F;
+		break;
+	case REG_DAB_SYNC_SATURATION_LPF:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 16) & 0xF;
+		break;
+	case REG_DAB_SYNC_SATURATION_PROPORTIONAL:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 20) & 0xF;
+		break;
+	case REG_DAB_SYNC_STROBE_ADJUST:
+		val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 24) & 0xFF);
+		break;
+	case REG_DAB_SYNC_FREQ_SCALAR:
+		val = (int16_t)((dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 7) & 0xFFFF);
 		break;
 	case REG_RX_FM_BAND_BURST_LENGTH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH);
@@ -854,20 +986,40 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 }
 
 
-IIO_DEVICE_ATTR_ALL_CH(tx1_dab_channel_gain, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(tx1_dab_gain, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX1_DAB_CHANNEL_GAIN);
 
-IIO_DEVICE_ATTR_ALL_CH(tx2_dab_channel_gain, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(tx2_dab_gain, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX2_DAB_CHANNEL_GAIN);
 
-IIO_DEVICE_ATTR_ALL_CH(tx_dab_channel_frequency, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(dab_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_CHANNEL_FREQUENCY);
+
+IIO_DEVICE_ATTR_ALL_CH(dab_rssi, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_RSSI);
+
+IIO_DEVICE_ATTR_ALL_CH(dab_resyncs, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_RESYNCS);
+
+IIO_DEVICE_ATTR_ALL_CH(dab_sync_correction, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_CORR);
+
+IIO_DEVICE_ATTR_ALL_CH(dab_frequency_error, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_FREQ_ERR);
 
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_fm_dab_adc_dac_show,
@@ -904,7 +1056,57 @@ static IIO_DEVICE_ATTR(rx_dab_band_burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_DAB_BAND_BURST_PERIOD);
 
-static IIO_DEVICE_ATTR(rx_dab_channel_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(rx_dab_monitor_burst_period, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RX_DAB_MONITOR_BURST_PERIOD);
+
+static IIO_DEVICE_ATTR(rx_dab_monitor_burst_length, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RX_DAB_MONITOR_BURST_LENGTH);
+
+static IIO_DEVICE_ATTR(rx_dab_monitor_disable_sync, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RX_DAB_MONITOR_DISABLE_SYNC);
+
+static IIO_DEVICE_ATTR(rx_dab_resync_threshold, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_RESYNC_THRESHOLD);
+
+static IIO_DEVICE_ATTR(rx_dab_sync_max_counts, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_MAX_COUNTS);
+
+static IIO_DEVICE_ATTR(rx_dab_sync_release_counts, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_RELEASE_COUNTS);
+
+static IIO_DEVICE_ATTR(rx_dab_sync_saturation_lpf, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_SATURATION_LPF);
+
+static IIO_DEVICE_ATTR(rx_dab_sync_saturation_proportional, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_SATURATION_PROPORTIONAL);
+
+static IIO_DEVICE_ATTR(rx_dab_sync_strobe_adjust, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_STROBE_ADJUST);
+
+static IIO_DEVICE_ATTR(rx_dab_sync_freq_scalar, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_SYNC_FREQ_SCALAR);
+
+static IIO_DEVICE_ATTR(rx_dab_monitor_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_DAB_CHANNEL_FREQUENCY);
@@ -1076,9 +1278,13 @@ static IIO_DEVICE_ATTR(downlink_sync, S_IRUGO,
 
 
 static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
-	IIO_ATTR_ALL_CH(tx1_dab_channel_gain),
-	IIO_ATTR_ALL_CH(tx2_dab_channel_gain),
-	IIO_ATTR_ALL_CH(tx_dab_channel_frequency),
+	IIO_ATTR_ALL_CH(tx1_dab_gain),
+	IIO_ATTR_ALL_CH(tx2_dab_gain),
+	IIO_ATTR_ALL_CH(dab_frequency),
+	IIO_ATTR_ALL_CH(dab_rssi),
+	IIO_ATTR_ALL_CH(dab_resyncs),
+	IIO_ATTR_ALL_CH(dab_sync_correction),
+	IIO_ATTR_ALL_CH(dab_frequency_error),
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_adc1_peak_hold_value.dev_attr.attr,
 	&iio_dev_attr_adc2_peak_hold_value.dev_attr.attr,
@@ -1086,7 +1292,17 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_adc_ber_checker.dev_attr.attr,
 	&iio_dev_attr_rx_dab_band_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_dab_band_burst_period.dev_attr.attr,
-	&iio_dev_attr_rx_dab_channel_frequency.dev_attr.attr,
+	&iio_dev_attr_rx_dab_monitor_burst_length.dev_attr.attr,
+	&iio_dev_attr_rx_dab_monitor_burst_period.dev_attr.attr,
+	&iio_dev_attr_rx_dab_monitor_disable_sync.dev_attr.attr,
+	&iio_dev_attr_rx_dab_resync_threshold.dev_attr.attr,
+	&iio_dev_attr_rx_dab_sync_max_counts.dev_attr.attr,
+	&iio_dev_attr_rx_dab_sync_release_counts.dev_attr.attr,
+	&iio_dev_attr_rx_dab_sync_saturation_lpf.dev_attr.attr,
+	&iio_dev_attr_rx_dab_sync_saturation_proportional.dev_attr.attr,
+	&iio_dev_attr_rx_dab_sync_strobe_adjust.dev_attr.attr,
+	&iio_dev_attr_rx_dab_sync_freq_scalar.dev_attr.attr,
+	&iio_dev_attr_rx_dab_monitor_frequency.dev_attr.attr,
 	&iio_dev_attr_tx_dab_dds_enable.dev_attr.attr,
 	&iio_dev_attr_tx1_dab_sel_rep_mod1_mod2_mod12.dev_attr.attr,
 	&iio_dev_attr_tx2_dab_sel_rep_mod1_mod2_mod12.dev_attr.attr,
