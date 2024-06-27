@@ -50,4 +50,22 @@ config XBAND_CONTROLLER
 	  To compile this driver as a module, choose M here: the
 	  module will be called xband_controller.
 		
+config IIO_AXI_FPGA_REG
+	tristate "Memory mapped FPGA register access"
+	help
+	  Driver intended mainly as quick and dirty FPGA memory access
+	  over iio. Useful to read hardware ID and such.
+
+config PCW_AXSS_VER
+	tristate "FPGA bitstream timestamp readout device"
+	help
+	  Driver intended to read out the AXSS value that is memory
+	  mapped onto AXI bus over iio.
+
+config PCW_ZEBU_UDP
+	tristate "Zebu UDP generator config acceess"
+	help
+	  Driver to configure and manipulate the Zebu UDP generator
+
 endmenu
+
