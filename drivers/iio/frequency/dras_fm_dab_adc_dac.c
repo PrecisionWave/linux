@@ -1759,6 +1759,7 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	printk("DRAS-FM-DAB-ADC-DAC: dab-band-ddc-phase = %d\n", st->dab_band_ddc_phase);
 	if(of_property_read_bool(np, "is-remote")){
 		st->is_remote = 1;
+		printk("DRAS-FM-DAB-ADC-DAC: is-remote\n");
 	}else{
 		st->is_remote = 0;
 	}
