@@ -433,13 +433,17 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_PERIOD, (u32)val);
 		break;
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_MONITOR_BURST_LENGTH, (u32)val);
 		break;
 	case REG_RX_DAB_MONITOR_BURST_PERIOD:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_MONITOR_BURST_PERIOD, (u32)val);
 		break;
 	case REG_RX_DAB_MONITOR_DISABLE_SYNC:
@@ -450,57 +454,73 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_DAB_RESYNC_THRESHOLD:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0x7 << 0);
 		temp32 += ((u32)val & 0x7) << 0;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
 		break;
 	case REG_DAB_SYNC_MAX_COUNTS:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0x7F << 3);
 		temp32 += ((u32)val & 0x7F) << 3;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
 		break;
 	case REG_DAB_SYNC_RELEASE_COUNTS:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0x3F << 10);
 		temp32 += ((u32)val & 0x3F) << 10;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
 		break;
 	case REG_DAB_SYNC_SATURATION_LPF:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0xF << 16);
 		temp32 += ((u32)val & 0xF) << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
 		break;
 	case REG_DAB_SYNC_SATURATION_PROPORTIONAL:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0xF << 20);
 		temp32 += ((u32)val & 0xF) << 20;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
 		break;
 	case REG_DAB_SYNC_STROBE_ADJUST:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) & ~(0xFF << 24);
 		temp32 += (u32)(((int8_t)val & 0xFF) << 24);
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_SYNC_SETTINGS, temp32);
 		break;
 	case REG_DAB_SYNC_FREQ_SCALAR:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) & ~(0xFFFF << 7);
 		temp32 += (u32)(((int16_t)val & 0xFFFF) << 7);
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_DAB_AGC_TARGET_LEVEL:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		if(val<0 || val>65535){
 			ret = -EINVAL;
 			break;
@@ -510,8 +530,10 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_AGC_SETTINGS, temp32);
 		break;
 	case REG_DAB_AGC_MAX_GAIN:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		if(val<0 || val>65535){
 			ret = -EINVAL;
 			break;
@@ -521,8 +543,10 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_AGC_SETTINGS, temp32);
 		break;
 	case REG_DAB_AGC_SQUELCH:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		if(val<0 || val>65535){
 			ret = -EINVAL;
 			break;
@@ -532,22 +556,28 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_AGC_SQUELCH, temp32);
 		break;
 	case REG_MOD_START_DELAY:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_BLOCK_MOD_STARTTDELAY) & ~0x3FFFF;
 		temp32 += (u32)val & 0x3FFFF;
 		dras_fm_dab_adc_dac_write(st, ADDR_BLOCK_MOD_STARTTDELAY, temp32);
 		break;
 	case REG_DAB_EN_2X12:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) & ~(0x1 << 17);
 		temp32 += ((u32)val & 0x1) << 17;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_DEMOD_SOURCE_CHANNEL:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		if(val<0 || val>11){
 			ret = -EINVAL;
 			break;
@@ -557,8 +587,10 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_MONITOR_SOURCE_CHANNEL:
-		if(st->is_remote)
+		if(st->is_remote){
+			ret = -ENODEV;
 			break;
+		}
 		if(val<0 || val>11){
 			ret = -EINVAL;
 			break;
@@ -808,15 +840,31 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_BI0:
+		if(st->is_remote){
+			ret = -ENODEV;
+			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_BI0, (u32)val);
 		break;
 	case REG_BI1:
+		if(st->is_remote){
+			ret = -ENODEV;
+			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_BI1, (u32)val);
 		break;
 	case REG_BI2:
+		if(st->is_remote){
+			ret = -ENODEV;
+			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_BI2, (u32)val);
 		break;
 	case REG_BI3:
+		if(st->is_remote){
+			ret = -ENODEV;
+			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_BI3, (u32)val);
 		break;
 	default:
