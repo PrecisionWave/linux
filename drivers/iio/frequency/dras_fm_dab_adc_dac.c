@@ -31,6 +31,8 @@
 #define ADDR_ADC_BER_TESTER		(5*4)
 #define ADDR_WATCHDOG			(9*4)
 #define ADDR_PPS_SETTINGS		(12*4)
+#define ADDR_HASH			(13*4)
+#define ADDR_RANDOMNUMBER		(14*4)
 
 // FM Band
 #define ADDR_RX_FM_BAND_BURST_LENGTH	(1*16+1)*4
@@ -241,7 +243,10 @@ enum chan_num{
 	REG_BI0,
 	REG_BI1,
 	REG_BI2,
-	REG_BI3
+	REG_BI3,
+	REG_IS_MU,
+	REG_RANDOMNUMBER,
+	REG_HASH
 };
 
 struct dras_fm_dab_adc_dac_state {
@@ -867,6 +872,13 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		}
 		dras_fm_dab_adc_dac_write(st, ADDR_BI3, (u32)val);
 		break;
+	case REG_HASH:
+		if(st->is_remote){
+			ret = -ENODEV;
+			break;
+		}
+		dras_fm_dab_adc_dac_write(st, ADDR_HASH, (u32)val);
+		break;
 	default:
 		ret = -ENODEV;
 		break;
@@ -930,15 +942,15 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_FREQ_ERR)){
 			match = 1;
-			switch(ch / 3){
+			switch(ch / 4){
 			case 0:
-				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_0TO3) >>((ch % 3)*8)) & 0xFF);
+				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_0TO3) >>((ch % 4)*8)) & 0xFF);
 				break;
 			case 1:
-				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_4TO7) >>((ch % 3)*8)) & 0xFF);
+				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_4TO7) >>((ch % 4)*8)) & 0xFF);
 				break;
 			case 2:
-				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_8TO11) >>((ch % 3)*8)) & 0xFF);
+				val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_FREQ_ERR_8TO11) >>((ch % 4)*8)) & 0xFF);
 				break;
 			default:
 				break;
@@ -1205,6 +1217,9 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_BI3);
 		ret = sprintf(buf, "%08x\n", temp32);
 		break;
+	case REG_IS_MU:
+		val = 1 - st->is_remote;
+		break;
 	case REG_EN_DL_TEST:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI)>>5) & 1;
 		break;
@@ -1217,6 +1232,12 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		break;
 	case REG_DL_SYNC:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_DL_ORDER_SYNC)>>25) & 1;
+		break;
+	case REG_HASH:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_HASH);
+		break;
+	case REG_RANDOMNUMBER:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RANDOMNUMBER);
 		break;
 	default:
 		ret = -ENODEV;
@@ -1576,6 +1597,11 @@ static IIO_DEVICE_ATTR(breakin_mask3, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_BI3);
 
+static IIO_DEVICE_ATTR(is_mu, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_IS_MU);
+
 static IIO_DEVICE_ATTR(enable_downlink_test, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -1595,6 +1621,16 @@ static IIO_DEVICE_ATTR(downlink_sync, S_IRUGO,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_DL_SYNC);
+
+static IIO_DEVICE_ATTR(hash, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_HASH);
+
+static IIO_DEVICE_ATTR(randomnumber, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RANDOMNUMBER);
 
 
 static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
@@ -1667,10 +1703,13 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_breakin_mask1.dev_attr.attr,
 	&iio_dev_attr_breakin_mask2.dev_attr.attr,
 	&iio_dev_attr_breakin_mask3.dev_attr.attr,
+	&iio_dev_attr_is_mu.dev_attr.attr,
 	&iio_dev_attr_enable_downlink_test.dev_attr.attr,
 	&iio_dev_attr_downlink_order.dev_attr.attr,
 	&iio_dev_attr_downlink_cpri_continous.dev_attr.attr,
 	&iio_dev_attr_downlink_sync.dev_attr.attr,
+	&iio_dev_attr_hash.dev_attr.attr,
+	&iio_dev_attr_randomnumber.dev_attr.attr,
 	NULL,
 };
 
