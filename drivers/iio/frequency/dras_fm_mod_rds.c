@@ -206,6 +206,7 @@ struct dras_fm_mod_rds_state {
 
 	uint32_t		mod_clk;
 	uint32_t		rep_clk;
+	const char*		unique_id;
 };
 
 static void dras_fm_mod_rds_write(struct dras_fm_mod_rds_state *st, unsigned reg, u32 val)
@@ -610,7 +611,22 @@ static int dras_fm_mod_rds_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
-	indio_dev->name = np->name;
+
+	if(of_property_read_string(np, "optional,unique-id", &st->unique_id))
+		st->unique_id = "";	// default
+
+	/* try to get unique id */
+	if(!strlen(st->unique_id)){
+		pr_warn("DRAS-FM-MOD-RDS: unique-id not found! check devicetree ..\n");
+		indio_dev->name = np->name;									// set non-unique id of the device
+	}
+	else if(strlen(st->unique_id) > 59){
+		pr_warn("DRAS-FM-MOD-RDS: unique-id is too long! check devicetree ..\n");
+		indio_dev->name = np->name;									// set non-unique id of the device
+	}
+	else
+		indio_dev->name = st->unique_id;							// set unique id of the device
+
 	indio_dev->channels = dras_fm_mod_rds_channels;
 	indio_dev->num_channels = ARRAY_SIZE(dras_fm_mod_rds_channels);
 	indio_dev->info = &dras_fm_mod_rds_info;
