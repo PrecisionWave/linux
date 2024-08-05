@@ -18,6 +18,7 @@
 #include <linux/of_address.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
+#include <linux/gpio/consumer.h>
 
 
 #define DRIVER_NAME			"dras-fm-dab-adc-dac"
@@ -265,6 +266,8 @@ struct dras_fm_dab_adc_dac_state {
 	u32			gain_fm_tx2;
 	bool			rf_mute;
 	bool			is_remote;
+
+	struct gpio_desc	*clk_ce_gpio;
 };
 
 static void dras_fm_dab_adc_dac_write(struct dras_fm_dab_adc_dac_state *st, unsigned reg, u32 val)
@@ -1804,6 +1807,11 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	}else{
 		st->is_remote = 0;
 	}
+
+	/* get and initialize clock enable GPIO
+	   GPIOD_OUT_HIGH: configure as output and output high
+	 */
+	st->clk_ce_gpio = devm_gpiod_get_optional(&pdev->dev, "clk-ce", GPIOD_OUT_HIGH);
 
 	indio_dev->name = np->name;
 	indio_dev->channels = dras_fm_dab_adc_dac_channels;
