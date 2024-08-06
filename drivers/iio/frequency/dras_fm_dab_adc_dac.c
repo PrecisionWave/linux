@@ -1819,7 +1819,7 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	/* get and initialize clock enable GPIO
 	   GPIOD_OUT_HIGH: configure as output and output high
 	 */
-	st->clk_ce_gpio = devm_gpiod_get_optional(&pdev->dev, "clk-ce", GPIOD_OUT_HIGH);
+	st->clk_ce_gpio = devm_gpiod_get_optional(&pdev->dev, "clk-ce",  GPIOD_OUT_HIGH | GPIOD_FLAGS_BIT_NONEXCLUSIVE);
 	if (IS_ERR(st->clk_ce_gpio)) {
 		ret = PTR_ERR(st->clk_ce_gpio);
 		goto err_iio_device_free;
