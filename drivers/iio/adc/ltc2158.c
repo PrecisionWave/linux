@@ -655,7 +655,7 @@ static int ltc2158_probe(struct spi_device *spi)
 	conv->set_pnsel = ltc2158_set_pnsel;
 
 	conv->out_clk = clk_register_fixed_factor(&spi->dev, "out_clk",
-		__clk_get_name(conv->clk), 0, 1, 1);
+		__clk_get_name(conv->clk), 0, 2, 1);
 	if (IS_ERR(conv->out_clk)) {
 		dev_warn(&spi->dev, "Failed to register out_clk\n");
 	} else {
