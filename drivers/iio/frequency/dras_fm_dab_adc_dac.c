@@ -19,6 +19,7 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <linux/gpio/consumer.h>
+#include <linux/clk.h>
 
 
 #define DRIVER_NAME			"dras-fm-dab-adc-dac"
@@ -267,6 +268,7 @@ struct dras_fm_dab_adc_dac_state {
 	bool			rf_mute;
 	bool			is_remote;
 
+	struct clk		*dsp_clk;
 	struct gpio_desc	*clk_ce_gpio;
 };
 
@@ -1788,6 +1790,12 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 //	printk("\nDDC-DUC at 0x%08llX mapped to 0x%p\n",
 //			(unsigned long long)res->start, st->regs);
 
+	st->dsp_clk = devm_clk_get(&pdev->dev, "dsp_clk");
+	if (IS_ERR_OR_NULL(st->dsp_clk)) {
+		ret = PTR_ERR(st->dsp_clk);
+		dev_err(&pdev->dev, "Failed to get DSP clock (%d)\n", ret);
+		goto err_iio_device_free;
+	}
 
 	if(of_property_read_u32(np, "required,fs-adc", &st->fs_adc)){
 		printk("DRAS-FM-DAB-ADC-DAC: ***ERROR! \"required,fs-adc\" missing in devicetree?\n");
@@ -1812,6 +1820,10 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	   GPIOD_OUT_HIGH: configure as output and output high
 	 */
 	st->clk_ce_gpio = devm_gpiod_get_optional(&pdev->dev, "clk-ce", GPIOD_OUT_HIGH);
+	if (IS_ERR(st->clk_ce_gpio)) {
+		ret = PTR_ERR(st->clk_ce_gpio);
+		goto err_iio_device_free;
+	}
 
 	indio_dev->name = np->name;
 	indio_dev->channels = dras_fm_dab_adc_dac_channels;
