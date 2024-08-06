@@ -248,7 +248,8 @@ enum chan_num{
 	REG_BI3,
 	REG_IS_MU,
 	REG_RANDOMNUMBER,
-	REG_HASH
+	REG_HASH,
+	REG_CLK_CE
 };
 
 struct dras_fm_dab_adc_dac_state {
@@ -886,6 +887,13 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		}
 		dras_fm_dab_adc_dac_write(st, ADDR_HASH, (u32)val);
 		break;
+	case REG_CLK_CE:
+		if (!st->clk_ce_gpio) {
+			ret = -ENODEV;
+			break;
+		}
+		gpiod_set_value(st->clk_ce_gpio, (u32)val);
+		break;
 	default:
 		ret = -ENODEV;
 		break;
@@ -1245,6 +1253,15 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		break;
 	case REG_RANDOMNUMBER:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RANDOMNUMBER);
+		break;
+	case REG_CLK_CE:
+		if (!st->clk_ce_gpio) {
+			ret = -ENODEV;
+			break;
+		}
+		ret = sprintf(buf, "%d (dir: %d)\n",
+			      gpiod_get_value(st->clk_ce_gpio),
+			      gpiod_get_direction(st->clk_ce_gpio));
 		break;
 	default:
 		ret = -ENODEV;
@@ -1639,6 +1656,10 @@ static IIO_DEVICE_ATTR(randomnumber, S_IRUGO,
 			dras_fm_dab_adc_dac_store,
 			REG_RANDOMNUMBER);
 
+static IIO_DEVICE_ATTR(clk_ce, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_CLK_CE);
 
 static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	IIO_ATTR_ALL_CH(tx1_dab_gain),
@@ -1717,6 +1738,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_downlink_sync.dev_attr.attr,
 	&iio_dev_attr_hash.dev_attr.attr,
 	&iio_dev_attr_randomnumber.dev_attr.attr,
+	&iio_dev_attr_clk_ce.dev_attr.attr,
 	NULL,
 };
 
