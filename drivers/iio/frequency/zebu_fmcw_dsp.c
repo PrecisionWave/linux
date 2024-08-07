@@ -22,7 +22,8 @@
 #include <linux/of_address.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
-
+#include <linux/gpio/consumer.h>
+#include <linux/clk.h>
 
 #define DRIVER_NAME			"zebu-fmcw-dsp"
 #define NB_OF_BLOCKS			1
@@ -166,6 +167,9 @@ struct zebu_fmcw_dsp_state {
 	bool 		pps_los;
   	uint32_t	pps_clk_error_ns;
   	uint32_t	pps_clk_error_hz;
+
+	struct clk		*dsp_clk;
+	struct gpio_desc	*clk_ce_gpio;
 };
 
 static void zebu_fmcw_dsp_write(struct zebu_fmcw_dsp_state *st, unsigned reg, uint32_t val)
@@ -1257,7 +1261,7 @@ static int zebu_fmcw_dsp_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct zebu_fmcw_dsp_state *st;
 	struct iio_dev *indio_dev;
-	int ret;
+	int ret = -ENODEV;
 
 	if (!np)
 		return -ENODEV;
@@ -1296,6 +1300,13 @@ static int zebu_fmcw_dsp_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
+	st->dsp_clk = devm_clk_get(&pdev->dev, "dsp_clk");
+	if (IS_ERR_OR_NULL(st->dsp_clk)) {
+		ret = PTR_ERR(st->dsp_clk);
+		dev_err(&pdev->dev, "Failed to get DSP clock (%d)\n", ret);
+		goto err_iio_device_free;
+	}
+
 	if(of_property_read_u32(np, "required,fs-if-dac", &st->fs_if_dac)){
 		printk("ZEBU-FMCW-DSP: ***ERROR! \"required,fs-if-dac\" missing in devicetree?\n");
 		goto err_iio_device_free;
@@ -1313,6 +1324,16 @@ static int zebu_fmcw_dsp_probe(struct platform_device *pdev)
 		printk("ZEBU-FMCW-DSP: ***ERROR! \"required,fs-if-adc\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
+
+	/* get and initialize clock enable GPIO
+	   GPIOD_OUT_HIGH: configure as output and output high
+	 */
+	st->clk_ce_gpio = devm_gpiod_get_optional(&pdev->dev, "clk-ce",  GPIOD_OUT_HIGH);
+	if (IS_ERR(st->clk_ce_gpio)) {
+		ret = PTR_ERR(st->clk_ce_gpio);
+		goto err_iio_device_free;
+	}
+
 	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->name = np->name;
 	indio_dev->channels = zebu_fmcw_dsp_channels;

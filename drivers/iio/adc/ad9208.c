@@ -6,6 +6,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/err.h>
@@ -1469,6 +1470,14 @@ static int ad9680_sfdr_fixup(struct spi_device *spi)
 	return ret;
 }
 
+static void ad9208_clk_del_provider(void *data)
+{
+	struct axiadc_converter *conv = data;
+
+	of_clk_del_provider(conv->spi->dev.of_node);
+	clk_unregister_fixed_factor(conv->out_clk);
+}
+
 static int ad9208_probe(struct spi_device *spi)
 {
 	struct axiadc_converter *conv;
@@ -1606,6 +1615,18 @@ static int ad9208_probe(struct spi_device *spi)
 	if (ret < 0)
 		dev_warn(&spi->dev,
 			 "Failed to request FastDetect IRQs (%d)", ret);
+
+	conv->out_clk = clk_register_fixed_factor(&spi->dev, "out_clk",
+		__clk_get_name(conv->clk), 0, 1, 2);
+	if (IS_ERR(conv->out_clk)) {
+		dev_warn(&spi->dev, "Failed to register out_clk\n");
+	} else {
+		ret = of_clk_add_provider(spi->dev.of_node, of_clk_src_simple_get, conv->out_clk);
+		if (ret)
+			clk_unregister_fixed_factor(conv->out_clk);
+
+		devm_add_action_or_reset(&spi->dev, ad9208_clk_del_provider, conv);
+	}
 
 	ad9208_get_revision(&phy->ad9208, &api_rev[0],
 			    &api_rev[1], &api_rev[2]);
