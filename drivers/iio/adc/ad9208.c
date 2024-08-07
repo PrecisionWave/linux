@@ -848,7 +848,7 @@ static int ad9208_setup(struct spi_device *spi)
 			dcm = min_t(u8, dcm, phy->ddc[i].decimation);
 	}
 
-	dev_dbg(&spi->dev, "using chip decimation %u\n", ret);
+	dev_dbg(&spi->dev, "using chip decimation %u\n", dcm);
 
 	ret = ad9208_adc_set_dcm_mode(&phy->ad9208, dcm);
 	if (ret) {
