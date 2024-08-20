@@ -1888,6 +1888,7 @@ static int dras_fm_dab_adc_dac_probe(struct platform_device *pdev)
 	//dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, 2048);	// 11.7kHz RBW @ 2k FFT
 	//dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_PERIOD, 14336000); // Fs/10 > 10Hz update rate
 	//dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, 4096);	// 35kHz RBW @ 4k FFT
+	dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_CHANNEL_FREQUENCY, (st->dab_band_ddc_phase & 0x3)<<24);
 
 	ret = iio_device_register(indio_dev);
 	if (ret)
