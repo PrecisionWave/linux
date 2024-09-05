@@ -34,13 +34,13 @@
 #define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
 #define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
 #define ADDR_DL_SYNC			(8*4) // sync
-#define ADDR_UL_GAIN			(9*4) // 16bit MSB CH1 + 16bit LSB CH0
+//#define ADDR_UL_GAIN			(9*4) // 16bit MSB CH1 + 16bit LSB CH0
 
 // TETRA channels
 #define ADDR_PER_TETRA_CHANNELS		16
 #define ADDR_RX_TETRA_DDSINC(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+0)*4
 #define ADDR_TX_TETRA_DDSINC(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+1)*4
-#define ADDR_TETRA_GAIN(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+2)*4
+//#define ADDR_TETRA_GAIN(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+2)*4
 #define ADDR_TX_TETRA_TESTTONE_AMPL(x)	(1*16+x*ADDR_PER_TETRA_CHANNELS+3)*4
 
 #define MIN_GAIN			0x0000
@@ -129,7 +129,7 @@
 enum chan_num{
 	REG_ALL_CH(REG_RX_TETRA_CHANNEL_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_TX_TETRA_CHANNEL_FREQUENCY),	// being expanded for all channels
-	REG_ALL_CH(REG_TETRA_CHANNEL_GAIN),	// being expanded for all channels
+	//REG_ALL_CH(REG_TETRA_CHANNEL_GAIN),	// being expanded for all channels
 	REG_ALL_CH(REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE),	// being expanded for all channels
 	REG_ALL_CH(REG_RX_TETRA_CHANNEL_SELECTION),	// being expanded for all channels
 	REG_ALL_CH(REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE),	// being expanded for all channels
@@ -138,8 +138,8 @@ enum chan_num{
 	REG_TX2_GAIN,
 	REG_CH0_WIDEBAND_MODE,
 	REG_CH4_WIDEBAND_MODE,
-	REG_CH0_UL_GAIN,
-	REG_CH4_UL_GAIN,
+	//REG_CH0_UL_GAIN,
+	//REG_CH4_UL_GAIN,
 	REG_RX_BURST_LENGTH,
 	REG_RX_BURST_PERIOD,
 	REG_RX_DMA_FULLRATE_ADC,
@@ -270,6 +270,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			dras_tetra_write(st, ADDR_TX_TETRA_DDSINC(ch), val);
 			break;
 		}
+/*
 		else if((u32)this_attr->address == REG_CH(ch, REG_TETRA_CHANNEL_GAIN)){
 			match = 1;
 			if(val<MIN_GAIN || val>MAX_GAIN){
@@ -279,8 +280,13 @@ static ssize_t dras_tetra_store(struct device *dev,
 			dras_tetra_write(st, ADDR_TETRA_GAIN(ch), val);
 			break;
 		}
+*/
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE)){
 			match = 1;
+			if(ch > 3){ // only channel 0..4 have this reg
+				ret = -ENODEV;
+				break;
+			}
 			if(val<MIN_AMPL || val>MAX_AMPL){
 				ret = -EINVAL;
 				break;
@@ -353,6 +359,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<10;
 		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 		break;
+/*
 	case REG_CH0_UL_GAIN:
 		if(val<0 || val>65535){
 			ret = -EINVAL;
@@ -371,6 +378,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<16;
 		dras_tetra_write(st, ADDR_UL_GAIN, temp32);
 		break;
+*/
 	case REG_TX1_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
@@ -508,14 +516,20 @@ static ssize_t dras_tetra_show(struct device *dev,
 				val -= st->fs_adc;
 			break;
 		}
+/*
 		else if((u32)this_attr->address == REG_CH(ch, REG_TETRA_CHANNEL_GAIN)){
 			match = 1;
 			val = dras_tetra_read(st, ADDR_TETRA_GAIN(ch));
 			break;
 		}
+*/
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE)){
-			match = 1;
-			val = dras_tetra_read(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch));
+			match = 1;			
+			if(ch > 3){ // only channel 0..4 have this reg
+				val = 0;
+			}else{
+				val = dras_tetra_read(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch));
+			}
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_SELECTION)){
@@ -552,12 +566,14 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_CH4_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
 		break;
+/*
 	case REG_CH0_UL_GAIN:
 		val = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF;
 		break;
 	case REG_CH4_UL_GAIN:
 		val = (dras_tetra_read(st, ADDR_UL_GAIN)>>16) & 0xFFFF;
 		break;
+*/
 	case REG_TX1_GAIN:
 		val = st->gain_tx1;
 		break;
@@ -625,10 +641,12 @@ IIO_DEVICE_ATTR_ALL_CH(tx_tetra_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX_TETRA_CHANNEL_FREQUENCY);
 
+/*
 IIO_DEVICE_ATTR_ALL_CH(tetra_channel_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_TETRA_CHANNEL_GAIN);
+*/
 
 IIO_DEVICE_ATTR_ALL_CH(tx_tetra_testtone_amplitude, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -670,6 +688,7 @@ static IIO_DEVICE_ATTR(ch4_wideband_mode, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_CH4_WIDEBAND_MODE);
 
+/*
 static IIO_DEVICE_ATTR(ch0_ul_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -679,6 +698,7 @@ static IIO_DEVICE_ATTR(ch4_ul_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_CH4_UL_GAIN);
+*/
 
 static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -740,7 +760,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_tetra_frequency),
 	IIO_ATTR_ALL_CH(tx_tetra_frequency),
 	IIO_ATTR_ALL_CH(tx_tetra_testtone_amplitude),
-	IIO_ATTR_ALL_CH(tetra_channel_gain),
+	//IIO_ATTR_ALL_CH(tetra_channel_gain),
 	IIO_ATTR_ALL_CH(rx_tetra_channel_input_selection),
 	IIO_ATTR_ALL_CH(tx1_tetra_channel_output_enable),
 	IIO_ATTR_ALL_CH(tx2_tetra_channel_output_enable),
@@ -748,8 +768,8 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx2_gain.dev_attr.attr,
 	&iio_dev_attr_ch0_wideband_mode.dev_attr.attr,
 	&iio_dev_attr_ch4_wideband_mode.dev_attr.attr,
-	&iio_dev_attr_ch0_ul_gain.dev_attr.attr,
-	&iio_dev_attr_ch4_ul_gain.dev_attr.attr,
+	//&iio_dev_attr_ch0_ul_gain.dev_attr.attr,
+	//&iio_dev_attr_ch4_ul_gain.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_dma_fullrate_adc.dev_attr.attr,
