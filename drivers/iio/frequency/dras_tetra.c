@@ -283,7 +283,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 */
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE)){
 			match = 1;
-			if(ch > 3){ // only channel 0..4 have this reg
+			if((ch%2)==1){ // only channel ch0,2,4,6 have this reg
 				ret = -ENODEV;
 				break;
 			}
@@ -291,7 +291,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			dras_tetra_write(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch), val);
+			dras_tetra_write(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch/2), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_SELECTION)){
@@ -525,10 +525,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 */
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE)){
 			match = 1;			
-			if(ch > 3){ // only channel 0..4 have this reg
+			if((ch%2)==1){ // only channel ch0,2,4,6 have this reg
 				val = 0;
 			}else{
-				val = dras_tetra_read(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch));
+				val = dras_tetra_read(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch/2));
 			}
 			break;
 		}
