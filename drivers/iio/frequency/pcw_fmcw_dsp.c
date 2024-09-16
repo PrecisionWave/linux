@@ -66,6 +66,8 @@
 #define ADDR_CHIRP_GAIN1			ADDR_OFFSET_TX_ARB + 7*4
 #define ADDR_RESYNC_WAVEFORMS			ADDR_OFFSET_TX_ARB + 8*4
 #define ADDR_TX_SYNC_PPS_DELAY			ADDR_OFFSET_TX_ARB + 9*4
+#define ADDR_CHIRP_ON_CNT			ADDR_OFFSET_TX_ARB + 10*4
+#define ADDR_CHIRP_OFF_CNT			ADDR_OFFSET_TX_ARB + 11*4
 
 #define ADDR_OFFSET_ANTENNA		0x200
 #define ADDR_ANTENNA_PATTERNS		ADDR_OFFSET_ANTENNA + 0*4
@@ -129,6 +131,8 @@ enum chan_num{
   	CH_TX_DISABLE_AUTOMUTE,
   	CH_TX_ENABLE_CHIRP,
   	CH_TX_CHIRP_LEN_SPS,
+  	CH_TX_CHIRP_ON_CNT,
+  	CH_TX_CHIRP_OFF_CNT,
   	CH_TX_CHIRP_START_FREQ,
   	CH_TX_CHIRP_STOP_FREQ,
   	CH_TX2_CHIRP_OFFSET_FREQ,
@@ -787,6 +791,14 @@ case CH_RX_FFT_LENGTH:
 		pcw_fmcw_dsp_write(st, ADDR_CHIRP_LEN_DAC_SPS, (u32)val);
 		break;
 
+  case CH_TX_CHIRP_ON_CNT:
+    pcw_fmcw_dsp_write(st, ADDR_CHIRP_ON_CNT, (u32)val>>2);
+    break;
+
+  case CH_TX_CHIRP_OFF_CNT:
+    pcw_fmcw_dsp_write(st, ADDR_CHIRP_OFF_CNT, (u32)val>>2);
+    break;
+
 	case CH_TX_CHIRP_START_FREQ:
     st->chirp_start_freq0 = val; // inc_start0
     temp64 = (u64)st->chirp_start_freq0  << (CHIRP_DDS_PHASEWIDTH-1);
@@ -1099,9 +1111,15 @@ case CH_RX_FFT_LENGTH:
   case CH_TX_ENABLE_CHIRP:
     val = ( pcw_fmcw_dsp_read(st, ADDR_SETTINGS_COMMON) >> 21 ) & 1;
     break;
-	case CH_TX_CHIRP_LEN_SPS:
-		val = pcw_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
-		break;
+  case CH_TX_CHIRP_LEN_SPS:
+    val = pcw_fmcw_dsp_read(st, ADDR_CHIRP_LEN_DAC_SPS);
+    break;
+  case CH_TX_CHIRP_ON_CNT:
+    val = pcw_fmcw_dsp_read(st, ADDR_CHIRP_ON_CNT)<<2;
+    break;
+  case CH_TX_CHIRP_OFF_CNT:
+    val = pcw_fmcw_dsp_read(st, ADDR_CHIRP_OFF_CNT)<<2;
+    break;
   case CH_TX_CHIRP_START_FREQ:
 		temp64 = (u64)pcw_fmcw_dsp_read(st, ADDR_CHIRP_INC_START0);
     temp64 = temp64 * 2 * (u64)st->fs_adc;
@@ -1388,6 +1406,16 @@ static IIO_DEVICE_ATTR(tx_chirp_len_sps, S_IRUGO | S_IWUSR,
 			pcw_fmcw_dsp_store,
 			CH_TX_CHIRP_LEN_SPS);
 
+static IIO_DEVICE_ATTR(tx_chirp_on_cnt, S_IRUGO | S_IWUSR,
+			pcw_fmcw_dsp_show,
+			pcw_fmcw_dsp_store,
+			CH_TX_CHIRP_ON_CNT);
+
+static IIO_DEVICE_ATTR(tx_chirp_off_cnt, S_IRUGO | S_IWUSR,
+			pcw_fmcw_dsp_show,
+			pcw_fmcw_dsp_store,
+			CH_TX_CHIRP_OFF_CNT);
+
 static IIO_DEVICE_ATTR(tx_chirp_start_freq, S_IRUGO | S_IWUSR,
 			pcw_fmcw_dsp_show,
 			pcw_fmcw_dsp_store,
@@ -1563,6 +1591,8 @@ static struct attribute *pcw_fmcw_dsp_attributes[] = {
   &iio_dev_attr_tx_disable_automute.dev_attr.attr,
   &iio_dev_attr_tx_enable_chirp.dev_attr.attr,
   &iio_dev_attr_tx_chirp_len_sps.dev_attr.attr,
+  &iio_dev_attr_tx_chirp_on_cnt.dev_attr.attr,
+  &iio_dev_attr_tx_chirp_off_cnt.dev_attr.attr,
   &iio_dev_attr_tx_chirp_start_freq.dev_attr.attr,
   &iio_dev_attr_tx_chirp_stop_freq.dev_attr.attr,
   &iio_dev_attr_tx2_chirp_offset_freq.dev_attr.attr,
