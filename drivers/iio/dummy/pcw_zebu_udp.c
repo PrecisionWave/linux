@@ -24,6 +24,7 @@ enum attributes {
 	MAX_PAYLOAD_BYTES,
 	ENABLE_TESTMODE,
 	ENABLE_PPS_EVENT,
+	USER_COUNTER,
 
 	// UDP packet generator
 	ETH_DST_MAC,
@@ -40,6 +41,7 @@ enum attributes {
 #define REG_STRGEN_MAX_PAYLOAD_BYTES 8
 #define REG_STRGEN_ENABLE_TESTMODE 12
 #define REG_STRGEN_ENABLE_PPS_EVENT 16
+#define REG_STRGEN_USER_COUNTER 20
 
 // UDP packet generator
 #define REG_PKTGEN_ETH_DST_MAC 0
@@ -200,6 +202,11 @@ static ssize_t zebu_udp_store(struct device *dev, struct device_attribute *attr,
 		strgen_csr_write(st, REG_STRGEN_ENABLE_PPS_EVENT, val);
 		break;
 
+	case USER_COUNTER:
+		// read only
+		ret = -EFAULT;
+		break;
+
 	// UDP packet generator
 	case ETH_DST_MAC:
 		ret = sscanf(buf, "%x:%x:%x:%x:%x:%x", &uv[0], &uv[1], &uv[2],
@@ -328,6 +335,11 @@ static ssize_t zebu_udp_show(struct device *dev, struct device_attribute *attr,
 		ret = sprintf(buf, "%u\n", val32);
 		break;
 
+	case USER_COUNTER:
+		val32 = strgen_csr_read(st, REG_STRGEN_USER_COUNTER);
+		ret = sprintf(buf, "%u\n", val32);
+		break;
+
 	// UDP packet generator
 	case ETH_DST_MAC:
 		uv[0] = pktgen_csr_read8(st, REG_PKTGEN_ETH_DST_MAC + 0);
@@ -403,6 +415,9 @@ static IIO_DEVICE_ATTR(enable_testmode, S_IRUGO | S_IWUSR, zebu_udp_show,
 static IIO_DEVICE_ATTR(enable_pps_event, S_IRUGO | S_IWUSR, zebu_udp_show,
 		       zebu_udp_store, ENABLE_PPS_EVENT);
 
+static IIO_DEVICE_ATTR(user_counter, S_IRUGO, zebu_udp_show,
+		       zebu_udp_store, USER_COUNTER);
+
 static IIO_DEVICE_ATTR(eth_dst_mac, S_IRUGO | S_IWUSR, zebu_udp_show,
 		       zebu_udp_store, ETH_DST_MAC);
 
@@ -427,6 +442,7 @@ static struct attribute *zebu_udp_attributes[] = {
 	&iio_dev_attr_max_payload_bytes.dev_attr.attr,
 	&iio_dev_attr_enable_testmode.dev_attr.attr,
 	&iio_dev_attr_enable_pps_event.dev_attr.attr,
+	&iio_dev_attr_user_counter.dev_attr.attr,
 	&iio_dev_attr_eth_dst_mac.dev_attr.attr,
 	&iio_dev_attr_eth_src_mac.dev_attr.attr,
 	&iio_dev_attr_ip_ttl.dev_attr.attr,
