@@ -25,6 +25,8 @@ enum attributes {
 	ENABLE_TESTMODE,
 	ENABLE_PPS_EVENT,
 	USER_COUNTER,
+	GPS_TIME,
+	CLOCK_TIME,
 
 	// UDP packet generator
 	ETH_DST_MAC,
@@ -36,20 +38,35 @@ enum attributes {
 };
 
 // Stream generator
-#define REG_STRGEN_UDP_DST_PORT_BASE 0
-#define REG_STRGEN_UDP_DST_PORT_STREAMS 4
-#define REG_STRGEN_MAX_PAYLOAD_BYTES 8
-#define REG_STRGEN_ENABLE_TESTMODE 12
-#define REG_STRGEN_ENABLE_PPS_EVENT 16
-#define REG_STRGEN_USER_COUNTER 20
+#define REG_STRGEN_UDP_DST_PORT_BASE	0
+#define REG_STRGEN_UDP_DST_PORT_STREAMS	4
+#define REG_STRGEN_MAX_PAYLOAD_BYTES	8
+#define REG_STRGEN_ENABLE_TESTMODE	12
+#define REG_STRGEN_ENABLE_PPS_EVENT	16
+#define REG_STRGEN_USER_COUNTER		20
+#define REG_STRGEN_GPS_TIME		24
+#define REG_STRGEN_CLOCK_TIME		28
 
 // UDP packet generator
-#define REG_PKTGEN_ETH_DST_MAC 0
-#define REG_PKTGEN_ETH_SRC_MAC 6
-#define REG_PKTGEN_IP_TTL (14 + 8)
-#define REG_PKTGEN_IP_SRC_IPv4 (14 + 12)
-#define REG_PKTGEN_IP_DST_IPv4 (14 + 16)
-#define REG_PKTGEN_UDP_SRC_PORT (14 + 20 + 0)
+#define REG_PKTGEN_ETH_DST_MAC		0
+#define REG_PKTGEN_ETH_SRC_MAC		6
+#define REG_PKTGEN_IP_TTL		(14 + 8)
+#define REG_PKTGEN_IP_SRC_IPv4		(14 + 12)
+#define REG_PKTGEN_IP_DST_IPv4		(14 + 16)
+#define REG_PKTGEN_UDP_SRC_PORT		(14 + 20 + 0)
+
+static const char *t_status[] = {
+	"UNSET", "FREE_RUNNING", "GPS_SYNC", "3",  "4",	 "5",  "6", "7", "8",
+	"9",	 "10",		 "11",	     "12", "13", "14", "15"
+};
+static const char *t_gps_proto[] = { "UNKNOWN", "NMEA", "UBX_BIN", "3",
+				     "4",	"5",	"6",	   "7",
+				     "8",	"9",	"10",	   "11",
+				     "12",	"13",	"14",	   "15" };
+static const char *t_gps_lock_state[] = { "NO_LOCK", "GPS_SYNC", "2",  "3",
+					  "4",	     "5",	 "6",  "7",
+					  "8",	     "9",	 "10", "11",
+					  "12",	     "13",	 "14", "15" };
 
 struct csr {
 	void __iomem *base;
@@ -161,6 +178,7 @@ static ssize_t zebu_udp_store(struct device *dev, struct device_attribute *attr,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	struct zebu_udp_state *st = iio_priv(indio_dev);
 	unsigned uv[6];
+	char uc[6];
 	long val;
 	int ret = 0;
 
@@ -203,8 +221,29 @@ static ssize_t zebu_udp_store(struct device *dev, struct device_attribute *attr,
 		break;
 
 	case USER_COUNTER:
+	case GPS_TIME:
 		// read only
 		ret = -EFAULT;
+		break;
+
+	case CLOCK_TIME:
+		ret = sscanf(buf, "%c%c:%c%c:%c%c", &uc[0], &uc[1], &uc[2],
+			     &uc[3], &uc[4], &uc[5]);
+		if (ret != 6) {
+			ret = -EINVAL;
+			goto error_unlock;
+		}
+		for (val = 0; val < 6; val++) {
+			if (uc[val] > '9' || uc[val] < '0') {
+				ret = -EINVAL;
+				goto error_unlock;
+			}
+			uv[val] = uc[val] - '0';
+		}
+		val = (uv[0] << 20) + (uv[1] << 16) + (uv[2] << 12) +
+		      (uv[3] << 8) + (uv[4] << 4) + (uv[5] << 0);
+		ret = 0;
+		strgen_csr_write(st, REG_STRGEN_CLOCK_TIME, (1<<24) | val);
 		break;
 
 	// UDP packet generator
@@ -340,6 +379,26 @@ static ssize_t zebu_udp_show(struct device *dev, struct device_attribute *attr,
 		ret = sprintf(buf, "%u\n", val32);
 		break;
 
+ 	case GPS_TIME:
+		val32 = strgen_csr_read(st, REG_STRGEN_GPS_TIME);
+		ret = sprintf(buf, "%02x:%02x:%02x %s %s\n",
+			      (val32 >> 16) & 0xff,
+			      (val32 >> 8) & 0xff,
+			      (val32 >> 0) & 0xff,
+			      t_gps_lock_state[(val32 >> 24) & 0xf],
+			      t_gps_proto[(val32 >> 28) & 0xf]);
+		break;
+
+ 	case CLOCK_TIME:
+		val32 = strgen_csr_read(st, REG_STRGEN_CLOCK_TIME);
+		ret = sprintf(buf, "%02x:%02x:%02x %s %s\n",
+			      (val32 >> 16) & 0xff,
+			      (val32 >> 8) & 0xff,
+			      (val32 >> 0) & 0xff,
+			      t_status[(val32 >> 24) & 0xf],
+			      t_status[(val32 >> 28) & 0xf]);
+		break;
+
 	// UDP packet generator
 	case ETH_DST_MAC:
 		uv[0] = pktgen_csr_read8(st, REG_PKTGEN_ETH_DST_MAC + 0);
@@ -418,6 +477,12 @@ static IIO_DEVICE_ATTR(enable_pps_event, S_IRUGO | S_IWUSR, zebu_udp_show,
 static IIO_DEVICE_ATTR(user_counter, S_IRUGO, zebu_udp_show,
 		       zebu_udp_store, USER_COUNTER);
 
+static IIO_DEVICE_ATTR(gps_time, S_IRUGO, zebu_udp_show,
+		       zebu_udp_store, GPS_TIME);
+
+static IIO_DEVICE_ATTR(clock_time, S_IRUGO | S_IWUSR, zebu_udp_show,
+		       zebu_udp_store, CLOCK_TIME);
+
 static IIO_DEVICE_ATTR(eth_dst_mac, S_IRUGO | S_IWUSR, zebu_udp_show,
 		       zebu_udp_store, ETH_DST_MAC);
 
@@ -443,6 +508,8 @@ static struct attribute *zebu_udp_attributes[] = {
 	&iio_dev_attr_enable_testmode.dev_attr.attr,
 	&iio_dev_attr_enable_pps_event.dev_attr.attr,
 	&iio_dev_attr_user_counter.dev_attr.attr,
+	&iio_dev_attr_gps_time.dev_attr.attr,
+	&iio_dev_attr_clock_time.dev_attr.attr,
 	&iio_dev_attr_eth_dst_mac.dev_attr.attr,
 	&iio_dev_attr_eth_src_mac.dev_attr.attr,
 	&iio_dev_attr_ip_ttl.dev_attr.attr,
