@@ -52,6 +52,7 @@
 #define ADDR_BI1			(1*16+12)*4
 #define ADDR_BI2			(1*16+13)*4
 #define ADDR_BI3			(1*16+14)*4
+#define ADDR_FM_MON_DDSINC		(1*16+15)*4
 
 // DAB Band
 #define ADDR_RX_DAB_CHANNEL_FREQUENCY	(2*16+0)*4
@@ -208,6 +209,7 @@ enum chan_num{
 	REG_MONITOR_SOURCE_CHANNEL,
 	REG_MOD_START_DELAY,
 	REG_RX_DAB_CHANNEL_FREQUENCY,
+	REG_RX_FM_MON_FREQUENCY,
 	REG_TX_DAB_DDS_ENABLE,
 	//REG_TX1_DAB_SEL_REP_MOD1_MOD2_MOD12,
 	//REG_TX2_DAB_SEL_REP_MOD1_MOD2_MOD12,
@@ -727,6 +729,26 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC43, temp32);
 		break;
+	case REG_RX_FM_MON_FREQUENCY:
+		if(st->is_remote){
+			ret = -ENODEV;
+			break;
+		}
+		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)st->fs_adc * 15;
+		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
+		val -= (int)temp64;
+		val = 3*val;
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->fs_adc);
+		val = (int)temp64 & 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_FM_MON_DDSINC) & 0xFFFF0000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_FM_MON_DDSINC, temp32);
+		break;
 	case REG_TX_FM_TESTTONE_AMPLITUDE0:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
@@ -1179,6 +1201,20 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val += (int)temp64;
 		break;
+	case REG_RX_FM_MON_FREQUENCY:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_FM_MON_DDSINC) & 0xFFFF;
+		if(val>1<<15){
+			temp64 = (u64)val * st->fs_adc;
+			val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
+		}else{
+			temp64 = (u64)val * st->fs_adc;
+			val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
+		}
+		val = val/3;
+		temp64 = (u64)st->fs_adc * 15;
+		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
+		val += (int)temp64;
+		break;
 	case REG_TX_FM_TESTTONE_AMPLITUDE0:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_AMPL21) & 0xFFFF;
 		break;
@@ -1537,6 +1573,11 @@ static IIO_DEVICE_ATTR(ch3_tx_fm_testtone_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_FREQUENCY3);
 
+static IIO_DEVICE_ATTR(rx_fm_monitor_frequency, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RX_FM_MON_FREQUENCY);
+
 static IIO_DEVICE_ATTR(ch0_tx_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -1733,6 +1774,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_ch1_tx_fm_testtone_frequency.dev_attr.attr,
 	&iio_dev_attr_ch2_tx_fm_testtone_frequency.dev_attr.attr,
 	&iio_dev_attr_ch3_tx_fm_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_rx_fm_monitor_frequency.dev_attr.attr,
 	&iio_dev_attr_ch0_tx_fm_testtone_amplitude.dev_attr.attr,
 	&iio_dev_attr_ch1_tx_fm_testtone_amplitude.dev_attr.attr,
 	&iio_dev_attr_ch2_tx_fm_testtone_amplitude.dev_attr.attr,
