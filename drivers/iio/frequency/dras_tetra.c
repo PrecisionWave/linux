@@ -22,33 +22,45 @@
 
 
 #define DRIVER_NAME			"dras-tetra"
-#define NB_OF_TETRA_CHANNELS		8
+#define NB_OF_TETRA_CHANNELS		16
 
 // common DSP addresses
 #define ADDR_DSP_VERSION		(0*4)
-#define ADDR_CHANNEL_ASSIGNMENT		(1*4)
+#define ADDR_WB_ROUTING_FILTERSEL	(1*4)
 #define ADDR_TX21_GAIN			(2*4)
 #define ADDR_RX_BURST_LENGTH		(3*4)
 #define ADDR_RX_BURST_PERIOD		(4*4)
-#define ADDR_CHANNEL_ASSIGNMENT2	(5*4)
+#define ADDR_WB_DDS_INC			(5*4)
 #define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
 #define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
 #define ADDR_DL_SYNC			(8*4) // sync
-//#define ADDR_UL_GAIN			(9*4) // 16bit MSB CH1 + 16bit LSB CH0
-
-// TETRA channels
-#define ADDR_PER_TETRA_CHANNELS		16
-#define ADDR_RX_TETRA_DDSINC(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+0)*4
-#define ADDR_TX_TETRA_DDSINC(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+1)*4
-//#define ADDR_TETRA_GAIN(x)		(1*16+x*ADDR_PER_TETRA_CHANNELS+2)*4
-#define ADDR_TX_TETRA_TESTTONE_AMPL(x)	(1*16+x*ADDR_PER_TETRA_CHANNELS+3)*4
+#define ADDR_NB_FILTER_SEL0		(9*4)
+#define ADDR_NB_FILTER_SEL1		(10*4)
+#define ADDR_NB_IN_SEL			(11*4)
+#define ADDR_NB_OUT_SEL			(12*4)
+#define ADDR_NB_DDS_INC			(13*4)
+#define ADDR_TESTTONE_INC		(14*4)
+#define ADDR_TESTTONE_AMPL_TX1		(15*4)
+#define ADDR_TESTTONE_AMPL_TX2		(16*4)
+#define ADDR_BAND1_AGC_TARGET		(17*4)
+#define ADDR_BAND1_AGC_MAXGAIN		(18*4)
+#define ADDR_BAND1_AGC_SQUELCH		(19*4)
+#define ADDR_BAND2_AGC_TARGET		(20*4)
+#define ADDR_BAND2_AGC_MAXGAIN		(21*4)
+#define ADDR_BAND2_AGC_SQUELCH		(22*4)
+#define ADDR_BAND1_RSSI			(24*4)
+#define ADDR_BAND2_RSSI			(24*4)
+#define ADDR_RX_BURST_LENGTH2		(25*4)
+#define ADDR_RX_BURST_PERIOD2		(26*4)
 
 #define MIN_GAIN			0x0000
 #define MAX_GAIN			0x3FFFF
 #define MIN_AMPL			0x0000
 #define MAX_AMPL			0xFFFF
-#define MAX_TETRA_FREQUENCY		20000000
-#define MIN_TETRA_FREQUENCY		-20000000
+#define MAX_BAND_FREQUENCY		20000000
+#define MIN_BAND_FREQUENCY		-20000000
+#define MAX_CH_FREQUENCY		3250000
+#define MIN_CH_FREQUENCY		-3250000
 
 
 // expands to:
@@ -80,7 +92,15 @@
 	CH4_##REG, \
 	CH5_##REG, \
 	CH6_##REG, \
-	CH7_##REG
+	CH7_##REG, \
+	CH8_##REG, \
+	CH9_##REG, \
+	CH10_##REG, \
+	CH11_##REG, \
+	CH12_##REG, \
+	CH13_##REG, \
+	CH14_##REG, \
+	CH15_##REG
 
 // expands to:
 //   static IIO_DEVICE_ATTR(ch0_<ATTR>, <RW>, <SHOW>, <STORE>, CH0_<REG>);
@@ -102,7 +122,15 @@
 	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
 	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
 	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
-	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
+	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG); \
+	static IIO_DEVICE_ATTR(ch8_##ATTR, RW, SHOW, STORE, CH8_##REG); \
+	static IIO_DEVICE_ATTR(ch9_##ATTR, RW, SHOW, STORE, CH9_##REG); \
+	static IIO_DEVICE_ATTR(ch10_##ATTR, RW, SHOW, STORE, CH10_##REG); \
+	static IIO_DEVICE_ATTR(ch11_##ATTR, RW, SHOW, STORE, CH11_##REG); \
+	static IIO_DEVICE_ATTR(ch12_##ATTR, RW, SHOW, STORE, CH12_##REG); \
+	static IIO_DEVICE_ATTR(ch13_##ATTR, RW, SHOW, STORE, CH13_##REG); \
+	static IIO_DEVICE_ATTR(ch14_##ATTR, RW, SHOW, STORE, CH14_##REG); \
+	static IIO_DEVICE_ATTR(ch15_##ATTR, RW, SHOW, STORE, CH15_##REG);
 
 // expands to:
 //   &iio_dev_attr_ch0_<ATTR>.dev_attr.attr,
@@ -124,26 +152,60 @@
 	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
+	&iio_dev_attr_ch7_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch8_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch9_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch10_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch11_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch12_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch13_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch14_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch15_##ATTR.dev_attr.attr
 
 enum chan_num{
-	REG_ALL_CH(REG_RX_TETRA_CHANNEL_FREQUENCY),	// being expanded for all channels
-	REG_ALL_CH(REG_TX_TETRA_CHANNEL_FREQUENCY),	// being expanded for all channels
-	//REG_ALL_CH(REG_TETRA_CHANNEL_GAIN),	// being expanded for all channels
-	REG_ALL_CH(REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE),	// being expanded for all channels
-	REG_ALL_CH(REG_RX_TETRA_CHANNEL_SELECTION),	// being expanded for all channels
-	REG_ALL_CH(REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE),	// being expanded for all channels
-	REG_ALL_CH(REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE),	// being expanded for all channels
+	REG_ALL_CH(REG_RX_FREQUENCY),	// being expanded for all channels
+	REG_ALL_CH(REG_TX_FREQUENCY),	// being expanded for all channels
+	REG_ALL_CH(REG_RX_BAND_SELECTION),	// being expanded for all channels
+	REG_ALL_CH(REG_TX_BAND_SELECTION),	// being expanded for all channels
+	REG_ALL_CH(REG_FILTER_SELECTION),	// being expanded for all channels
 	REG_TX1_GAIN,
 	REG_TX2_GAIN,
-	REG_CH0_WIDEBAND_MODE,
-	REG_CH4_WIDEBAND_MODE,
-	//REG_CH0_UL_GAIN,
-	//REG_CH4_UL_GAIN,
-	REG_RX_BURST_LENGTH,
-	REG_RX_BURST_PERIOD,
-	REG_RX_DMA_FULLRATE_ADC,
-	REG_RX_DMA_FULLRATE_ADC_SELECTION,
+	REG_BAND1_RX_FREQUENCY,
+	REG_BAND2_RX_FREQUENCY,
+	REG_BAND1_TX_FREQUENCY,
+	REG_BAND2_TX_FREQUENCY,
+	REG_BAND1_RX_SELECTION,
+	REG_BAND2_RX_SELECTION,
+	REG_BAND1_FILTER_SELECTION,
+	REG_BAND2_FILTER_SELECTION,
+	REG_BAND1_TX1_ENABLE,
+	REG_BAND1_TX2_ENABLE,
+	REG_BAND2_TX1_ENABLE,
+	REG_BAND2_TX2_ENABLE,
+	REG_BAND1_WIDEBAND_MODE,
+	REG_BAND2_WIDEBAND_MODE,
+	REG_BAND1_AGC_TARGET,
+	REG_BAND1_AGC_MAXGAIN,
+	REG_BAND1_AGC_SQUELCH,
+	REG_BAND2_AGC_TARGET,
+	REG_BAND2_AGC_MAXGAIN,
+	REG_BAND2_AGC_SQUELCH,
+	REG_BAND1_RSSI,
+	REG_BAND2_RSSI,
+	REG_TX1_TESTTONE_FREQUENCY1,
+	REG_TX1_TESTTONE_FREQUENCY2,
+	REG_TX2_TESTTONE_FREQUENCY1,
+	REG_TX2_TESTTONE_FREQUENCY2,
+	REG_TX1_TESTTONE_AMPLITUDE1,
+	REG_TX1_TESTTONE_AMPLITUDE2,
+	REG_TX2_TESTTONE_AMPLITUDE1,
+	REG_TX2_TESTTONE_AMPLITUDE2,
+	REG_RX_BURST_LENGTH1,
+	REG_RX_BURST_PERIOD1,
+	REG_RX_DMA1_SOURCE_BAND1_RX1_BAND2_RX2,
+	REG_RX_BURST_LENGTH2,
+	REG_RX_BURST_PERIOD2,
+	REG_RX_DMA2_SOURCE_BAND1_RX1_BAND2_RX2,
 	REG_EN_UL_TEST,
 	REG_UL_ID,
 	REG_DL_ORDER,
@@ -158,10 +220,13 @@ struct dras_tetra_state {
 	void __iomem		*regs;
 	struct mutex		lock;
 
-	uint32_t		fs_adc;
+	uint32_t		tetra_clk;
 	u32			gain_tx1;
 	u32			gain_tx2;
 	bool			rf_mute;
+	u32			nb_dds_inc[2*NB_OF_TETRA_CHANNELS];
+	u32			wb_dds_inc[4];
+	u32			testtone_dds_inc[4];
 
 	struct device		*dev;
 	struct clk		*adrv_clk;
@@ -246,88 +311,70 @@ static ssize_t dras_tetra_store(struct device *dev,
 	mutex_lock(&indio_dev->mlock);
 	match = 0;
 	for(ch=0; ch<NB_OF_TETRA_CHANNELS; ch++){
-		if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_FREQUENCY)){
+		if((u32)this_attr->address == REG_CH(ch, REG_RX_FREQUENCY)){
 			match = 1;
-			if(val<MIN_TETRA_FREQUENCY || val>MAX_TETRA_FREQUENCY){
+			if(val<MIN_CH_FREQUENCY || val>MAX_CH_FREQUENCY){
 				ret = -EINVAL;
 				break;
 			}
-			temp64 = (u64)val << 24;
-			temp64 = div_s64(temp64,st->fs_adc);
-			val = (int)temp64 & 0xFFFFFF;
-			dras_tetra_write(st, ADDR_RX_TETRA_DDSINC(ch), val);
+			temp64 = (u64)val << 18;
+			temp64 = div_s64(temp64,st->tetra_clk>>5);
+			st->nb_dds_inc[ch*2] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+			val = ((int)temp64 & 0x3FFFF) | ((ch*2)<<18);
+			dras_tetra_write(st, ADDR_NB_DDS_INC, val);
 			break;
 		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_FREQUENCY)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_TX_FREQUENCY)){
 			match = 1;
-			if(val<MIN_TETRA_FREQUENCY || val>MAX_TETRA_FREQUENCY){
+			if(val<MIN_CH_FREQUENCY || val>MAX_CH_FREQUENCY){
 				ret = -EINVAL;
 				break;
 			}
-			temp64 = (u64)val << 24;
-			temp64 = div_s64(temp64,st->fs_adc);
-			val = (int)temp64 & 0xFFFFFF;
-			dras_tetra_write(st, ADDR_TX_TETRA_DDSINC(ch), val);
+			temp64 = (u64)val << 18;
+			temp64 = div_s64(temp64,st->tetra_clk>>5);
+			st->nb_dds_inc[ch*2+1] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+			val = ((int)temp64 & 0x3FFFF) | ((ch*2+1)<<18);
+			dras_tetra_write(st, ADDR_NB_DDS_INC, val);
 			break;
 		}
-/*
-		else if((u32)this_attr->address == REG_CH(ch, REG_TETRA_CHANNEL_GAIN)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_RX_BAND_SELECTION)){
 			match = 1;
-			if(val<MIN_GAIN || val>MAX_GAIN){
+			if(val<0 || val>2){
 				ret = -EINVAL;
 				break;
 			}
-			dras_tetra_write(st, ADDR_TETRA_GAIN(ch), val);
+			temp32 = dras_tetra_read(st, ADDR_NB_IN_SEL) & ~(3<<(2*ch));
+			temp32 += ((uint32_t)val)<<(2*ch);
+			dras_tetra_write(st, ADDR_NB_IN_SEL, temp32);
 			break;
 		}
-*/
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_TX_BAND_SELECTION)){
 			match = 1;
-			if((ch%2)==1){ // only channel ch0,2,4,6 have this reg
-				ret = -ENODEV;
-				break;
-			}
-			if(val<MIN_AMPL || val>MAX_AMPL){
+			if(val<0 || val>2){
 				ret = -EINVAL;
 				break;
 			}
-			dras_tetra_write(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch/2), val);
+			temp32 = dras_tetra_read(st, ADDR_NB_OUT_SEL) & ~(3<<(2*ch));
+			temp32 += ((uint32_t)val)<<(2*ch);
+			dras_tetra_write(st, ADDR_NB_OUT_SEL, temp32);
 			break;
 		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_SELECTION)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
 			match = 1;
-			if(val<0 || val>3){
+			if(val<1 || val>8){
 				ret = -EINVAL;
 				break;
 			}
-			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT2) & ~(1<<ch);
-			temp32 += (((uint32_t)val>>1) & 1)<<ch;
-			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT2, temp32);
-			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<ch);
-			temp32 += ((uint32_t)val & 1)<<ch;
-			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
-			break;
-		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE)){
-			match = 1;
-			if(val<0 || val>1){
-				ret = -EINVAL;
-				break;
+			val--;
+			if(ch<8){
+				temp32 = dras_tetra_read(st, ADDR_NB_FILTER_SEL0) & ~(7<<(4*ch));
+				temp32 += ((uint32_t)val)<<(4*ch);
+				dras_tetra_write(st, ADDR_NB_FILTER_SEL0, temp32);
+			}else{
+				temp32 = dras_tetra_read(st, ADDR_NB_FILTER_SEL1) & ~(7<<(4*ch-32));
+				temp32 += ((uint32_t)val)<<(4*ch-32);
+				dras_tetra_write(st, ADDR_NB_FILTER_SEL1, temp32);
 			}
-			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<(ch+16));
-			temp32 += ((uint32_t)val)<<(ch+16);
-			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
-			break;
-		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE)){
-			match = 1;
-			if(val<0 || val>1){
-				ret = -EINVAL;
-				break;
-			}
-			temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<(ch+24));
-			temp32 += ((uint32_t)val)<<(ch+24);
-			dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
 			break;
 		}
 	}
@@ -338,44 +385,222 @@ static ssize_t dras_tetra_store(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
-	case REG_CH0_WIDEBAND_MODE:
-		if(val<0 || val>2){
+	case REG_BAND1_RX_FREQUENCY:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(3<<8);
-		temp32 += ((uint32_t)val)<<8;
-		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->wb_dds_inc[0] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 0<<18;
+		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
 		break;
-	case REG_CH4_WIDEBAND_MODE:
+	case REG_BAND2_RX_FREQUENCY:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->wb_dds_inc[2] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 2<<18;
+		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
+		break;
+	case REG_BAND1_TX_FREQUENCY:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->wb_dds_inc[1] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 1<<18;
+		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
+		break;
+	case REG_BAND2_TX_FREQUENCY:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->wb_dds_inc[3] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 3<<18;
+		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		break;
+	case REG_TX1_TESTTONE_FREQUENCY1:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->testtone_dds_inc[0] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 0<<18;
+		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		break;
+	case REG_TX1_TESTTONE_FREQUENCY2:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->testtone_dds_inc[1] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 1<<18;
+		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		break;
+	case REG_TX2_TESTTONE_FREQUENCY1:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->testtone_dds_inc[2] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 2<<18;
+		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		break;
+	case REG_TX2_TESTTONE_FREQUENCY2:
+		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		temp64 = (u64)val << 18;
+		temp64 = div_s64(temp64,st->tetra_clk>>2);
+		st->testtone_dds_inc[3] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
+		val = ((int)temp64 & 0x3FFFF) | 3<<18;
+		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		break;
+	case REG_TX1_TESTTONE_AMPLITUDE1:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF0000;
+		temp32 += ((uint32_t)val) & 0xFFFF;
+		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
+		break;
+	case REG_TX1_TESTTONE_AMPLITUDE2:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
+		temp32 += ((uint32_t)val) <<16;
+		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
+		break;
+	case REG_TX2_TESTTONE_AMPLITUDE1:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF0000;
+		temp32 += ((uint32_t)val) & 0xFFFF;
+		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
+		break;
+	case REG_TX2_TESTTONE_AMPLITUDE2:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
+		temp32 += ((uint32_t)val) <<16;
+		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
+		break;
+	case REG_BAND1_FILTER_SELECTION:
+		if(val<1 || val>4){
+			ret = -EINVAL;
+			break;
+		}
+		val--;
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<0);
+		temp32 += ((uint32_t)val)<<0;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND2_FILTER_SELECTION:
+		if(val<1 || val>4){
+			ret = -EINVAL;
+			break;
+		}
+		val--;
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<2);
+		temp32 += ((uint32_t)val)<<2;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND1_RX_SELECTION:
+		if(val<0 || val>3){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<4);
+		temp32 += ((uint32_t)val)<<4;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND2_RX_SELECTION:
+		if(val<0 || val>3){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<6);
+		temp32 += ((uint32_t)val)<<6;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND1_TX1_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<10);
-		temp32 += ((uint32_t)val)<<10;
-		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<8);
+		temp32 += ((uint32_t)val)<<8;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
-/*
-	case REG_CH0_UL_GAIN:
-		if(val<0 || val>65535){
+	case REG_BAND2_TX1_ENABLE:
+		if(val<0 || val>1){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF0000;
-		temp32 += ((uint32_t)val);
-		dras_tetra_write(st, ADDR_UL_GAIN, temp32);
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<9);
+		temp32 += ((uint32_t)val)<<9;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
-	case REG_CH4_UL_GAIN:
-		if(val<0 || val>65535){
+	case REG_BAND1_TX2_ENABLE:
+		if(val<0 || val>1){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF;
-		temp32 += ((uint32_t)val)<<16;
-		dras_tetra_write(st, ADDR_UL_GAIN, temp32);
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<10);
+		temp32 += ((uint32_t)val)<<8;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
-*/
+	case REG_BAND2_TX2_ENABLE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<11);
+		temp32 += ((uint32_t)val)<<9;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND1_WIDEBAND_MODE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<12);
+		temp32 += ((uint32_t)val)<<12;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND2_WIDEBAND_MODE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<13);
+		temp32 += ((uint32_t)val)<<13;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
 	case REG_TX1_GAIN:
 		if(val<MIN_GAIN || val>MAX_GAIN){
 			ret = -EINVAL;
@@ -398,29 +623,77 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_TX21_GAIN,
 			(st->gain_tx2 << 16) | st->gain_tx1);
 		break;
-	case REG_RX_BURST_LENGTH:
-		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, (uint32_t)val);
-		break;
-	case REG_RX_BURST_PERIOD:
-		dras_tetra_write(st, ADDR_RX_BURST_PERIOD, (uint32_t)val);
-		break;
-	case REG_RX_DMA_FULLRATE_ADC:
-		if(val<0 || val>1){
+	case REG_BAND1_AGC_TARGET:
+		if(val>0xFFF){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<12);
-		temp32 += ((uint32_t)val)<<12;
-		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		dras_tetra_write(st, ADDR_BAND1_AGC_TARGET, (u32)val);
 		break;
-	case REG_RX_DMA_FULLRATE_ADC_SELECTION:
-		if(val<1 || val>2){
+	case REG_BAND1_AGC_MAXGAIN:
+		if(val>0xFFFFFF){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) & ~(1<<13);
-		temp32 += ((uint32_t)val-1)<<13;
-		dras_tetra_write(st, ADDR_CHANNEL_ASSIGNMENT, temp32);
+		dras_tetra_write(st, ADDR_BAND1_AGC_MAXGAIN, (u32)val);
+		break;
+	case REG_BAND1_AGC_SQUELCH:
+		if(val>0x7FFF){
+			ret = -EINVAL;
+			break;
+		}
+		dras_tetra_write(st, ADDR_BAND1_AGC_SQUELCH, (u32)val);
+		break;
+	case REG_BAND2_AGC_TARGET:
+		if(val>0xFFF){
+			ret = -EINVAL;
+			break;
+		}
+		dras_tetra_write(st, ADDR_BAND2_AGC_TARGET, (u32)val);
+		break;
+	case REG_BAND2_AGC_MAXGAIN:
+		if(val>0xFFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		dras_tetra_write(st, ADDR_BAND2_AGC_MAXGAIN, (u32)val);
+		break;
+	case REG_BAND2_AGC_SQUELCH:
+		if(val>0x7FFF){
+			ret = -EINVAL;
+			break;
+		}
+		dras_tetra_write(st, ADDR_BAND2_AGC_SQUELCH, (u32)val);
+		break;
+	case REG_RX_BURST_LENGTH1:
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, (u32)val);
+		break;
+	case REG_RX_BURST_PERIOD1:
+		dras_tetra_write(st, ADDR_RX_BURST_PERIOD, (u32)val);
+		break;
+	case REG_RX_BURST_LENGTH2:
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH2, (u32)val);
+		break;
+	case REG_RX_BURST_PERIOD2:
+		dras_tetra_write(st, ADDR_RX_BURST_PERIOD2, (u32)val);
+		break;
+	case REG_RX_DMA1_SOURCE_BAND1_RX1_BAND2_RX2:
+		if(val<0 || val>3){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<14);
+		temp32 += ((uint32_t)val)<<14;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_RX_DMA2_SOURCE_BAND1_RX1_BAND2_RX2:
+		if(val<0 || val>3){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<15);
+		temp32 += ((uint32_t)val)<<15;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_RF_MUTE:
 		if((bool)val == st->rf_mute){
@@ -493,56 +766,41 @@ static ssize_t dras_tetra_show(struct device *dev,
 	mutex_lock(&indio_dev->mlock);
 	match = 0;
 	for(ch=0; ch<NB_OF_TETRA_CHANNELS; ch++){
-		if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_FREQUENCY)){
+		if((u32)this_attr->address == REG_CH(ch, REG_RX_FREQUENCY)){
 			match = 1;
-			temp64 = (int32_t)dras_tetra_read(st, ADDR_RX_TETRA_DDSINC(ch)) & 0xFFFFFF;
-
-			temp64 = temp64 * st->fs_adc;
-			val = (int32_t)(temp64 >> 24);
-			if(val > (st->fs_adc >>1))
-				val -= st->fs_adc;
+			temp64 = (int32_t)st->nb_dds_inc[ch*2];
+			temp64 = temp64 * (st->tetra_clk>>5);
+			val = (int32_t)(temp64 >> 18);
+			if(val > (st->tetra_clk >>6))
+				val -= st->tetra_clk>>5;
 			break;
 		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_FREQUENCY)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_TX_FREQUENCY)){
 			match = 1;
-			temp64 = (int32_t)dras_tetra_read(st, ADDR_TX_TETRA_DDSINC(ch)) & 0xFFFFFF;
-
-			temp64 = temp64 * st->fs_adc;
-			val = (int32_t)(temp64 >> 24);
-			if(val > (st->fs_adc >>1))
-				val -= st->fs_adc;
+			temp64 = (int32_t)st->nb_dds_inc[ch*2+1];
+			temp64 = temp64 * (st->tetra_clk>>5);
+			val = (int32_t)(temp64 >> 18);
+			if(val > (st->tetra_clk >>6))
+				val -= st->tetra_clk>>5;
 			break;
 		}
-/*
-		else if((u32)this_attr->address == REG_CH(ch, REG_TETRA_CHANNEL_GAIN)){
+		else if((u32)this_attr->address == REG_CH(ch, REG_RX_BAND_SELECTION)){
 			match = 1;
-			val = dras_tetra_read(st, ADDR_TETRA_GAIN(ch));
+			val = ((dras_tetra_read(st, ADDR_NB_IN_SEL) >> (2*ch)) & 3);
 			break;
 		}
-*/
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE)){
-			match = 1;			
-			if((ch%2)==1){ // only channel ch0,2,4,6 have this reg
-				val = 0;
+		else if((u32)this_attr->address == REG_CH(ch, REG_TX_BAND_SELECTION)){
+			match = 1;
+			val = ((dras_tetra_read(st, ADDR_NB_OUT_SEL) >> (2*ch)) & 3);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
+			match = 1;
+			if(ch<8){
+				val = 1+(((dras_tetra_read(st, ADDR_NB_FILTER_SEL0) >> (4*ch)) & 7));
 			}else{
-				val = dras_tetra_read(st, ADDR_TX_TETRA_TESTTONE_AMPL(ch/2));
+				val = 1+(((dras_tetra_read(st, ADDR_NB_FILTER_SEL1) >> (4*ch-32)) & 7));
 			}
-			break;
-		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_RX_TETRA_CHANNEL_SELECTION)){
-			match = 1;
-			val = (((dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT2) >> ch) & 1)<<1);
-			val += (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> ch) & 1;
-			break;
-		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE)){
-			match = 1;
-			val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> (ch+16)) & 1;
-			break;
-		}
-		else if((u32)this_attr->address == REG_CH(ch, REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE)){
-			match = 1;
-			val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> (ch+24)) & 1;
 			break;
 		}
 	}
@@ -555,37 +813,153 @@ static ssize_t dras_tetra_show(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
-	case REG_CH0_WIDEBAND_MODE:
-		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 8) & 3;
+	case REG_BAND1_RX_FREQUENCY:
+		temp64 = (int32_t)st->wb_dds_inc[0];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
 		break;
-	case REG_CH4_WIDEBAND_MODE:
-		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 10) & 1;
+	case REG_BAND2_RX_FREQUENCY:
+		temp64 = (int32_t)st->wb_dds_inc[2];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
 		break;
-/*
-	case REG_CH0_UL_GAIN:
-		val = dras_tetra_read(st, ADDR_UL_GAIN) & 0xFFFF;
+	case REG_BAND1_TX_FREQUENCY:
+		temp64 = (int32_t)st->wb_dds_inc[1];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
 		break;
-	case REG_CH4_UL_GAIN:
-		val = (dras_tetra_read(st, ADDR_UL_GAIN)>>16) & 0xFFFF;
+	case REG_BAND2_TX_FREQUENCY:
+		temp64 = (int32_t)st->wb_dds_inc[3];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
 		break;
-*/
+	case REG_TX1_TESTTONE_FREQUENCY1:
+		temp64 = (int32_t)st->testtone_dds_inc[0];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
+		break;
+	case REG_TX1_TESTTONE_FREQUENCY2:
+		temp64 = (int32_t)st->testtone_dds_inc[1];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
+		break;
+	case REG_TX2_TESTTONE_FREQUENCY1:
+		temp64 = (int32_t)st->testtone_dds_inc[2];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
+		break;
+	case REG_TX2_TESTTONE_FREQUENCY2:
+		temp64 = (int32_t)st->testtone_dds_inc[3];
+		temp64 = temp64 * (st->tetra_clk>>2);
+		val = (int32_t)(temp64 >> 18);
+		if(val > (st->tetra_clk >>3))
+			val -= st->tetra_clk>>2;
+		break;
+	case REG_TX1_TESTTONE_AMPLITUDE1:
+		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
+		break;
+	case REG_TX1_TESTTONE_AMPLITUDE2:
+		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1)>>16;
+		break;
+	case REG_TX2_TESTTONE_AMPLITUDE1:
+		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
+		break;
+	case REG_TX2_TESTTONE_AMPLITUDE2:
+		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2)>>16;
+		break;
+	case REG_BAND1_FILTER_SELECTION:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 0) & 3;
+		val++;
+		break;
+	case REG_BAND2_FILTER_SELECTION:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 2) & 3;
+		val++;
+		break;
+	case REG_BAND1_RX_SELECTION:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 4) & 3;
+		break;
+	case REG_BAND2_RX_SELECTION:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 6) & 3;
+		break;
+	case REG_BAND1_TX1_ENABLE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 8) & 1;
+		break;
+	case REG_BAND2_TX1_ENABLE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 9) & 1;
+		break;
+	case REG_BAND1_TX2_ENABLE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 10) & 1;
+		break;
+	case REG_BAND2_TX2_ENABLE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 11) & 1;
+		break;
+	case REG_BAND1_WIDEBAND_MODE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 12) & 1;
+		break;
+	case REG_BAND2_WIDEBAND_MODE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 13) & 1;
+		break;
+	case REG_BAND1_AGC_TARGET:
+		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFF;
+		break;
+	case REG_BAND1_AGC_MAXGAIN:
+		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFFFFF;
+		break;
+	case REG_BAND1_AGC_SQUELCH:
+		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0x7FFF;
+		break;
+	case REG_BAND2_AGC_TARGET:
+		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0xFFF;
+		break;
+	case REG_BAND2_AGC_MAXGAIN:
+		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0xFFFFFF;
+		break;
+	case REG_BAND2_AGC_SQUELCH:
+		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0x7FFF;
+		break;
+	case REG_BAND1_RSSI:
+		val = dras_tetra_read(st, ADDR_BAND1_RSSI) & 0xFFFF;
+		break;
+	case REG_BAND2_RSSI:
+		val = dras_tetra_read(st, ADDR_BAND2_RSSI) & 0xFFFF;
+		break;
 	case REG_TX1_GAIN:
 		val = st->gain_tx1;
 		break;
 	case REG_TX2_GAIN:
 		val = st->gain_tx2;
 		break;
-	case REG_RX_BURST_LENGTH:
+	case REG_RX_BURST_LENGTH1:
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH);
 		break;
-	case REG_RX_BURST_PERIOD:
+	case REG_RX_BURST_PERIOD1:
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_PERIOD);
 		break;
-	case REG_RX_DMA_FULLRATE_ADC:
-		val = (dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 12) & 1;
+	case REG_RX_BURST_LENGTH2:
+		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH2);
 		break;
-	case REG_RX_DMA_FULLRATE_ADC_SELECTION:
-		val = 1+((dras_tetra_read(st, ADDR_CHANNEL_ASSIGNMENT) >> 13) & 1);
+	case REG_RX_BURST_PERIOD2:
+		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_PERIOD2);
+		break;
+	case REG_RX_DMA1_SOURCE_BAND1_RX1_BAND2_RX2:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 14) & 3;
+		break;
+	case REG_RX_DMA2_SOURCE_BAND1_RX1_BAND2_RX2:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 15) & 3;
 		break;
 	case REG_DSP_VERSION:
 		val = dras_tetra_read(st, ADDR_DSP_VERSION);
@@ -626,42 +1000,30 @@ static ssize_t dras_tetra_show(struct device *dev,
 	return ret;
 }
 
-IIO_DEVICE_ATTR_ALL_CH(rx_tetra_frequency, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(rx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_RX_TETRA_CHANNEL_FREQUENCY);
+			REG_RX_FREQUENCY);
 
-IIO_DEVICE_ATTR_ALL_CH(tx_tetra_frequency, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(tx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_TX_TETRA_CHANNEL_FREQUENCY);
+			REG_TX_FREQUENCY);
 
-/*
-IIO_DEVICE_ATTR_ALL_CH(tetra_channel_gain, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(rx_band_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_TETRA_CHANNEL_GAIN);
-*/
+			REG_RX_BAND_SELECTION);
 
-IIO_DEVICE_ATTR_ALL_CH(tx_tetra_testtone_amplitude, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(tx_band_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_TX_TETRA_CHANNEL_TESTTONE_AMPLITUDE);
+			REG_TX_BAND_SELECTION);
 
-IIO_DEVICE_ATTR_ALL_CH(rx_tetra_channel_input_selection, S_IRUGO | S_IWUSR,
+IIO_DEVICE_ATTR_ALL_CH(filter_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_RX_TETRA_CHANNEL_SELECTION);
-
-IIO_DEVICE_ATTR_ALL_CH(tx1_tetra_channel_output_enable, S_IRUGO | S_IWUSR,
-			dras_tetra_show,
-			dras_tetra_store,
-			REG_TX1_TETRA_CHANNEL_OUTPUT_ENABLE);
-
-IIO_DEVICE_ATTR_ALL_CH(tx2_tetra_channel_output_enable, S_IRUGO | S_IWUSR,
-			dras_tetra_show,
-			dras_tetra_store,
-			REG_TX2_TETRA_CHANNEL_OUTPUT_ENABLE);
+			REG_FILTER_SELECTION);
 
 static IIO_DEVICE_ATTR(tx1_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -673,47 +1035,185 @@ static IIO_DEVICE_ATTR(tx2_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX2_GAIN);
 
-static IIO_DEVICE_ATTR(ch0_wideband_mode, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_rx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_CH0_WIDEBAND_MODE);
+			REG_BAND1_RX_FREQUENCY);
 
-static IIO_DEVICE_ATTR(ch4_wideband_mode, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_rx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_CH4_WIDEBAND_MODE);
+			REG_BAND2_RX_FREQUENCY);
 
-/*
-static IIO_DEVICE_ATTR(ch0_ul_gain, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_tx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_CH0_UL_GAIN);
+			REG_BAND1_TX_FREQUENCY);
 
-static IIO_DEVICE_ATTR(ch4_ul_gain, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_tx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_CH4_UL_GAIN);
-*/
+			REG_BAND2_TX_FREQUENCY);
 
-static IIO_DEVICE_ATTR(rx_burst_length, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_rx_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_RX_BURST_LENGTH);
+			REG_BAND1_RX_SELECTION);
 
-static IIO_DEVICE_ATTR(rx_burst_period, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_rx_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_RX_BURST_PERIOD);
+			REG_BAND2_RX_SELECTION);
 
-static IIO_DEVICE_ATTR(rx_dma_fullrate_adc, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_filter_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_RX_DMA_FULLRATE_ADC);
+			REG_BAND1_FILTER_SELECTION);
 
-static IIO_DEVICE_ATTR(rx_dma_fullrate_adc_selection, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_filter_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_RX_DMA_FULLRATE_ADC_SELECTION);
+			REG_BAND2_FILTER_SELECTION);
+
+static IIO_DEVICE_ATTR(band1_tx1_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_TX1_ENABLE);
+
+static IIO_DEVICE_ATTR(band1_tx2_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_TX2_ENABLE);
+
+static IIO_DEVICE_ATTR(band2_tx1_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_TX1_ENABLE);
+
+static IIO_DEVICE_ATTR(band2_tx2_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_TX2_ENABLE);
+
+static IIO_DEVICE_ATTR(band1_wideband_mode, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_WIDEBAND_MODE);
+
+static IIO_DEVICE_ATTR(band2_wideband_mode, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_WIDEBAND_MODE);
+
+static IIO_DEVICE_ATTR(band1_agc_target, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_AGC_TARGET);
+
+static IIO_DEVICE_ATTR(band1_agc_maxgain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_AGC_MAXGAIN);
+
+static IIO_DEVICE_ATTR(band1_agc_squelch, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_AGC_SQUELCH);
+
+static IIO_DEVICE_ATTR(band2_agc_target, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_AGC_TARGET);
+
+static IIO_DEVICE_ATTR(band2_agc_maxgain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_AGC_MAXGAIN);
+
+static IIO_DEVICE_ATTR(band2_agc_squelch, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_AGC_SQUELCH);
+
+static IIO_DEVICE_ATTR(band1_rssi, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_RSSI);
+
+static IIO_DEVICE_ATTR(band2_rssi, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_RSSI);
+
+static IIO_DEVICE_ATTR(tx1_testtone_frequency1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_TESTTONE_FREQUENCY1);
+
+static IIO_DEVICE_ATTR(tx1_testtone_frequency2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_TESTTONE_FREQUENCY2);
+
+static IIO_DEVICE_ATTR(tx2_testtone_frequency1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_TESTTONE_FREQUENCY1);
+
+static IIO_DEVICE_ATTR(tx2_testtone_frequency2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_TESTTONE_FREQUENCY2);
+
+static IIO_DEVICE_ATTR(tx1_testtone_amplitude1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_TESTTONE_AMPLITUDE1);
+
+static IIO_DEVICE_ATTR(tx1_testtone_amplitude2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_TESTTONE_AMPLITUDE2);
+
+static IIO_DEVICE_ATTR(tx2_testtone_amplitude1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_TESTTONE_AMPLITUDE1);
+
+static IIO_DEVICE_ATTR(tx2_testtone_amplitude2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_TESTTONE_AMPLITUDE2);
+
+static IIO_DEVICE_ATTR(rx_burst_length1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_LENGTH1);
+
+static IIO_DEVICE_ATTR(rx_burst_period1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_PERIOD1);
+
+static IIO_DEVICE_ATTR(rx_dma1_source_band1_rx1_band2_rx2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_DMA1_SOURCE_BAND1_RX1_BAND2_RX2);
+
+static IIO_DEVICE_ATTR(rx_burst_length2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_LENGTH2);
+
+static IIO_DEVICE_ATTR(rx_burst_period2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_PERIOD2);
+
+static IIO_DEVICE_ATTR(rx_dma2_source_band1_rx1_band2_rx2, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_DMA2_SOURCE_BAND1_RX1_BAND2_RX2);
 
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_tetra_show,
@@ -752,23 +1252,49 @@ static IIO_DEVICE_ATTR(downlink_sync, S_IRUGO,
 
 
 static struct attribute *dras_tetra_attributes[] = {
-	IIO_ATTR_ALL_CH(rx_tetra_frequency),
-	IIO_ATTR_ALL_CH(tx_tetra_frequency),
-	IIO_ATTR_ALL_CH(tx_tetra_testtone_amplitude),
-	//IIO_ATTR_ALL_CH(tetra_channel_gain),
-	IIO_ATTR_ALL_CH(rx_tetra_channel_input_selection),
-	IIO_ATTR_ALL_CH(tx1_tetra_channel_output_enable),
-	IIO_ATTR_ALL_CH(tx2_tetra_channel_output_enable),
+	IIO_ATTR_ALL_CH(rx_frequency),
+	IIO_ATTR_ALL_CH(tx_frequency),
+	IIO_ATTR_ALL_CH(rx_band_selection),
+	IIO_ATTR_ALL_CH(tx_band_selection),
+	IIO_ATTR_ALL_CH(filter_selection),
 	&iio_dev_attr_tx1_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_gain.dev_attr.attr,
-	&iio_dev_attr_ch0_wideband_mode.dev_attr.attr,
-	&iio_dev_attr_ch4_wideband_mode.dev_attr.attr,
-	//&iio_dev_attr_ch0_ul_gain.dev_attr.attr,
-	//&iio_dev_attr_ch4_ul_gain.dev_attr.attr,
-	&iio_dev_attr_rx_burst_length.dev_attr.attr,
-	&iio_dev_attr_rx_burst_period.dev_attr.attr,
-	&iio_dev_attr_rx_dma_fullrate_adc.dev_attr.attr,
-	&iio_dev_attr_rx_dma_fullrate_adc_selection.dev_attr.attr,
+	&iio_dev_attr_band1_rx_frequency.dev_attr.attr,
+	&iio_dev_attr_band2_rx_frequency.dev_attr.attr,
+	&iio_dev_attr_band1_tx_frequency.dev_attr.attr,
+	&iio_dev_attr_band2_tx_frequency.dev_attr.attr,
+	&iio_dev_attr_band1_rx_selection.dev_attr.attr,
+	&iio_dev_attr_band2_rx_selection.dev_attr.attr,
+	&iio_dev_attr_band1_filter_selection.dev_attr.attr,
+	&iio_dev_attr_band2_filter_selection.dev_attr.attr,
+	&iio_dev_attr_band1_tx1_enable.dev_attr.attr,
+	&iio_dev_attr_band1_tx2_enable.dev_attr.attr,
+	&iio_dev_attr_band2_tx1_enable.dev_attr.attr,
+	&iio_dev_attr_band2_tx2_enable.dev_attr.attr,
+	&iio_dev_attr_band1_wideband_mode.dev_attr.attr,
+	&iio_dev_attr_band2_wideband_mode.dev_attr.attr,
+	&iio_dev_attr_band1_agc_target.dev_attr.attr,
+	&iio_dev_attr_band1_agc_maxgain.dev_attr.attr,
+	&iio_dev_attr_band1_agc_squelch.dev_attr.attr,
+	&iio_dev_attr_band2_agc_target.dev_attr.attr,
+	&iio_dev_attr_band2_agc_maxgain.dev_attr.attr,
+	&iio_dev_attr_band2_agc_squelch.dev_attr.attr,
+	&iio_dev_attr_band1_rssi.dev_attr.attr,
+	&iio_dev_attr_band2_rssi.dev_attr.attr,
+	&iio_dev_attr_tx1_testtone_frequency1.dev_attr.attr,
+	&iio_dev_attr_tx1_testtone_frequency2.dev_attr.attr,
+	&iio_dev_attr_tx2_testtone_frequency1.dev_attr.attr,
+	&iio_dev_attr_tx2_testtone_frequency2.dev_attr.attr,
+	&iio_dev_attr_tx1_testtone_amplitude1.dev_attr.attr,
+	&iio_dev_attr_tx1_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx2_testtone_amplitude1.dev_attr.attr,
+	&iio_dev_attr_tx2_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_rx_burst_length1.dev_attr.attr,
+	&iio_dev_attr_rx_burst_period1.dev_attr.attr,
+	&iio_dev_attr_rx_burst_length2.dev_attr.attr,
+	&iio_dev_attr_rx_burst_period2.dev_attr.attr,
+	&iio_dev_attr_rx_dma1_source_band1_rx1_band2_rx2.dev_attr.attr,
+	&iio_dev_attr_rx_dma2_source_band1_rx1_band2_rx2.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_rf_mute.dev_attr.attr,
 	&iio_dev_attr_enable_uplink_test.dev_attr.attr,
@@ -891,12 +1417,12 @@ static int dras_tetra_probe(struct platform_device *pdev)
 //			(unsigned long long)res->start, st->regs);
 
 
-	if(of_property_read_u32(np, "required,fs-adc", &st->fs_adc)){
-		printk("DRAS-TETRA: ***ERROR! \"required,fs-adc\" missing in devicetree?\n");
+	if(of_property_read_u32(np, "required,tetra-clk", &st->tetra_clk)){
+		printk("DRAS-TETRA: ***ERROR! \"required,tetra-clk\" missing in devicetree?\n");
 		goto err_iio_device_free;
 	}
-	if(st->fs_adc == 0){
-		printk("DRAS-TETRA: ***ERROR! \"required,fs-adc\" equal to 0 Hz\n");
+	if(st->tetra_clk == 0){
+		printk("DRAS-TETRA: ***ERROR! \"required,tetra-clk\" equal to 0 Hz\n");
 		goto err_iio_device_free;
 	}
 
