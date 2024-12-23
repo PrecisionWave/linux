@@ -32,6 +32,7 @@ obj-$(CONFIG_DRAS_FM_DAB_ADC_DAC) += dras_fm_dab_adc_dac.o
 obj-$(CONFIG_DRAS_TETRA) += dras_tetra.o
 obj-$(CONFIG_VBI_FM_DSP) += vbi_fm_dsp.o
 obj-$(CONFIG_VBI_FSK_DSP) += vbi_fsk_dsp.o
+obj-$(CONFIG_VBI_X235_DSP) += vbi_x235_dsp.o
 obj-$(CONFIG_VBI_DAB_DSP) += vbi_dab_dsp.o
 obj-$(CONFIG_VBI_DAB_DSP) += vbi_fembms_dsp.o
 obj-$(CONFIG_PCW_SDR_DSP) += pcw_sdr_dsp.o
