@@ -508,7 +508,7 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 		val = (vbi_x235_dsp_read(st, ADDR_ADC_PEAK) >> 16);
 		break;
 	case REG_LO_FREQ_READ:
-		val = vbi_x235_dsp_read(st, ADDR_FREQ_READ) & 0x3FFFF;
+		val = vbi_x235_dsp_read(st, ADDR_FREQ_READ) & 0x3FFF;
 		val = val*25000 + 30000000;
 		break;
 	case REG_TX_ENABLE_READ:
