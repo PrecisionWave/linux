@@ -283,13 +283,11 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 	long val;
 	int ret;
 	u64 temp64;
-	int tempint;
-	u32 temp32;
-	int subchannel;
-	int block_nb;
-	u32 ch;
-	int match;
-	u64 fcenter2;
+	u32 temp32 = 0;
+	int quotient;
+	//u32 ch;
+	//int match;
+	//u64 fcenter2;
 
 	/* convert to long
 	 * auto-detect decimal,
@@ -324,12 +322,20 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		vbi_x235_dsp_write(st, ADDR_RX_DDS_INC, (u32)val);
 		break;
 	case REG_LO_MAN_FREQ:
-		if(val<30000000 || val>90000000){
+		if(val<30000000 || val>89975000){
 			ret = -EINVAL;
 			break;
 		}
-		val = (val - 30000000)/25000;
-		vbi_x235_dsp_write(st, ADDR_LO_FREQ, (u32)val);
+		val -= 30000000;
+		quotient = val/10000000; // 10M-Schritte Bit13..10
+		temp32 = ((u32)quotient & 0xF)<<10;
+		val = val - quotient * 10000000;
+		quotient = val/1000000; // 1M-Schritte Bit9..6
+		temp32 += ((u32)quotient & 0xF)<<6;
+		val = val - quotient * 1000000;
+		quotient = val/25000; // 25k-Schritte Bit5..0
+		temp32 += ((u32)quotient & 0x3F)<<0;
+		vbi_x235_dsp_write(st, ADDR_LO_FREQ, temp32);
 		break;
 	case REG_LO_EN_MAN_TUNING:
 		if(val<0 || val>1){
@@ -486,14 +492,15 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	struct vbi_x235_dsp_state *st = iio_priv(indio_dev);
 	u32 val;
+	u32 temp32;
 	int ret = 0;
-	int tempint;
-	u64 fcenter2;
+	//int tempint;
+	//u64 fcenter2;
 	u64 temp64;
-	u32 subchannel;
-	u32 block_nb;
-	u32 ch;
-	int match;
+	//u32 subchannel;
+	//u32 block_nb;
+	//u32 ch;
+	//int match;
 
 
 	/* unique registers */
@@ -508,8 +515,11 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 		val = (vbi_x235_dsp_read(st, ADDR_ADC_PEAK) >> 16);
 		break;
 	case REG_LO_FREQ_READ:
-		val = vbi_x235_dsp_read(st, ADDR_FREQ_READ) & 0x3FFF;
-		val = val*25000 + 30000000;
+		temp32 = vbi_x235_dsp_read(st, ADDR_FREQ_READ);
+		val = (temp32 & 0x3F)*25000;
+		val += ((temp32>>6) & 0xF)*1000000;
+		val += ((temp32>>10) & 0xF)*10000000;
+		val += 30000000;
 		break;
 	case REG_TX_ENABLE_READ:
 		val = (vbi_x235_dsp_read(st, ADDR_FREQ_READ) >>14) & 1;
@@ -526,8 +536,11 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 			val -= st->dsp_clk;
 		break;
 	case REG_LO_MAN_FREQ:
-		val = vbi_x235_dsp_read(st, ADDR_LO_FREQ);
-		val = val*25000 + 30000000;
+		temp32 = vbi_x235_dsp_read(st, ADDR_LO_FREQ);
+		val = (temp32 & 0x3F)*25000;
+		val += ((temp32>>6) & 0xF)*1000000;
+		val += ((temp32>>10) & 0xF)*10000000;
+		val += 30000000;
 		break;
 	case REG_LO_EN_MAN_TUNING:
 		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>10) & 1;
