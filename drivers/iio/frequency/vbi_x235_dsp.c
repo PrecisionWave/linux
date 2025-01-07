@@ -326,7 +326,6 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		val -= 30000000;
 		quotient = val/10000000; // 10M-Schritte Bit13..10
 		temp32 = ((u32)quotient & 0xF)<<10;
 		val = val - quotient * 10000000;
@@ -519,7 +518,6 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 		val = (temp32 & 0x3F)*25000;
 		val += ((temp32>>6) & 0xF)*1000000;
 		val += ((temp32>>10) & 0xF)*10000000;
-		val += 30000000;
 		break;
 	case REG_TX_ENABLE_READ:
 		val = (vbi_x235_dsp_read(st, ADDR_FREQ_READ) >>14) & 1;
@@ -540,7 +538,6 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 		val = (temp32 & 0x3F)*25000;
 		val += ((temp32>>6) & 0xF)*1000000;
 		val += ((temp32>>10) & 0xF)*10000000;
-		val += 30000000;
 		break;
 	case REG_LO_EN_MAN_TUNING:
 		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>10) & 1;
