@@ -917,19 +917,19 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFF;
 		break;
 	case REG_BAND1_AGC_MAXGAIN:
-		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFFFFF;
+		val = dras_tetra_read(st, ADDR_BAND1_AGC_MAXGAIN) & 0xFFFFFF;
 		break;
 	case REG_BAND1_AGC_SQUELCH:
-		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0x7FFF;
+		val = dras_tetra_read(st, ADDR_BAND1_AGC_SQUELCH) & 0x7FFF;
 		break;
 	case REG_BAND2_AGC_TARGET:
 		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0xFFF;
 		break;
 	case REG_BAND2_AGC_MAXGAIN:
-		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0xFFFFFF;
+		val = dras_tetra_read(st, ADDR_BAND2_AGC_MAXGAIN) & 0xFFFFFF;
 		break;
 	case REG_BAND2_AGC_SQUELCH:
-		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0x7FFF;
+		val = dras_tetra_read(st, ADDR_BAND2_AGC_SQUELCH) & 0x7FFF;
 		break;
 	case REG_BAND1_RSSI:
 		val = dras_tetra_read(st, ADDR_BAND1_RSSI) & 0xFFFF;
