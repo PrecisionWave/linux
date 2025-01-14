@@ -22,7 +22,7 @@
 
 
 #define DRIVER_NAME			"dras-radio-repeater"
-#define NB_OF_TETRA_CHANNELS		8
+#define NB_OF_TETRA_CHANNELS		16
 #define NB_OF_TETRA_PORTS		16
 
 // global attributes
@@ -34,10 +34,11 @@
 #define ADDR_OFFSET_TLAST0		21*4 // 4bits per port, port0..7
 #define ADDR_OFFSET_TLAST1		22*4 // 4bits per port, port8..15
 #define ADDR_MUTE_LEN			23*4
+#define ADDR_BEST_SOURCE1		24*4
+#define ADDR_BEST_SOURCE2		25*4
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_BEST_SOURCE(x)		(8+x)*4
 #define ADDR_UL_ORDER(x)		(32+x)*4 // 8 channels per port, each with 4bits, 16 ports, port x from 0..15
 #define ADDR_PORT_ID(x)			(48+x)*4 // 12bit port id, port x from 0..15
 
@@ -74,7 +75,15 @@
 	CH4_##REG, \
 	CH5_##REG, \
 	CH6_##REG, \
-	CH7_##REG
+	CH7_##REG, \
+	CH8_##REG, \
+	CH9_##REG, \
+	CH10_##REG, \
+	CH11_##REG, \
+	CH12_##REG, \
+	CH13_##REG, \
+	CH14_##REG, \
+	CH15_##REG
 
 #define REG_ALL_PORT(PORT) \
 	PORT0_##PORT, \
@@ -114,7 +123,15 @@
 	static IIO_DEVICE_ATTR(ch4_##ATTR, RW, SHOW, STORE, CH4_##REG); \
 	static IIO_DEVICE_ATTR(ch5_##ATTR, RW, SHOW, STORE, CH5_##REG); \
 	static IIO_DEVICE_ATTR(ch6_##ATTR, RW, SHOW, STORE, CH6_##REG); \
-	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG);
+	static IIO_DEVICE_ATTR(ch7_##ATTR, RW, SHOW, STORE, CH7_##REG); \
+	static IIO_DEVICE_ATTR(ch8_##ATTR, RW, SHOW, STORE, CH8_##REG); \
+	static IIO_DEVICE_ATTR(ch9_##ATTR, RW, SHOW, STORE, CH9_##REG); \
+	static IIO_DEVICE_ATTR(ch10_##ATTR, RW, SHOW, STORE, CH10_##REG); \
+	static IIO_DEVICE_ATTR(ch11_##ATTR, RW, SHOW, STORE, CH11_##REG); \
+	static IIO_DEVICE_ATTR(ch12_##ATTR, RW, SHOW, STORE, CH12_##REG); \
+	static IIO_DEVICE_ATTR(ch13_##ATTR, RW, SHOW, STORE, CH13_##REG); \
+	static IIO_DEVICE_ATTR(ch14_##ATTR, RW, SHOW, STORE, CH14_##REG); \
+	static IIO_DEVICE_ATTR(ch15_##ATTR, RW, SHOW, STORE, CH15_##REG);
 
 #define IIO_DEVICE_ATTR_ALL_PORT(ATTR, RW, SHOW, STORE, PORT) \
 	static IIO_DEVICE_ATTR(port0_##ATTR, RW, SHOW, STORE, PORT0_##PORT); \
@@ -154,7 +171,15 @@
 	&iio_dev_attr_ch4_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch5_##ATTR.dev_attr.attr, \
 	&iio_dev_attr_ch6_##ATTR.dev_attr.attr, \
-	&iio_dev_attr_ch7_##ATTR.dev_attr.attr
+	&iio_dev_attr_ch7_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch8_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch9_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch10_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch11_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch12_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch13_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch14_##ATTR.dev_attr.attr, \
+	&iio_dev_attr_ch15_##ATTR.dev_attr.attr
 
 #define IIO_ATTR_ALL_PORT(ATTR) \
 	&iio_dev_attr_port0_##ATTR.dev_attr.attr, \
@@ -319,8 +344,8 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			temp32 = dras_radio_repeater_read(st, ADDR_CHANNEL_EN) & ~(1<<(port+8));
-			temp32 += ((uint32_t)val)<<(port+8);
+			temp32 = dras_radio_repeater_read(st, ADDR_CHANNEL_EN) & ~(1<<(port+16));
+			temp32 += ((uint32_t)val)<<(port+16);
 			dras_radio_repeater_write(st, ADDR_CHANNEL_EN, temp32);
 		}
 	}
@@ -401,7 +426,10 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 			break;
 		}else if((u32)this_attr->address == REG_CH(ch, REG_BEST_SOURCE)){
 			match = 1;
-			val = dras_radio_repeater_read(st, ADDR_BEST_SOURCE(ch)) & 0xF;
+			if(ch<8)
+				val = dras_radio_repeater_read(st, ADDR_BEST_SOURCE1 >> (4*ch)) & 0xF;
+			else
+				val = dras_radio_repeater_read(st, ADDR_BEST_SOURCE2 >> (4*(ch-8))) & 0xF;
 		}
 	}
 
@@ -419,7 +447,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
 			match = 1;
-			val = (dras_radio_repeater_read(st, ADDR_CHANNEL_EN) >> (port+8)) & 1;
+			val = (dras_radio_repeater_read(st, ADDR_CHANNEL_EN) >> (port+16)) & 1;
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_UL_ORDER)){
 			match = 1;
