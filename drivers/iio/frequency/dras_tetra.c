@@ -474,37 +474,41 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE1:
-		if(val<0 || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
+		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF0000;
 		temp32 += ((uint32_t)val) & 0xFFFF;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE2:
-		if(val<0 || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
+		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
 		temp32 += ((uint32_t)val) <<16;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE1:
-		if(val<0 || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
+		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF0000;
 		temp32 += ((uint32_t)val) & 0xFFFF;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE2:
-		if(val<0 || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
+		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
 		temp32 += ((uint32_t)val) <<16;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
@@ -871,15 +875,19 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE1:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
+		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE2:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1)>>16;
+		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE1:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
+		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE2:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2)>>16;
+		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_BAND1_FILTER_SELECTION:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 0) & 3;

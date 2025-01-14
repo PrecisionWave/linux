@@ -33,6 +33,7 @@
 #define ADDR_DSP_VERSION		20*4
 #define ADDR_OFFSET_TLAST0		21*4 // 4bits per port, port0..7
 #define ADDR_OFFSET_TLAST1		22*4 // 4bits per port, port8..15
+#define ADDR_MUTE_LEN			23*4
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
@@ -185,6 +186,7 @@ enum chan_num{
 	REG_DSP_VERSION,
 	REG_TARGET_POWER,
 	REG_SQUELCH,
+	REG_MUTE_LEN,
 	REG_MAX_GAIN
 };
 
@@ -353,6 +355,13 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		}
 		dras_radio_repeater_write(st, ADDR_MAXGAIN, (u32)val);
 		break;
+	case REG_MUTE_LEN:
+		if(val<0 || val>0x7FF){
+			ret = -EINVAL;
+			break;
+		}
+		dras_radio_repeater_write(st, ADDR_MUTE_LEN, (u32)val);
+		break;
 	default:
 		ret = -ENODEV;
 		break;
@@ -449,6 +458,9 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	case REG_MAX_GAIN:
 		val = dras_radio_repeater_read(st, ADDR_MAXGAIN);
 		break;
+	case REG_MUTE_LEN:
+		val = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & 0x7FF;
+		break;
 	case REG_DSP_VERSION:
 		val = dras_radio_repeater_read(st, ADDR_DSP_VERSION);
 		break;
@@ -519,6 +531,11 @@ static IIO_DEVICE_ATTR(max_gain, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_store,
 			REG_MAX_GAIN);
 
+static IIO_DEVICE_ATTR(mute_len, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_MUTE_LEN);
+
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -538,6 +555,7 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	&iio_dev_attr_target_power.dev_attr.attr,
 	&iio_dev_attr_squelch.dev_attr.attr,
 	&iio_dev_attr_max_gain.dev_attr.attr,
+	&iio_dev_attr_mute_len.dev_attr.attr,
 	NULL,
 };
 
