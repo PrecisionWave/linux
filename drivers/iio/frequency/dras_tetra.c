@@ -53,10 +53,6 @@
 #define ADDR_RX_BURST_LENGTH2		(25*4)
 #define ADDR_RX_BURST_PERIOD2		(26*4)
 
-#define MIN_GAIN			0x0000
-#define MAX_GAIN			0x3FFFF
-#define MIN_AMPL			0x0000
-#define MAX_AMPL			0xFFFF
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
 #define MAX_CH_FREQUENCY		3250000
@@ -606,7 +602,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_TX1_GAIN:
-		if(val<MIN_GAIN || val>MAX_GAIN){
+		if(val<0 || val>0xFFFF){
 			ret = -EINVAL;
 			break;
 		}
@@ -617,7 +613,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			(st->gain_tx2 << 16) | st->gain_tx1);
 		break;
 	case REG_TX2_GAIN:
-		if(val<MIN_GAIN || val>MAX_GAIN){
+		if(val<0 || val>0xFFFF){
 			ret = -EINVAL;
 			break;
 		}
