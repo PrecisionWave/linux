@@ -337,6 +337,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				temp32 += ((uint32_t)val)<<shift;
 				dras_radio_repeater_write(st, ADDR_OFFSET_TLAST1, temp32);
 			}
+			break;
 		}
 		if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
 			match = 1;
@@ -347,6 +348,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			temp32 = dras_radio_repeater_read(st, ADDR_CHANNEL_EN) & ~(1<<(port+16));
 			temp32 += ((uint32_t)val)<<(port+16);
 			dras_radio_repeater_write(st, ADDR_CHANNEL_EN, temp32);
+			break;
 		}
 	}
 
@@ -419,6 +421,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		if((u32)this_attr->address == REG_CH(ch, REG_RSSI)){
 			match = 1;
 			val = dras_radio_repeater_read(st, ADDR_RSSI(ch)) & 0x1FFFFFF;
+			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_CHANNEL_ENABLE)){
 			match = 1;
@@ -427,9 +430,10 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		}else if((u32)this_attr->address == REG_CH(ch, REG_BEST_SOURCE)){
 			match = 1;
 			if(ch<8)
-				val = dras_radio_repeater_read(st, ADDR_BEST_SOURCE1 >> (4*ch)) & 0xF;
+				val = (dras_radio_repeater_read(st, ADDR_BEST_SOURCE1) >> (4*ch)) & 0xF;
 			else
-				val = dras_radio_repeater_read(st, ADDR_BEST_SOURCE2 >> (4*(ch-8))) & 0xF;
+				val = (dras_radio_repeater_read(st, ADDR_BEST_SOURCE2) >> (4*(ch-8))) & 0xF;
+			break;
 		}
 	}
 
@@ -444,10 +448,12 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 				val = (dras_radio_repeater_read(st, ADDR_OFFSET_TLAST1)>>shift) & 0xF;
 			}
 			//val = val/2; // only odd channels used
+			break;
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
 			match = 1;
 			val = (dras_radio_repeater_read(st, ADDR_CHANNEL_EN) >> (port+16)) & 1;
+			break;
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_UL_ORDER)){
 			match = 1;
@@ -457,14 +463,17 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 			//	power10 = power10 * 10;
 			//}
 			ret = sprintf(buf, "%08x\n", temp32);
+			break;
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_PORT_ID)){
 			match = 1;
 			val = dras_radio_repeater_read(st, ADDR_PORT_ID(port)) & 0xFFF;
+			break;
 		}
 		else if((u32)this_attr->address == REG_PORT(port, REG_UL_SYNC)){
 			match = 1;
 			val = (dras_radio_repeater_read(st, ADDR_PORT_ID(port))>>12) & 0x1;
+			break;
 		}
 	}
 
