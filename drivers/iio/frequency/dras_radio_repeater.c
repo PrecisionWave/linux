@@ -212,6 +212,7 @@ enum chan_num{
 	REG_TARGET_POWER,
 	REG_SQUELCH,
 	REG_MUTE_LEN,
+	REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE,
 	REG_MAX_GAIN
 };
 
@@ -369,7 +370,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		dras_radio_repeater_write(st, ADDR_TARGET_PWR, temp32);
 		break;
 	case REG_SQUELCH:
-		if(val<0 || val>0xFFFFFFF){
+		if(val<0 || val>0x1FFFFF){
 			ret = -EINVAL;
 			break;
 		}
@@ -387,7 +388,18 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		dras_radio_repeater_write(st, ADDR_MUTE_LEN, (u32)val);
+		temp32 = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & 0x7FF;
+		temp32 += (uint32_t)val;
+		dras_radio_repeater_write(st, ADDR_MUTE_LEN, temp32);
+		break;
+	case REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & ~(1<<15);
+		temp32 += ((uint32_t)val)<<15;
+		dras_radio_repeater_write(st, ADDR_MUTE_LEN, temp32);
 		break;
 	default:
 		ret = -ENODEV;
@@ -498,6 +510,9 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	case REG_MUTE_LEN:
 		val = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & 0x7FF;
 		break;
+	case REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE:
+		val = (dras_radio_repeater_read(st, ADDR_MUTE_LEN)>>15) & 0x1;
+		break;
 	case REG_DSP_VERSION:
 		val = dras_radio_repeater_read(st, ADDR_DSP_VERSION);
 		break;
@@ -573,6 +588,11 @@ static IIO_DEVICE_ATTR(mute_len, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_store,
 			REG_MUTE_LEN);
 
+static IIO_DEVICE_ATTR(wideband_mu_rxtx4_for_coverage, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE);
+
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -593,6 +613,7 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	&iio_dev_attr_squelch.dev_attr.attr,
 	&iio_dev_attr_max_gain.dev_attr.attr,
 	&iio_dev_attr_mute_len.dev_attr.attr,
+	&iio_dev_attr_wideband_mu_rxtx4_for_coverage.dev_attr.attr,
 	NULL,
 };
 
