@@ -638,7 +638,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_BAND1_AGC_MAXGAIN, (u32)val);
 		break;
 	case REG_BAND1_AGC_SQUELCH:
-		if(val>0x7FFF){
+		if(val>0xFFFF){
 			ret = -EINVAL;
 			break;
 		}
@@ -659,7 +659,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_BAND2_AGC_MAXGAIN, (u32)val);
 		break;
 	case REG_BAND2_AGC_SQUELCH:
-		if(val>0x7FFF){
+		if(val>0xFFFF){
 			ret = -EINVAL;
 			break;
 		}
@@ -1109,32 +1109,32 @@ static IIO_DEVICE_ATTR(band2_wideband_mode, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_BAND2_WIDEBAND_MODE);
 
-static IIO_DEVICE_ATTR(band1_agc_target, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_target, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND1_AGC_TARGET);
 
-static IIO_DEVICE_ATTR(band1_agc_maxgain, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_maxgain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND1_AGC_MAXGAIN);
 
-static IIO_DEVICE_ATTR(band1_agc_squelch, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_squelch, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND1_AGC_SQUELCH);
 
-static IIO_DEVICE_ATTR(band2_agc_target, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_target, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND2_AGC_TARGET);
 
-static IIO_DEVICE_ATTR(band2_agc_maxgain, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_maxgain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND2_AGC_MAXGAIN);
 
-static IIO_DEVICE_ATTR(band2_agc_squelch, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_squelch, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND2_AGC_SQUELCH);
@@ -1277,12 +1277,12 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_band2_tx2_enable.dev_attr.attr,
 	&iio_dev_attr_band1_wideband_mode.dev_attr.attr,
 	&iio_dev_attr_band2_wideband_mode.dev_attr.attr,
-	&iio_dev_attr_band1_agc_target.dev_attr.attr,
-	&iio_dev_attr_band1_agc_maxgain.dev_attr.attr,
-	&iio_dev_attr_band1_agc_squelch.dev_attr.attr,
-	&iio_dev_attr_band2_agc_target.dev_attr.attr,
-	&iio_dev_attr_band2_agc_maxgain.dev_attr.attr,
-	&iio_dev_attr_band2_agc_squelch.dev_attr.attr,
+	&iio_dev_attr_band1_target.dev_attr.attr,
+	&iio_dev_attr_band1_maxgain.dev_attr.attr,
+	&iio_dev_attr_band1_squelch.dev_attr.attr,
+	&iio_dev_attr_band2_target.dev_attr.attr,
+	&iio_dev_attr_band2_maxgain.dev_attr.attr,
+	&iio_dev_attr_band2_squelch.dev_attr.attr,
 	&iio_dev_attr_band1_rssi.dev_attr.attr,
 	&iio_dev_attr_band2_rssi.dev_attr.attr,
 	&iio_dev_attr_tx1_testtone_frequency1.dev_attr.attr,
