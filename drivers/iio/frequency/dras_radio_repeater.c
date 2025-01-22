@@ -36,11 +36,15 @@
 #define ADDR_MUTE_LEN			23*4
 #define ADDR_BEST_SOURCE1		24*4
 #define ADDR_BEST_SOURCE2		25*4
+#define ADDR_MAXGAIN_DL			26*4
+#define ADDR_TARGET_PWR_DL		27*4
+#define ADDR_SQUELCH_DL			28*4
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
 #define ADDR_UL_ORDER(x)		(32+x)*4 // 8 channels per port, each with 4bits, 16 ports, port x from 0..15
 #define ADDR_PORT_ID(x)			(48+x)*4 // 12bit port id, port x from 0..15
+#define ADDR_RSSI_DL(x)			(64+x)*4 // 16bit LSB first rssi, second 16bit second rssi
 
 
 // expands to:
@@ -200,20 +204,25 @@
 	&iio_dev_attr_port15_##ATTR.dev_attr.attr
 
 enum chan_num{
-	REG_ALL_CH(REG_RSSI),	// being expanded for all channels
 	REG_ALL_CH(REG_CHANNEL_ENABLE),	// being expanded for all channels
+	REG_ALL_CH(REG_EN_FREQ_TRANSLATION),	// being expanded for all channels
 	REG_ALL_CH(REG_BEST_SOURCE),	// being expanded for all channels
+	REG_ALL_CH(REG_UL_RSSI),	// being expanded for all channels
+	REG_ALL_CH(REG_UL_TARGET_POWER),	// being expanded for all channels
+	REG_ALL_CH(REG_UL_SQUELCH),	// being expanded for all channels
+	REG_ALL_CH(REG_UL_MAX_GAIN),	// being expanded for all channels
+	REG_ALL_CH(REG_DL_RSSI),	// being expanded for all channels
+	REG_ALL_CH(REG_DL_TARGET_POWER),	// being expanded for all channels
+	REG_ALL_CH(REG_DL_SQUELCH),	// being expanded for all channels
+	REG_ALL_CH(REG_DL_MAX_GAIN),	// being expanded for all channels
 	REG_ALL_PORT(REG_OFFSET_TLAST),	// being expanded for all channels
 	REG_ALL_PORT(REG_ENABLE_DL_TEST),	// being expanded for all channels
 	REG_ALL_PORT(REG_UL_ORDER),	// being expanded for all channels
 	REG_ALL_PORT(REG_PORT_ID),	// being expanded for all channels
 	REG_ALL_PORT(REG_UL_SYNC),	// being expanded for all channels
 	REG_DSP_VERSION,
-	REG_TARGET_POWER,
-	REG_SQUELCH,
 	REG_MUTE_LEN,
-	REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE,
-	REG_MAX_GAIN
+	REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE
 };
 
 struct dras_radio_repeater_state {
@@ -225,6 +234,12 @@ struct dras_radio_repeater_state {
 	struct clk		*adrv_clk;
 	struct notifier_block	adrv_clk_rate_change_nb;
 	uint32_t		adrv_clk_rate;
+	u32			ul_target[NB_OF_TETRA_CHANNELS];
+	u32			ul_squelch[NB_OF_TETRA_CHANNELS];
+	u32			ul_maxgain[NB_OF_TETRA_CHANNELS];
+	u32			dl_target[NB_OF_TETRA_CHANNELS];
+	u32			dl_squelch[NB_OF_TETRA_CHANNELS];
+	u32			dl_maxgain[NB_OF_TETRA_CHANNELS];
 };
 
 static void dras_radio_repeater_write(struct dras_radio_repeater_state *st, unsigned reg, u32 val)
@@ -316,6 +331,83 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			dras_radio_repeater_write(st, ADDR_CHANNEL_EN, temp32);
 			break;
 		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_EN_FREQ_TRANSLATION)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			temp32 = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & ~(1<<(ch+16));
+			temp32 += ((uint32_t)val)<<(ch+16);
+			dras_radio_repeater_write(st, ADDR_MUTE_LEN, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_UL_TARGET_POWER)){
+			match = 1;
+			if(val<0 || val>0xFFFF){
+				ret = -EINVAL;
+				break;
+			}
+			st->ul_target[ch] = (u32)val;
+			temp32 = (u32)val | (ch<<16);
+			dras_radio_repeater_write(st, ADDR_TARGET_PWR, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_UL_SQUELCH)){
+			match = 1;
+			if(val<0 || val>0x1FFFFF){
+				ret = -EINVAL;
+				break;
+			}
+			st->ul_squelch[ch] = (u32)val;
+			temp32 = (u32)val | (ch<<21);
+			dras_radio_repeater_write(st, ADDR_SQUELCH, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_UL_MAX_GAIN)){
+			match = 1;
+			if(val<0 || val>0xFFFFFF){
+				ret = -EINVAL;
+				break;
+			}
+			st->ul_maxgain[ch] = (u32)val;
+			temp32 = (u32)val | (ch<<24);
+			dras_radio_repeater_write(st, ADDR_MAXGAIN, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_TARGET_POWER)){
+			match = 1;
+			if(val<0 || val>0xFFFF){
+				ret = -EINVAL;
+				break;
+			}
+			st->dl_target[ch] = (u32)val;
+			temp32 = (u32)val | (ch<<16);
+			dras_radio_repeater_write(st, ADDR_TARGET_PWR_DL, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_SQUELCH)){
+			match = 1;
+			if(val<0 || val>0x1FFFFF){
+				ret = -EINVAL;
+				break;
+			}
+			st->dl_squelch[ch] = (u32)val;
+			temp32 = (u32)val | (ch<<21);
+			dras_radio_repeater_write(st, ADDR_SQUELCH_DL, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_MAX_GAIN)){
+			match = 1;
+			if(val<0 || val>0xFFFFFF){
+				ret = -EINVAL;
+				break;
+			}
+			st->dl_maxgain[ch] = (u32)val;
+			temp32 = (u32)val | (ch<<24);
+			dras_radio_repeater_write(st, ADDR_MAXGAIN_DL, temp32);
+			break;
+		}
 	}
 
 	for(port=0; port<NB_OF_TETRA_PORTS; port++){
@@ -340,7 +432,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			}
 			break;
 		}
-		if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
+		else if((u32)this_attr->address == REG_PORT(port, REG_ENABLE_DL_TEST)){
 			match = 1;
 			if(val<0 || val>1){
 				ret = -EINVAL;
@@ -360,29 +452,6 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
-	case REG_TARGET_POWER:
-		if(val<0 || val>0xFFFF){
-			ret = -EINVAL;
-			break;
-		}
-		temp32 = dras_radio_repeater_read(st, ADDR_TARGET_PWR) & ~0xFFFF;
-		temp32 += (u32)val;
-		dras_radio_repeater_write(st, ADDR_TARGET_PWR, temp32);
-		break;
-	case REG_SQUELCH:
-		if(val<0 || val>0x1FFFFF){
-			ret = -EINVAL;
-			break;
-		}
-		dras_radio_repeater_write(st, ADDR_SQUELCH, (u32)val);
-		break;
-	case REG_MAX_GAIN:
-		if(val<0 || val>0xFFFFFF){
-			ret = -EINVAL;
-			break;
-		}
-		dras_radio_repeater_write(st, ADDR_MAXGAIN, (u32)val);
-		break;
 	case REG_MUTE_LEN:
 		if(val<0 || val>0x7FF){
 			ret = -EINVAL;
@@ -430,16 +499,57 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	mutex_lock(&indio_dev->mlock);
 	match = 0;
 	for(ch=0; ch<NB_OF_TETRA_CHANNELS; ch++){
-		if((u32)this_attr->address == REG_CH(ch, REG_RSSI)){
+		if((u32)this_attr->address == REG_CH(ch, REG_UL_RSSI)){
 			match = 1;
 			val = dras_radio_repeater_read(st, ADDR_RSSI(ch)) & 0x1FFFFFF;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_RSSI)){
+			match = 1;
+			val = dras_radio_repeater_read(st, ADDR_RSSI_DL(ch)) & 0x1FFFFFF;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_UL_TARGET_POWER)){
+			match = 1;
+			val = st->ul_target[ch];
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_UL_SQUELCH)){
+			match = 1;
+			val = st->ul_squelch[ch];
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_UL_MAX_GAIN)){
+			match = 1;
+			val = st->ul_maxgain[ch];
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_TARGET_POWER)){
+			match = 1;
+			val = st->dl_target[ch];
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_SQUELCH)){
+			match = 1;
+			val = st->dl_squelch[ch];
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_MAX_GAIN)){
+			match = 1;
+			val = st->dl_maxgain[ch];
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_CHANNEL_ENABLE)){
 			match = 1;
 			val = (dras_radio_repeater_read(st, ADDR_CHANNEL_EN) >> ch) & 1;
 			break;
-		}else if((u32)this_attr->address == REG_CH(ch, REG_BEST_SOURCE)){
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_EN_FREQ_TRANSLATION)){
+			match = 1;
+			val = (dras_radio_repeater_read(st, ADDR_MUTE_LEN) >> (ch+16)) & 1;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_BEST_SOURCE)){
 			match = 1;
 			if(ch<8)
 				val = (dras_radio_repeater_read(st, ADDR_BEST_SOURCE1) >> (4*ch)) & 0xF;
@@ -498,15 +608,6 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
-	case REG_TARGET_POWER:
-		val = dras_radio_repeater_read(st, ADDR_TARGET_PWR);
-		break;
-	case REG_SQUELCH:
-		val = dras_radio_repeater_read(st, ADDR_SQUELCH);
-		break;
-	case REG_MAX_GAIN:
-		val = dras_radio_repeater_read(st, ADDR_MAXGAIN);
-		break;
 	case REG_MUTE_LEN:
 		val = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & 0x7FF;
 		break;
@@ -528,15 +629,55 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	return ret;
 }
 
-IIO_DEVICE_ATTR_ALL_CH(rssi, S_IRUGO,
+IIO_DEVICE_ATTR_ALL_CH(uplink_rssi, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
-			REG_RSSI);
+			REG_UL_RSSI);
+
+IIO_DEVICE_ATTR_ALL_CH(downlink_rssi, S_IRUGO,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_DL_RSSI);
+
+IIO_DEVICE_ATTR_ALL_CH(uplink_target_power, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_UL_TARGET_POWER);
+
+IIO_DEVICE_ATTR_ALL_CH(uplink_squelch, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_UL_SQUELCH);
+
+IIO_DEVICE_ATTR_ALL_CH(uplink_max_gain, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_UL_MAX_GAIN);
+
+IIO_DEVICE_ATTR_ALL_CH(downlink_target_power, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_DL_TARGET_POWER);
+
+IIO_DEVICE_ATTR_ALL_CH(downlink_squelch, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_DL_SQUELCH);
+
+IIO_DEVICE_ATTR_ALL_CH(downlink_max_gain, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_DL_MAX_GAIN);
 
 IIO_DEVICE_ATTR_ALL_CH(channel_enable, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_CHANNEL_ENABLE);
+
+IIO_DEVICE_ATTR_ALL_CH(enable_frequency_translation, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_EN_FREQ_TRANSLATION);
 
 IIO_DEVICE_ATTR_ALL_CH(best_source, S_IRUGO,
 			dras_radio_repeater_show,
@@ -568,21 +709,6 @@ IIO_DEVICE_ATTR_ALL_PORT(uplink_sync, S_IRUGO,
 			dras_radio_repeater_store,
 			REG_UL_SYNC);
 
-static IIO_DEVICE_ATTR(target_power, S_IRUGO | S_IWUSR,
-			dras_radio_repeater_show,
-			dras_radio_repeater_store,
-			REG_TARGET_POWER);
-
-static IIO_DEVICE_ATTR(squelch, S_IRUGO | S_IWUSR,
-			dras_radio_repeater_show,
-			dras_radio_repeater_store,
-			REG_SQUELCH);
-
-static IIO_DEVICE_ATTR(max_gain, S_IRUGO | S_IWUSR,
-			dras_radio_repeater_show,
-			dras_radio_repeater_store,
-			REG_MAX_GAIN);
-
 static IIO_DEVICE_ATTR(mute_len, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -600,8 +726,16 @@ static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 
 
 static struct attribute *dras_radio_repeater_attributes[] = {
-	IIO_ATTR_ALL_CH(rssi),
+	IIO_ATTR_ALL_CH(uplink_rssi),
+	IIO_ATTR_ALL_CH(downlink_rssi),
+	IIO_ATTR_ALL_CH(uplink_target_power),
+	IIO_ATTR_ALL_CH(downlink_target_power),
+	IIO_ATTR_ALL_CH(uplink_squelch),
+	IIO_ATTR_ALL_CH(downlink_squelch),
+	IIO_ATTR_ALL_CH(uplink_max_gain),
+	IIO_ATTR_ALL_CH(downlink_max_gain),
 	IIO_ATTR_ALL_CH(channel_enable),
+	IIO_ATTR_ALL_CH(enable_frequency_translation),
 	IIO_ATTR_ALL_CH(best_source),
 	IIO_ATTR_ALL_PORT(offset_tlast),
 	IIO_ATTR_ALL_PORT(enable_downlink_test),
@@ -609,9 +743,6 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	IIO_ATTR_ALL_PORT(id),
 	IIO_ATTR_ALL_PORT(uplink_sync),
 	&iio_dev_attr_dsp_version.dev_attr.attr,
-	&iio_dev_attr_target_power.dev_attr.attr,
-	&iio_dev_attr_squelch.dev_attr.attr,
-	&iio_dev_attr_max_gain.dev_attr.attr,
 	&iio_dev_attr_mute_len.dev_attr.attr,
 	&iio_dev_attr_wideband_mu_rxtx4_for_coverage.dev_attr.attr,
 	NULL,
