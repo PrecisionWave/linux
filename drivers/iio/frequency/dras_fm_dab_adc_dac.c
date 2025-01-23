@@ -32,7 +32,11 @@
 #define ADDR_PPS_CLKS			(3*4)
 #define ADDR_PPS_CNT			(4*4)
 #define ADDR_ADC_BER_TESTER		(5*4)
+#define ADDR_DAB_TESTTONE0		(6*4)
+#define ADDR_DAB_TESTTONE1		(7*4)
+#define ADDR_DAB_TESTTONE2		(8*4)
 #define ADDR_WATCHDOG			(9*4)
+#define ADDR_DAB_TESTTONE3		(10*4)
 #define ADDR_PPS_SETTINGS		(12*4)
 #define ADDR_HASH			(13*4)
 #define ADDR_RANDOMNUMBER		(14*4)
@@ -229,6 +233,14 @@ enum chan_num{
 	REG_TX_FM_TESTTONE_AMPLITUDE1,
 	REG_TX_FM_TESTTONE_AMPLITUDE2,
 	REG_TX_FM_TESTTONE_AMPLITUDE3,
+	REG_TX_DAB_TESTTONE_FREQUENCY0,
+	REG_TX_DAB_TESTTONE_FREQUENCY1,
+	REG_TX_DAB_TESTTONE_FREQUENCY2,
+	REG_TX_DAB_TESTTONE_FREQUENCY3,
+	REG_TX_DAB_TESTTONE_AMPLITUDE0,
+	REG_TX_DAB_TESTTONE_AMPLITUDE1,
+	REG_TX_DAB_TESTTONE_AMPLITUDE2,
+	REG_TX_DAB_TESTTONE_AMPLITUDE3,
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
 	REG_SATURATION_MUTING_OCCURRENCE,
@@ -785,8 +797,96 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_AMPL43, temp32);
 		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY0:
+		if(val<MIN_DAB_FREQUENCY || val>MAX_DAB_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		val += st->fs_adc>>1;
+		temp64 = (u64)val << 16;
+		temp64 = div_s64(temp64,st->fs_adc);
+		val = (int)temp64 & 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) & 0xFFFF0000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE0, temp32);
+		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY1:
+		if(val<MIN_DAB_FREQUENCY || val>MAX_DAB_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		val += st->fs_adc>>1;
+		temp64 = (u64)val << 16;
+		temp64 = div_s64(temp64,st->fs_adc);
+		val = (int)temp64 & 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) & 0xFFFF0000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE1, temp32);
+		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY2:
+		if(val<MIN_DAB_FREQUENCY || val>MAX_DAB_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		val += st->fs_adc>>1;
+		temp64 = (u64)val << 16;
+		temp64 = div_s64(temp64,st->fs_adc);
+		val = (int)temp64 & 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) & 0xFFFF0000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE2, temp32);
+		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY3:
+		if(val<MIN_DAB_FREQUENCY || val>MAX_DAB_FREQUENCY){
+			ret = -EINVAL;
+			break;
+		}
+		val += st->fs_adc>>1;
+		temp64 = (u64)val << 16;
+		temp64 = div_s64(temp64,st->fs_adc);
+		val = (int)temp64 & 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) & 0xFFFF0000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE0:
+		if(val<MIN_GAIN || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) & 0xFFFF;
+		temp32 += (u32)val << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE0, temp32);
+		break;
 	case REG_RX_FM_BAND_BURST_LENGTH:
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, (u32)val);
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE1:
+		if(val<MIN_GAIN || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) & 0xFFFF;
+		temp32 += (u32)val << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE1, temp32);
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE2:
+		if(val<MIN_GAIN || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) & 0xFFFF;
+		temp32 += (u32)val << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE2, temp32);
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE3:
+		if(val<MIN_GAIN || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) & 0xFFFF;
+		temp32 += (u32)val << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
 		break;
 	case REG_RX_FM_BAND_BURST_PERIOD:
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, (u32)val);
@@ -1227,6 +1327,42 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_TX_FM_TESTTONE_AMPLITUDE3:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_AMPL43) >> 16;
 		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY0:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) & 0xFFFF;
+		temp64 = (u64)val * st->fs_adc;
+		val = (u32)(temp64 >> 16);
+		val += st->fs_adc>>1;
+		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY1:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) & 0xFFFF;
+		temp64 = (u64)val * st->fs_adc;
+		val = (u32)(temp64 >> 16);
+		val += st->fs_adc>>1;
+		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY2:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) & 0xFFFF;
+		temp64 = (u64)val * st->fs_adc;
+		val = (u32)(temp64 >> 16);
+		val += st->fs_adc>>1;
+		break;
+	case REG_TX_DAB_TESTTONE_FREQUENCY3:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) & 0xFFFF;
+		temp64 = (u64)val * st->fs_adc;
+		val = (u32)(temp64 >> 16);
+		val += st->fs_adc>>1;
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE0:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) >> 16;
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE1:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) >> 16;
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE2:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) >> 16;
+		break;
+	case REG_TX_DAB_TESTTONE_AMPLITUDE3:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) >> 16;
+		break;
 	case REG_WATCHDOG_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 2) & 0x1;
 		break;
@@ -1553,22 +1689,22 @@ static IIO_DEVICE_ATTR(tx2_fm_sel_rep_mod1_mod2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_TX2_FM_SEL_REP_MOD1_MOD2);
 */
-static IIO_DEVICE_ATTR(ch0_tx_fm_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch0_tx1_fm_testtone_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_FREQUENCY0);
 
-static IIO_DEVICE_ATTR(ch1_tx_fm_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch1_tx1_fm_testtone_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_FREQUENCY1);
 
-static IIO_DEVICE_ATTR(ch2_tx_fm_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch0_tx2_fm_testtone_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_FREQUENCY2);
 
-static IIO_DEVICE_ATTR(ch3_tx_fm_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch1_tx2_fm_testtone_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_FREQUENCY3);
@@ -1578,25 +1714,65 @@ static IIO_DEVICE_ATTR(rx_fm_monitor_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_FM_MON_FREQUENCY);
 
-static IIO_DEVICE_ATTR(ch0_tx_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch0_tx1_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE0);
 
-static IIO_DEVICE_ATTR(ch1_tx_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch1_tx1_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE1);
 
-static IIO_DEVICE_ATTR(ch2_tx_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch0_tx2_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE2);
 
-static IIO_DEVICE_ATTR(ch3_tx_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(ch1_tx2_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE3);
+
+static IIO_DEVICE_ATTR(ch0_tx1_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_FREQUENCY0);
+
+static IIO_DEVICE_ATTR(ch1_tx1_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_FREQUENCY1);
+
+static IIO_DEVICE_ATTR(ch0_tx2_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_FREQUENCY2);
+
+static IIO_DEVICE_ATTR(ch1_tx2_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_FREQUENCY3);
+
+static IIO_DEVICE_ATTR(ch0_tx1_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_AMPLITUDE0);
+
+static IIO_DEVICE_ATTR(ch1_tx1_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_AMPLITUDE1);
+
+static IIO_DEVICE_ATTR(ch0_tx2_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_AMPLITUDE2);
+
+static IIO_DEVICE_ATTR(ch1_tx2_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_DAB_TESTTONE_AMPLITUDE3);
 
 static IIO_DEVICE_ATTR(watchdog_enable, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
@@ -1770,15 +1946,23 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_tx2_dac_overflow.dev_attr.attr,
 	//&iio_dev_attr_tx1_fm_sel_rep_mod1_mod2.dev_attr.attr,
 	//&iio_dev_attr_tx2_fm_sel_rep_mod1_mod2.dev_attr.attr,
-	&iio_dev_attr_ch0_tx_fm_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch1_tx_fm_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch2_tx_fm_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch3_tx_fm_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch0_tx1_fm_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch1_tx1_fm_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch0_tx2_fm_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch1_tx2_fm_testtone_frequency.dev_attr.attr,
 	&iio_dev_attr_rx_fm_monitor_frequency.dev_attr.attr,
-	&iio_dev_attr_ch0_tx_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch1_tx_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch2_tx_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch3_tx_fm_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch0_tx1_fm_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch1_tx1_fm_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch0_tx2_fm_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch1_tx2_fm_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch0_tx1_dab_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch1_tx1_dab_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch0_tx2_dab_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch1_tx2_dab_testtone_frequency.dev_attr.attr,
+	&iio_dev_attr_ch0_tx1_dab_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch1_tx1_dab_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch0_tx2_dab_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_ch1_tx2_dab_testtone_amplitude.dev_attr.attr,
 	&iio_dev_attr_watchdog_enable.dev_attr.attr,
 	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
 	&iio_dev_attr_saturation_muting_occurrence.dev_attr.attr,
