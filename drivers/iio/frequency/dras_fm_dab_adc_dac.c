@@ -685,6 +685,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val -= (int)temp64;
+		val = -val;
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
@@ -701,6 +702,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val -= (int)temp64;
+		val = -val;
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
@@ -717,6 +719,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val -= (int)temp64;
+		val = -val;
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
@@ -733,6 +736,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val -= (int)temp64;
+		val = -val;
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
@@ -1255,6 +1259,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
 		}
 		val = val/3;
+		val = -val;
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val += (int)temp64;
@@ -1269,6 +1274,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
 		}
 		val = val/3;
+		val = -val;
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val += (int)temp64;
@@ -1283,6 +1289,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
 		}
 		val = val/3;
+		val = -val;
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val += (int)temp64;
@@ -1297,6 +1304,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
 		}
 		val = val/3;
+		val = -val;
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val += (int)temp64;
