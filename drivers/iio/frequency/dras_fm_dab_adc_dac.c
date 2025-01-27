@@ -1697,87 +1697,88 @@ static IIO_DEVICE_ATTR(tx2_fm_sel_rep_mod1_mod2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_TX2_FM_SEL_REP_MOD1_MOD2);
 */
-static IIO_DEVICE_ATTR(ch0_tx1_fm_testtone_frequency, S_IRUGO | S_IWUSR,
-			dras_fm_dab_adc_dac_show,
-			dras_fm_dab_adc_dac_store,
-			REG_TX_FM_TESTTONE_FREQUENCY0);
-
-static IIO_DEVICE_ATTR(ch1_tx1_fm_testtone_frequency, S_IRUGO | S_IWUSR,
-			dras_fm_dab_adc_dac_show,
-			dras_fm_dab_adc_dac_store,
-			REG_TX_FM_TESTTONE_FREQUENCY1);
-
-static IIO_DEVICE_ATTR(ch0_tx2_fm_testtone_frequency, S_IRUGO | S_IWUSR,
-			dras_fm_dab_adc_dac_show,
-			dras_fm_dab_adc_dac_store,
-			REG_TX_FM_TESTTONE_FREQUENCY2);
-
-static IIO_DEVICE_ATTR(ch1_tx2_fm_testtone_frequency, S_IRUGO | S_IWUSR,
-			dras_fm_dab_adc_dac_show,
-			dras_fm_dab_adc_dac_store,
-			REG_TX_FM_TESTTONE_FREQUENCY3);
 
 static IIO_DEVICE_ATTR(rx_fm_monitor_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_FM_MON_FREQUENCY);
 
-static IIO_DEVICE_ATTR(ch0_tx1_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx1_fm_testtone_frequency1, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_FM_TESTTONE_FREQUENCY0);
+
+static IIO_DEVICE_ATTR(tx1_fm_testtone_frequency2, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_FM_TESTTONE_FREQUENCY1);
+
+static IIO_DEVICE_ATTR(tx2_fm_testtone_frequency1, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_FM_TESTTONE_FREQUENCY2);
+
+static IIO_DEVICE_ATTR(tx2_fm_testtone_frequency2, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_FM_TESTTONE_FREQUENCY3);
+
+static IIO_DEVICE_ATTR(tx1_fm_testtone_amplitude1, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE0);
 
-static IIO_DEVICE_ATTR(ch1_tx1_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx1_fm_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE1);
 
-static IIO_DEVICE_ATTR(ch0_tx2_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx2_fm_testtone_amplitude1, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE2);
 
-static IIO_DEVICE_ATTR(ch1_tx2_fm_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx2_fm_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_FM_TESTTONE_AMPLITUDE3);
 
-static IIO_DEVICE_ATTR(ch0_tx1_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx1_dab_testtone_frequency1, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_FREQUENCY0);
 
-static IIO_DEVICE_ATTR(ch1_tx1_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx1_dab_testtone_frequency2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_FREQUENCY1);
 
-static IIO_DEVICE_ATTR(ch0_tx2_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx2_dab_testtone_frequency1, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_FREQUENCY2);
 
-static IIO_DEVICE_ATTR(ch1_tx2_dab_testtone_frequency, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx2_dab_testtone_frequency2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_FREQUENCY3);
 
-static IIO_DEVICE_ATTR(ch0_tx1_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx1_dab_testtone_amplitude1, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_AMPLITUDE0);
 
-static IIO_DEVICE_ATTR(ch1_tx1_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx1_dab_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_AMPLITUDE1);
 
-static IIO_DEVICE_ATTR(ch0_tx2_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx2_dab_testtone_amplitude1, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_AMPLITUDE2);
 
-static IIO_DEVICE_ATTR(ch1_tx2_dab_testtone_amplitude, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(tx2_dab_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_AMPLITUDE3);
@@ -1954,23 +1955,23 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_tx2_dac_overflow.dev_attr.attr,
 	//&iio_dev_attr_tx1_fm_sel_rep_mod1_mod2.dev_attr.attr,
 	//&iio_dev_attr_tx2_fm_sel_rep_mod1_mod2.dev_attr.attr,
-	&iio_dev_attr_ch0_tx1_fm_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch1_tx1_fm_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch0_tx2_fm_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch1_tx2_fm_testtone_frequency.dev_attr.attr,
 	&iio_dev_attr_rx_fm_monitor_frequency.dev_attr.attr,
-	&iio_dev_attr_ch0_tx1_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch1_tx1_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch0_tx2_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch1_tx2_fm_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch0_tx1_dab_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch1_tx1_dab_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch0_tx2_dab_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch1_tx2_dab_testtone_frequency.dev_attr.attr,
-	&iio_dev_attr_ch0_tx1_dab_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch1_tx1_dab_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch0_tx2_dab_testtone_amplitude.dev_attr.attr,
-	&iio_dev_attr_ch1_tx2_dab_testtone_amplitude.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_testtone_frequency1.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_testtone_frequency2.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_testtone_frequency1.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_testtone_frequency2.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_testtone_amplitude1.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_testtone_amplitude1.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx1_dab_testtone_frequency1.dev_attr.attr,
+	&iio_dev_attr_tx1_dab_testtone_frequency2.dev_attr.attr,
+	&iio_dev_attr_tx2_dab_testtone_frequency1.dev_attr.attr,
+	&iio_dev_attr_tx2_dab_testtone_frequency2.dev_attr.attr,
+	&iio_dev_attr_tx1_dab_testtone_amplitude1.dev_attr.attr,
+	&iio_dev_attr_tx1_dab_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx2_dab_testtone_amplitude1.dev_attr.attr,
+	&iio_dev_attr_tx2_dab_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_watchdog_enable.dev_attr.attr,
 	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
 	&iio_dev_attr_saturation_muting_occurrence.dev_attr.attr,
