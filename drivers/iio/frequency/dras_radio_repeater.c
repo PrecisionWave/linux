@@ -39,6 +39,8 @@
 #define ADDR_MAXGAIN_DL			26*4
 #define ADDR_TARGET_PWR_DL		27*4
 #define ADDR_SQUELCH_DL			28*4
+#define ADDR_HASH			29*4
+#define ADDR_RANDOMNUMBER		30*4
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
@@ -221,7 +223,8 @@ enum chan_num{
 	REG_ALL_PORT(REG_PORT_ID),	// being expanded for all channels
 	REG_ALL_PORT(REG_UL_SYNC),	// being expanded for all channels
 	REG_DSP_VERSION,
-	REG_MUTE_LEN,
+	REG_RANDOMNUMBER,
+	REG_HASH,
 	REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE
 };
 
@@ -344,67 +347,67 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_TARGET_POWER)){
 			match = 1;
-			if(val<0 || val>0xFFFF){
+			if(val<0 || val>0x1FF){
 				ret = -EINVAL;
 				break;
 			}
 			st->ul_target[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<16);
+			temp32 = (u32)val | (ch<<9);
 			dras_radio_repeater_write(st, ADDR_TARGET_PWR, temp32);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_SQUELCH)){
 			match = 1;
-			if(val<0 || val>0x1FFFFF){
+			if(val<0 || val>0x7FFF){
 				ret = -EINVAL;
 				break;
 			}
 			st->ul_squelch[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<21);
+			temp32 = (u32)val | (ch<<15);
 			dras_radio_repeater_write(st, ADDR_SQUELCH, temp32);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_MAX_GAIN)){
 			match = 1;
-			if(val<0 || val>0xFFFFFF){
+			if(val<0 || val>0x7FFFFF){
 				ret = -EINVAL;
 				break;
 			}
 			st->ul_maxgain[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<24);
+			temp32 = (u32)val | (ch<<23);
 			dras_radio_repeater_write(st, ADDR_MAXGAIN, temp32);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_TARGET_POWER)){
 			match = 1;
-			if(val<0 || val>0xFFFF){
+			if(val<0 || val>0x1FF){
 				ret = -EINVAL;
 				break;
 			}
 			st->dl_target[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<16);
+			temp32 = (u32)val | (ch<<9);
 			dras_radio_repeater_write(st, ADDR_TARGET_PWR_DL, temp32);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_SQUELCH)){
 			match = 1;
-			if(val<0 || val>0x1FFFFF){
+			if(val<0 || val>0x7FFF){
 				ret = -EINVAL;
 				break;
 			}
 			st->dl_squelch[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<21);
+			temp32 = (u32)val | (ch<<15);
 			dras_radio_repeater_write(st, ADDR_SQUELCH_DL, temp32);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_MAX_GAIN)){
 			match = 1;
-			if(val<0 || val>0xFFFFFF){
+			if(val<0 || val>0x7FFFFF){
 				ret = -EINVAL;
 				break;
 			}
 			st->dl_maxgain[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<24);
+			temp32 = (u32)val | (ch<<23);
 			dras_radio_repeater_write(st, ADDR_MAXGAIN_DL, temp32);
 			break;
 		}
@@ -452,15 +455,6 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
-	case REG_MUTE_LEN:
-		if(val<0 || val>0x7FF){
-			ret = -EINVAL;
-			break;
-		}
-		temp32 = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & 0x7FF;
-		temp32 += (uint32_t)val;
-		dras_radio_repeater_write(st, ADDR_MUTE_LEN, temp32);
-		break;
 	case REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -469,6 +463,9 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		temp32 = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & ~(1<<15);
 		temp32 += ((uint32_t)val)<<15;
 		dras_radio_repeater_write(st, ADDR_MUTE_LEN, temp32);
+		break;
+	case REG_HASH:
+		dras_radio_repeater_write(st, ADDR_HASH, (u32)val);
 		break;
 	default:
 		ret = -ENODEV;
@@ -501,12 +498,12 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	for(ch=0; ch<NB_OF_TETRA_CHANNELS; ch++){
 		if((u32)this_attr->address == REG_CH(ch, REG_UL_RSSI)){
 			match = 1;
-			val = dras_radio_repeater_read(st, ADDR_RSSI(ch)) & 0x1FFFFFF;
+			val = dras_radio_repeater_read(st, ADDR_RSSI(ch)) & 0x7FFF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_RSSI)){
 			match = 1;
-			val = dras_radio_repeater_read(st, ADDR_RSSI_DL(ch)) & 0x1FFFFFF;
+			val = dras_radio_repeater_read(st, ADDR_RSSI_DL(ch)) & 0x7FFF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_TARGET_POWER)){
@@ -608,11 +605,14 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 
 	/* unique registers */
 	switch ((u32)this_attr->address) {
-	case REG_MUTE_LEN:
-		val = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & 0x7FF;
-		break;
 	case REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE:
 		val = (dras_radio_repeater_read(st, ADDR_MUTE_LEN)>>15) & 0x1;
+		break;
+	case REG_HASH:
+		val = dras_radio_repeater_read(st, ADDR_HASH);
+		break;
+	case REG_RANDOMNUMBER:
+		val = dras_radio_repeater_read(st, ADDR_RANDOMNUMBER);
 		break;
 	case REG_DSP_VERSION:
 		val = dras_radio_repeater_read(st, ADDR_DSP_VERSION);
@@ -709,15 +709,20 @@ IIO_DEVICE_ATTR_ALL_PORT(uplink_sync, S_IRUGO,
 			dras_radio_repeater_store,
 			REG_UL_SYNC);
 
-static IIO_DEVICE_ATTR(mute_len, S_IRUGO | S_IWUSR,
-			dras_radio_repeater_show,
-			dras_radio_repeater_store,
-			REG_MUTE_LEN);
-
 static IIO_DEVICE_ATTR(wideband_mu_rxtx4_for_coverage, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE);
+
+static IIO_DEVICE_ATTR(hash, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_HASH);
+
+static IIO_DEVICE_ATTR(randomnumber, S_IRUGO,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_RANDOMNUMBER);
 
 static IIO_DEVICE_ATTR(dsp_version, S_IRUGO,
 			dras_radio_repeater_show,
@@ -742,8 +747,9 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	IIO_ATTR_ALL_PORT(uplink_order),
 	IIO_ATTR_ALL_PORT(id),
 	IIO_ATTR_ALL_PORT(uplink_sync),
+	&iio_dev_attr_hash.dev_attr.attr,
+	&iio_dev_attr_randomnumber.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
-	&iio_dev_attr_mute_len.dev_attr.attr,
 	&iio_dev_attr_wideband_mu_rxtx4_for_coverage.dev_attr.attr,
 	NULL,
 };
