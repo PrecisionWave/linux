@@ -854,7 +854,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE0:
-		if(val<MIN_GAIN || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
@@ -863,11 +863,8 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE0, temp32);
 		break;
-	case REG_RX_FM_BAND_BURST_LENGTH:
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, (u32)val);
-		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE1:
-		if(val<MIN_GAIN || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
@@ -877,7 +874,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE1, temp32);
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE2:
-		if(val<MIN_GAIN || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
@@ -887,7 +884,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE2, temp32);
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE3:
-		if(val<MIN_GAIN || val>0xFFFF){
+		if(val<0 || val>46286){
 			ret = -EINVAL;
 			break;
 		}
@@ -895,6 +892,9 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) & 0xFFFF;
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
+		break;
+	case REG_RX_FM_BAND_BURST_LENGTH:
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, (u32)val);
 		break;
 	case REG_RX_FM_BAND_BURST_PERIOD:
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, (u32)val);

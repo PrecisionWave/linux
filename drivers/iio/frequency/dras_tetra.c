@@ -571,7 +571,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<10);
-		temp32 += ((uint32_t)val)<<8;
+		temp32 += ((uint32_t)val)<<10;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_BAND2_TX2_ENABLE:
@@ -580,7 +580,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<11);
-		temp32 += ((uint32_t)val)<<9;
+		temp32 += ((uint32_t)val)<<11;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_BAND1_WIDEBAND_MODE:
