@@ -423,7 +423,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->wb_dds_inc[3] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
 		val = ((int)temp64 & 0x3FFFF) | 3<<18;
-		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
 		break;
 	case REG_TX1_TESTTONE_FREQUENCY1:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
