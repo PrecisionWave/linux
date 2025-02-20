@@ -285,6 +285,7 @@ struct dras_fm_dab_adc_dac_state {
 	u32			gain_fm_tx2;
 	bool			rf_mute;
 	bool			is_remote;
+	u32			fm_testtone_inc[5];
 
 	struct clk		*dsp_clk;
 	struct gpio_desc	*clk_ce_gpio;
@@ -689,9 +690,9 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		val = (int)temp64 & 0xFFFF;
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC21) & 0xFFFF0000;
-		temp32 += (u32)val;
+		temp32 = (int)temp64 & 0xFFFF;
+		st->fm_testtone_inc[0] = temp32;
+		temp32 |= 0<<16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY1:
@@ -706,9 +707,9 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		val = (int)temp64 & 0xFFFF;
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC21) & 0xFFFF;
-		temp32 += (u32)val << 16;
+		temp32 = (int)temp64 & 0xFFFF;
+		st->fm_testtone_inc[1] = temp32;
+		temp32 |= 1<<16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY2:
@@ -723,10 +724,10 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		val = (int)temp64 & 0xFFFF;
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC43) & 0xFFFF0000;
-		temp32 += (u32)val;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC43, temp32);
+		temp32 = (int)temp64 & 0xFFFF;
+		st->fm_testtone_inc[2] = temp32;
+		temp32 |= 2<<16;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY3:
 		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
@@ -740,10 +741,10 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		val = (int)temp64 & 0xFFFF;
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC43) & 0xFFFF;
-		temp32 += (u32)val << 16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC43, temp32);
+		temp32 = (int)temp64 & 0xFFFF;
+		st->fm_testtone_inc[3] = temp32;
+		temp32 |= 3<<16;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
 		break;
 	case REG_RX_FM_MON_FREQUENCY:
 		if(st->is_remote){
@@ -757,13 +758,14 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val -= (int)temp64;
+		val = -val;
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		val = (int)temp64 & 0xFFFF;
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_FM_MON_DDSINC) & 0xFFFF0000;
-		temp32 += (u32)val;
-		dras_fm_dab_adc_dac_write(st, ADDR_FM_MON_DDSINC, temp32);
+		temp32 = (int)temp64 & 0xFFFF;
+		st->fm_testtone_inc[4] = temp32;
+		temp32 |= 11<<16;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
 		break;
 	case REG_TX_FM_TESTTONE_AMPLITUDE0:
 		if(val<MIN_GAIN || val>MAX_GAIN){
@@ -1254,7 +1256,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		break;
 */
 	case REG_TX_FM_TESTTONE_FREQUENCY0:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC21) & 0xFFFF;
+		val = (int32_t)st->fm_testtone_inc[0] & 0xFFFF;
 		if(val>1<<15){
 			temp64 = (u64)val * st->fs_adc;
 			val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
@@ -1269,7 +1271,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val += (int)temp64;
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY1:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC21) >> 16;
+		val = (int32_t)st->fm_testtone_inc[1] & 0xFFFF;
 		if(val>1<<15){
 			temp64 = (u64)val * st->fs_adc;
 			val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
@@ -1284,7 +1286,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val += (int)temp64;
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY2:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC43) & 0xFFFF;
+		val = (int32_t)st->fm_testtone_inc[2] & 0xFFFF;
 		if(val>1<<15){
 			temp64 = (u64)val * st->fs_adc;
 			val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
@@ -1299,7 +1301,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val += (int)temp64;
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY3:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_TESTTONE_DDSINC43) >> 16;
+		val = (int32_t)st->fm_testtone_inc[3] & 0xFFFF;
 		if(val>1<<15){
 			temp64 = (u64)val * st->fs_adc;
 			val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
@@ -1314,7 +1316,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val += (int)temp64;
 		break;
 	case REG_RX_FM_MON_FREQUENCY:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_FM_MON_DDSINC) & 0xFFFF;
+		val = (int32_t)st->fm_testtone_inc[4] & 0xFFFF;
 		if(val>1<<15){
 			temp64 = (u64)val * st->fs_adc;
 			val = ((int)(temp64 >> 18)) - (st->fs_adc>>2); // f_test = fm_f_mix+(fm_dds_inc*clk/2^18-clk/4)/3
@@ -1323,6 +1325,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = (u32)(temp64 >> 18); // f_test = fm_f_mix+fm_dds_inc*clk/2^18/3
 		}
 		val = val/3;
+		val = -val;
 		temp64 = (u64)st->fs_adc * 15;
 		temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 		val += (int)temp64;
