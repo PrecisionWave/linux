@@ -197,6 +197,8 @@ enum chan_num{
 	REG_LO_EN_MAN_TUNING,
 	REG_LO_FREQ_READ,
 	REG_TX_ENABLE_READ,
+	REG_TX_MANUAL_MODE,
+	REG_TX_MANUAL_EN,
 	REG_LO_CONF_DELAY,
 	REG_GAIN_TX1,
 	REG_GAIN_TX2,
@@ -393,6 +395,24 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		temp32 += (u32)val<<14;
 		vbi_x235_dsp_write(st, ADDR_SETTINGS, temp32);
 		break;
+	case REG_TX_MANUAL_MODE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_x235_dsp_read(st, ADDR_SETTINGS) & ~(1<<15);
+		temp32 += (u32)val<<15;
+		vbi_x235_dsp_write(st, ADDR_SETTINGS, temp32);
+		break;
+	case REG_TX_MANUAL_EN:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_x235_dsp_read(st, ADDR_SETTINGS) & ~(1<<16);
+		temp32 += (u32)val<<16;
+		vbi_x235_dsp_write(st, ADDR_SETTINGS, temp32);
+		break;
 	case REG_RX_BYP_DIS:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -560,6 +580,12 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 	case REG_PREFILSEL:
 		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>14) & 1;
 		break;
+	case REG_TX_MANUAL_MODE:
+		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>15) & 1;
+		break;
+	case REG_TX_MANUAL_EN:
+		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>16) & 1;
+		break;
 	case REG_RX_BYP_DIS:
 		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>9) & 1;
 		break;
@@ -671,6 +697,16 @@ static IIO_DEVICE_ATTR(rx_prefilter_select, S_IRUGO | S_IWUSR,
 			vbi_x235_dsp_store,
 			REG_PREFILSEL);
 
+static IIO_DEVICE_ATTR(tx_manual_mode, S_IRUGO | S_IWUSR,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_TX_MANUAL_MODE);
+
+static IIO_DEVICE_ATTR(tx_manual_enable, S_IRUGO | S_IWUSR,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_TX_MANUAL_EN);
+
 static IIO_DEVICE_ATTR(rx_bypass_disable, S_IRUGO | S_IWUSR,
 			vbi_x235_dsp_show,
 			vbi_x235_dsp_store,
@@ -737,6 +773,8 @@ static struct attribute *vbi_x235_dsp_attributes[] = {
 	&iio_dev_attr_rx1_lna_enable.dev_attr.attr,
 	&iio_dev_attr_rx2_lna_enable.dev_attr.attr,
 	&iio_dev_attr_rx_prefilter_select.dev_attr.attr,
+	&iio_dev_attr_tx_manual_mode.dev_attr.attr,
+	&iio_dev_attr_tx_manual_enable.dev_attr.attr,
 	&iio_dev_attr_rx_bypass_disable.dev_attr.attr,
 	&iio_dev_attr_tx_bypass_disable.dev_attr.attr,
 	&iio_dev_attr_rx_adc_selection.dev_attr.attr,
