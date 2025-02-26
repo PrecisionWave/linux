@@ -555,6 +555,7 @@ static int ltc2158_probe(struct spi_device *spi)
 {
 	struct device_node *np = spi->dev.of_node;
 	struct axiadc_converter *conv;
+	struct gpio_desc *clk_ce_gpio;
 	int ret, clk_enabled = 0;
 	struct clk *clk;
 	unsigned char buf[2];
@@ -644,6 +645,13 @@ static int ltc2158_probe(struct spi_device *spi)
 	conv->read_raw = ltc2158_read_raw;
 	conv->post_setup = ltc2158_post_setup;
 	conv->set_pnsel = ltc2158_set_pnsel;
+
+	/* get and initialize clock enable GPIO
+	   GPIOD_OUT_HIGH: configure as output and output high
+	 */
+	clk_ce_gpio = devm_gpiod_get_optional(&spi->dev, "clk-ce", GPIOD_OUT_HIGH);
+	if (IS_ERR(clk_ce_gpio))
+		return PTR_ERR(clk_ce_gpio);
 
 	return 0;
 out:
