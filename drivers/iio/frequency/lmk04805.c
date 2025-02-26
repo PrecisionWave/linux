@@ -410,6 +410,7 @@ struct lmk04805_state {
 	struct iio_chan_spec		lmk04805_channels[LMK04805_NUM_CHAN];
 	struct clk_onecell_data		clk_data;
 	struct clk*			clks[LMK04805_NUM_CHAN];
+	struct clk*			clkin;
 
 	uint8_t		clk_output_format[LMK04805_NUM_CHAN];
 	unsigned long	oscin_freq;
@@ -1746,6 +1747,7 @@ static int lmk04805_probe(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev;
 	struct lmk04805_state *st;
+	struct clk *clkin;
 	int ret;
 	//printk("lmk04805: calling probe()\n");
 
@@ -1755,6 +1757,17 @@ static int lmk04805_probe(struct spi_device *spi)
 		return -ENODEV;
 	}
 
+	clkin = devm_clk_get_optional(&spi->dev, "clkin");
+	if (IS_ERR(clkin))
+		return PTR_ERR(clkin);
+	
+	if (clkin) {
+		ret = clk_prepare_enable(clkin);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
 	/* state: alloc mem then initialize */
 	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));
 	if(!indio_dev)
@@ -1762,6 +1775,7 @@ static int lmk04805_probe(struct spi_device *spi)
 	st = iio_priv(indio_dev);
 	spi_set_drvdata(spi, indio_dev);
 	st->spi = spi;
+	st->clkin = clkin;
 
 	// ret = rename_iio_attribute(ATTR_REF(pll1_locked), "pll1_locked1");
 	// if(ret){
@@ -1824,6 +1838,9 @@ static int lmk04805_probe(struct spi_device *spi)
 error_disable_reg:
 	if (!IS_ERR(st->reg))
 		regulator_disable(st->reg);
+
+	if (st->clkin)
+		clk_disable_unprepare(st->clkin);
 
 	return ret;
 }
