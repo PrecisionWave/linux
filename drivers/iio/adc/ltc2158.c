@@ -570,14 +570,6 @@ static int ltc2158_probe(struct spi_device *spi)
 	unsigned char buf[2];
 	uint32_t phase;
 
-	/* get and initialize clock enable GPIO
-	   GPIOD_OUT_HIGH: configure as output and output high
-	 */
-	clk_ce_gpio = devm_gpiod_get_optional(&spi->dev, "clk-ce", 
-		GPIOD_OUT_HIGH | GPIOD_FLAGS_BIT_NONEXCLUSIVE);
-	if (IS_ERR(clk_ce_gpio))
-		return PTR_ERR(clk_ce_gpio);
-
 	clk = devm_clk_get(&spi->dev, NULL);
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
@@ -674,6 +666,14 @@ static int ltc2158_probe(struct spi_device *spi)
 
 		devm_add_action_or_reset(&spi->dev, ltc2158_clk_del_provider, conv);
 	}
+
+	/* get and initialize clock enable GPIO
+	   GPIOD_OUT_HIGH: configure as output and output high
+	 */
+	clk_ce_gpio = devm_gpiod_get_optional(&spi->dev, "clk-ce", 
+		GPIOD_OUT_HIGH | GPIOD_FLAGS_BIT_NONEXCLUSIVE);
+	if (IS_ERR(clk_ce_gpio))
+		return PTR_ERR(clk_ce_gpio);
 
 	return 0;
 
