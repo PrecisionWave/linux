@@ -40,7 +40,7 @@
 #define LMK04805_CLK_FORMAT_LVDS			0x1
 #define LMK04805_CLK_FORMAT_LVPECL_1600		0x4
 
-const uint32_t lmk04805_reg_default[] = {
+static const uint32_t lmk04805_reg_default[] = {
 		0x00140600,
 		0x00140041,
 		0x00140142,
@@ -361,7 +361,7 @@ enum attributes{
 	ATTR_CLKIN0_LOS
 };
 
-int rename_iio_attribute(struct attribute *attr, char *name){
+static int rename_iio_attribute(struct attribute *attr, char *name){
 	// indio_dev->channel_attr_list
 	if(!attr)
 		return -1;
@@ -373,7 +373,7 @@ int rename_iio_attribute(struct attribute *attr, char *name){
 	return 0;
 }
 
-void lmk04805_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
+static void lmk04805_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
 	int mask = (((1 << nbits) - 1) << offset);
 	/* mask register bits */
 	*reg &= ~mask;
@@ -381,16 +381,16 @@ void lmk04805_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
 	*reg |= (value << offset) & mask;
 }
 
-void lmk04805_extract_register_value(u32 reg, u32 offset, u32 nbits, u32 *value){
+static void lmk04805_extract_register_value(u32 reg, u32 offset, u32 nbits, u32 *value){
 	int mask = ((1 << nbits) - 1);
 	*value = (reg >> offset) & mask;
 }
 
-uint32_t lmk04805_get_clk_format(uint32_t reg, int ch){
+static uint32_t lmk04805_get_clk_format(uint32_t reg, int ch){
 	return (reg >> (16+4*(ch%4))) & 0x0000000F;
 }
 
-void lmk04805_set_clk_format(int ch, uint8_t format, uint32_t* reg){
+static void lmk04805_set_clk_format(int ch, uint8_t format, uint32_t* reg){
 	*reg = (*reg & ~(0x0000000F << (16+4*(ch%4)))) | ((format&0x0000000F) << (16+4*(ch%4)));
 }
 
@@ -433,7 +433,7 @@ struct lmk04805_state {
 
 };
 
-int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
+static int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
@@ -483,7 +483,7 @@ int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 	return 0;
 }
 
-int lmk04805_spi_write(struct iio_dev *indio_dev, u32 val)
+static int lmk04805_spi_write(struct iio_dev *indio_dev, u32 val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
@@ -511,7 +511,7 @@ int lmk04805_spi_write(struct iio_dev *indio_dev, u32 val)
 	return 0;
 }
 
-int lmk04805_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
+static int lmk04805_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 
@@ -525,7 +525,7 @@ int lmk04805_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 	return 0;
 };
 
-int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
+static int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
@@ -562,7 +562,7 @@ int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 	return 0;
 }
 
-int lmk04805_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
+static int lmk04805_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret = 0;
@@ -599,7 +599,7 @@ int lmk04805_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
 	return 0;
 }
 
-int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
+static int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret = 0;
 	int i;
@@ -1858,6 +1858,12 @@ static int lmk04805_remove(struct spi_device *spi)
 	return 0;
 }
 
+static void lmk04805_shutdown(struct spi_device *spi)
+{
+	struct iio_dev *indio_dev = spi_get_drvdata(spi);
+	lmk04805_spi_write(indio_dev, 0x80160140); // perform RESET
+}
+
 static const struct spi_device_id lmk04805_id[] = {	//TODO
 	{"lmk04805-1", 0},
 	{}
@@ -1871,6 +1877,7 @@ static struct spi_driver lmk04805_driver = {
 	},
 	.probe		= lmk04805_probe,
 	.remove		= lmk04805_remove,
+	.shutdown	= lmk04805_shutdown,
 	.id_table	= lmk04805_id,
 };
 module_spi_driver(lmk04805_driver);
