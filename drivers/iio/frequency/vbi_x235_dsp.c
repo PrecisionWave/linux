@@ -39,6 +39,7 @@
 #define ADDR_LO_CONFIG_DELAY	(5*4)
 #define ADDR_SETTINGS		(6*4)
 #define ADDR_VERSION		(7*4)
+#define ADDR_OVER_UNDERFLOWS	(8*4)
 
 
 // expands to:
@@ -196,6 +197,9 @@ enum chan_num{
 	REG_LO_MAN_FREQ,
 	REG_LO_EN_MAN_TUNING,
 	REG_LO_FREQ_READ,
+	REG_FSKMOD_UNDERFLOWS,
+	REG_RX_IQ_OVERFLOWS,
+	REG_FSKMOD_RATE,
 	REG_TX_ENABLE_READ,
 	REG_TX_MANUAL_MODE,
 	REG_TX_MANUAL_EN,
@@ -367,6 +371,15 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		temp32 = vbi_x235_dsp_read(st, ADDR_GAIN) & 0xFFFF;
 		temp32 += ((uint32_t)val) <<16;
 		vbi_x235_dsp_write(st, ADDR_GAIN, temp32);
+		break;
+	case REG_FSKMOD_RATE:
+		if(val<0 || val>0x3FFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = vbi_x235_dsp_read(st, ADDR_SETTINGS) & ~(0x3FFF<<17);
+		temp32 += (u32)val<<17;
+		vbi_x235_dsp_write(st, ADDR_SETTINGS, temp32);
 		break;
 	case REG_LNA_RX1_EN:
 		if(val<0 || val>1){
@@ -559,6 +572,15 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 		val += ((temp32>>6) & 0xF)*1000000;
 		val += ((temp32>>10) & 0xF)*10000000;
 		break;
+	case REG_FSKMOD_UNDERFLOWS:
+		val = (vbi_x235_dsp_read(st, ADDR_OVER_UNDERFLOWS) & 0xFFFF);
+		break;
+	case REG_FSKMOD_RATE:
+		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS) >>17) & 0x3FFF;
+		break;
+	case REG_RX_IQ_OVERFLOWS:
+		val = vbi_x235_dsp_read(st, ADDR_OVER_UNDERFLOWS) >>16;
+		break;
 	case REG_LO_EN_MAN_TUNING:
 		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>10) & 1;
 		break;
@@ -646,6 +668,21 @@ static IIO_DEVICE_ATTR(lo_frequency_read, S_IRUGO,
 			vbi_x235_dsp_show,
 			vbi_x235_dsp_store,
 			REG_LO_FREQ_READ);
+
+static IIO_DEVICE_ATTR(fskmod_unerflows, S_IRUGO,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_FSKMOD_UNDERFLOWS);
+
+static IIO_DEVICE_ATTR(fskmod_dma_rate, S_IRUGO | S_IWUSR,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_FSKMOD_RATE);
+
+static IIO_DEVICE_ATTR(rx_iq_overflows, S_IRUGO,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_RX_IQ_OVERFLOWS);
 
 static IIO_DEVICE_ATTR(lo_tx_enable_read, S_IRUGO,
 			vbi_x235_dsp_show,
@@ -762,7 +799,10 @@ static struct attribute *vbi_x235_dsp_attributes[] = {
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_adc1_peak_hold_value.dev_attr.attr,
 	&iio_dev_attr_adc2_peak_hold_value.dev_attr.attr,
-	&iio_dev_attr_lo_frequency_read.dev_attr.attr,
+	&iio_dev_attr_lo_frequency_read.dev_attr.attr, 
+	&iio_dev_attr_fskmod_unerflows.dev_attr.attr,
+	&iio_dev_attr_rx_iq_overflows.dev_attr.attr,
+	&iio_dev_attr_fskmod_dma_rate.dev_attr.attr,
 	&iio_dev_attr_lo_tx_enable_read.dev_attr.attr,
 	&iio_dev_attr_rx_zf1_frequency.dev_attr.attr,
 	&iio_dev_attr_lo_manual_frequency.dev_attr.attr,
