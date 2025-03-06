@@ -451,6 +451,14 @@ config ADF5355
 	  To compile this driver as a module, choose M here: the
 	  module will be called adf5355.
 
+config LMX2582
+	tristate "Texas Instruments LMX2582 driver"
+	help
+	  Say yes here to build support for LMX2582 driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lmx2582.
+
 config LMX2594
 	tristate "Texas Instruments LMX2594 driver"
 	help
