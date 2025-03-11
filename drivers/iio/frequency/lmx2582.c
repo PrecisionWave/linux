@@ -170,26 +170,47 @@
 #define LMX2582_R70_rb_VCO_DACISET(x)		(((x) >> 0) & 0x1ff)
 
 /* Specifications */
-#define LMX2582_MIN_VCO_FREQ		3550000000ULL /* 3550 MHz */
-#define LMX2582_MAX_VCO_FREQ		7100000000ULL /* 7100 MHz */
-#define LMX2582_MIN_OUT_FREQ		  20000000ULL /*   20 MHz */
-#define LMX2582_MAX_OUT_FREQ		5500000000ULL /* 5500 MHz */
+#define LMX2582_MIN_FREQ_VCO		3550000000ULL /* 3550 MHz */
+#define LMX2582_MAX_FREQ_VCO		7100000000ULL /* 7100 MHz */
+#define LMX2582_MIN_FREQ_OUT		  20000000ULL /*   20 MHz */
+#define LMX2582_MAX_FREQ_OUT		5500000000ULL /* 5500 MHz */
 #define LMX2582_MIN_FREQ_REFIN		   5000000ULL /*    5 MHz */
 #define LMX2582_MAX_FREQ_REFIN		1400000000ULL /* 1400 MHz */
 #define LMX2582_MIN_FREQ_PFD		   5000000ULL /*    5 MHz */
 #define LMX2582_MAX_FREQ_PFD		 200000000ULL /*  200 MHz */
-#define LMX2582_MAX_CAL_CLK_FREQ	 200000000ULL /*  200 MHz */
+#define LMX2582_MAX_FREQ_CAL_CLK	 200000000ULL /*  200 MHz */
 #define LMX2582_FVCO_HIGH		6500000000ULL /* 6500 MHz */
 
 #define LMX2582_CHECK_RANGE(freq, range) \
-	((freq > LMX2582_MAX_ ## range) || (freq < LMX2582_MIN_ ## range))
+	(((freq) > LMX2582_MAX_ ## range) || ((freq) < LMX2582_MIN_ ## range))
 
 #define LMX2582_CLK_COUNT			2
 
 enum {
-	LMX2582_FREQ,
-	LMX2582_PWRDOWN,
-	LMX2582_CHANNEL_NAME,
+	LMX2582_CH_ATTR_FREQ,
+	LMX2582_CH_ATTR_PWRDOWN,
+	LMX2582_CH_ATTR_CHANNEL_NAME,
+	LMX2582_ATTR_FVCO,
+	LMX2582_ATTR_FPFD,
+	LMX2582_ATTR_FOSC,
+	LMX2582_ATTR_CHDIV_TOTAL,
+	LMX2582_ATTR_FCHDIV,
+	LMX2582_ATTR_PLL_R,
+	LMX2582_ATTR_PLL_R_PRE,
+	LMX2582_ATTR_PLL_OSC_2X,
+	LMX2582_ATTR_MULT,
+	LMX2582_ATTR_PLL_N_PRE,
+	LMX2582_ATTR_PLL_N,
+	LMX2582_ATTR_PLL_NUM,
+	LMX2582_ATTR_PLL_DEN,
+	LMX2582_ATTR_CHDIV_SEG1,
+	LMX2582_ATTR_CHDIV_SEG2,
+	LMX2582_ATTR_CHDIV_SEG3,
+	LMX2582_ATTR_CHDIV_SEG_SEL,
+	LMX2582_ATTR_CP_IUP,
+	LMX2582_ATTR_CP_IDN,
+	LMX2582_ATTR_CP_ICOARSE,
+	LMX2582_ATTR_CP_EN,
 };
 
 static const char * const lmx2582_ch_names[] = {
@@ -534,31 +555,32 @@ struct lmx2582_output {
 	bool			enabled;
 	struct clock_scale	scale;
 	unsigned int		power;
-	unsigned int		muxsel;
+	unsigned int		out_mux;
 	unsigned long long	frequency;
 };
 
 struct lmx2582_state {
-	struct spi_device		*spi;
-	struct lmx2582_config		*conf;
-	struct dentry			*dent;
-	struct clk			*clkin;
-	struct clk			*clks[LMX2582_CLK_COUNT];
-	struct clk_onecell_data		clk_data;
+	struct spi_device	*spi;
+	struct lmx2582_config	*conf;
+	struct dentry		*dent;
+	struct clk		*clkin;
+	struct clk		*clks[LMX2582_CLK_COUNT];
+	struct clk_onecell_data	clk_data;
 
-	struct lmx2582_output		outputs[LMX2582_CLK_COUNT];
+	struct lmx2582_output	outputs[LMX2582_CLK_COUNT];
 
-	bool				has_clk_out_names;
-	const char			*lmx2582_clk_names[LMX2582_CLK_COUNT];
+	bool			has_clk_out_names;
+	const char		*lmx2582_clk_names[LMX2582_CLK_COUNT];
 
 	/* Protect against concurrent accesses to the device */
 	struct mutex		lock;
-	unsigned long		fosc;
-	unsigned long long	fvco; /* Phase Frequency Detector */
-	unsigned long long	fpd; /* Phase Frequency Detector */
+	unsigned long long	fosc;
+	unsigned long long	fvco;
+	unsigned long long	fpd;
+	unsigned long long	fcal_clk;
+	unsigned long long	fchdiv;
+	u32			chdiv_total;
 
-	u32			integer;
-	u32			fract;
 	u16			regs[LMX2582_R_NUM];
 
 	/*
@@ -838,14 +860,17 @@ static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 {
 	struct lmx2582_config *conf = st->conf;
 	int i;
-	unsigned long long cal_clk;
-	unsigned long long chdiv_freq;
-	u32 chdiv_total;
 
 	if (parent_rate)
 		st->fosc = parent_rate;
 	else
 		st->fosc = clk_get_rate(st->clkin);
+
+	/* verify clkin clock range */
+	if (LMX2582_CHECK_RANGE(st->fosc, FREQ_REFIN))
+		dev_err(&st->spi->dev,
+			"OSC frequency (%llu Hz) out of range!",
+			st->fosc);
 
 	/* Input path to phase comparator */
 	st->fpd = st->fosc;
@@ -854,36 +879,77 @@ static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 	st->fpd *= conf->MULT;
 	st->fpd = div_u64(st->fpd, conf->PLL_R == 0 ? 1 : conf->PLL_R);
 
+	if (LMX2582_CHECK_RANGE(st->fpd, FREQ_PFD))
+		dev_err(&st->spi->dev,
+			"PFD frequency (%llu Hz) out of range!",
+			st->fpd);
+
 	/* VCO feedback path */
 	st->fvco = st->fpd * (conf->PLL_N * conf->PLL_DEN + conf->PLL_NUM);
 	st->fvco = div_u64(st->fvco, conf->PLL_DEN == 0 ? 1 : conf->PLL_DEN);
 	st->fvco *= conf->PLL_N_PRE ? 4 : 2;
 
+	if (LMX2582_CHECK_RANGE(st->fvco, FREQ_VCO))
+		dev_err(&st->spi->dev,
+			"VCO frequency (%llu Hz) out of range!",
+			st->fvco);
+
 	/* state machine clock */
 	for (i = 0; i < 8; i++) {
 		conf->CAL_CLK_DIV = i;
-		if ((st->fosc >> i) < LMX2582_MAX_CAL_CLK_FREQ)
+		if ((st->fosc >> i) < LMX2582_MAX_FREQ_CAL_CLK)
 			break;
 	}
-	cal_clk = st->fosc >> conf->CAL_CLK_DIV;
+	st->fcal_clk = st->fosc >> conf->CAL_CLK_DIV;
 
-	/* output clocks */
-	chdiv_total = lmx2582_get_chdiv_total(conf);
-	if (chdiv_total == 0) 
-		chdiv_freq = 0;
-	else
-		chdiv_freq = div_u64(st->fvco, chdiv_total);
+	/* output parameters */
+	conf->OUTA_MUX = st->outputs[0].out_mux;
+	conf->OUTA_POW = st->outputs[0].power;
+	conf->OUTB_MUX = st->outputs[1].out_mux;
+	conf->OUTB_POW = st->outputs[1].power;
 
-	if (st->outputs[0].muxsel == LMX2582_OUTx_MUX_CHDIV)
-		st->outputs[0].frequency =  chdiv_freq;
+	/* calculate output clocks */
+	st->chdiv_total = lmx2582_get_chdiv_total(conf);
+	if (st->chdiv_total == 0) 
+		st->fchdiv = 0;
 	else
+		st->fchdiv = div_u64(st->fvco, st->chdiv_total);
+
+	switch(conf->OUTA_MUX & 3) {
+	case LMX2582_OUTx_MUX_CHDIV:
+		st->outputs[0].frequency =  st->fchdiv;
+		break;
+
+	case LMX2582_OUTx_MUX_VCO:
 		st->outputs[0].frequency = st->fvco;
-	
-	if (st->outputs[1].muxsel == LMX2582_OUTx_MUX_CHDIV)
-		st->outputs[1].frequency = chdiv_freq;
-	else
+		break;
+	default: 
+		st->outputs[0].frequency = 0;
+		break;
+	}
+
+	if (st->outputs[0].frequency &&
+	    LMX2582_CHECK_RANGE(st->outputs[0].frequency, FREQ_OUT))
+		dev_err(&st->spi->dev,
+			"OUTA frequency (%llu Hz) out of range!",
+			st->outputs[0].frequency);
+
+	switch(conf->OUTB_MUX & 3) {
+	case LMX2582_OUTx_MUX_CHDIV:
+		st->outputs[1].frequency = st->fchdiv;
+		break;
+	case LMX2582_OUTx_MUX_VCO:
 		st->outputs[1].frequency = st->fvco;
-	
+		break;
+	default: 
+		st->outputs[1].frequency = 0;
+		break;
+	}
+	if (st->outputs[1].frequency &&
+	    LMX2582_CHECK_RANGE(st->outputs[1].frequency, FREQ_OUT))
+		dev_err(&st->spi->dev,
+			"OUTB frequency (%llu Hz) out of range!",
+			st->outputs[1].frequency);
 
 	/* VCO Band selection */
 	if (st->fvco >= LMX2582_FVCO_HIGH)
@@ -1096,16 +1162,15 @@ static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 
 	dev_info(&st->spi->dev,
 		 "VCO: %llu Hz, FPD %llu Hz, CAL %llu Hz, "
-		 "chdiv total: %u, chdiv freq %lld Hz\n",
-		 st->fvco, st->fpd, cal_clk, chdiv_total, chdiv_freq);
+		 "chdiv: %u, chdiv freq %lld Hz\n",
+		 st->fvco, st->fpd, st->fcal_clk, st->chdiv_total, st->fchdiv);
 
 	return lmx2582_sync_config(st);
 }
 
-static ssize_t lmx2582_write(struct iio_dev *indio_dev,
-				    uintptr_t private,
-				    const struct iio_chan_spec *chan,
-				    const char *buf, size_t len)
+static ssize_t lmx2582_write(struct iio_dev *indio_dev, uintptr_t private,
+			     const struct iio_chan_spec *chan, const char *buf,
+			     size_t len)
 {
 	struct lmx2582_state *st = iio_priv(indio_dev);
 	//struct lmx2582_config *conf = st->conf;
@@ -1116,29 +1181,28 @@ static ssize_t lmx2582_write(struct iio_dev *indio_dev,
 	if (ret)
 		return ret;
 
-	mutex_lock(&st->lock);
 	switch ((u32)private) {
-	case LMX2582_FREQ:
+	case LMX2582_CH_ATTR_FREQ:
 		st->outputs[chan->channel].frequency = readin;
 		break;
-	case LMX2582_PWRDOWN:
+	case LMX2582_CH_ATTR_PWRDOWN:
 		st->outputs[chan->channel].enabled = readin == 0;
 		break;
 	default:
 		ret = -EINVAL;
 	}
 
-	ret = lmx2582_setup(st, 0);
-
-	mutex_unlock(&st->lock);
+	if (ret == 0) {
+		mutex_lock(&st->lock);
+		ret = lmx2582_setup(st, 0);
+		mutex_unlock(&st->lock);
+	}
 
 	return ret ? ret : len;
 }
 
-static ssize_t lmx2582_read(struct iio_dev *indio_dev,
-				   uintptr_t private,
-				   const struct iio_chan_spec *chan,
-				   char *buf)
+static ssize_t lmx2582_read(struct iio_dev *indio_dev, uintptr_t private,
+			    const struct iio_chan_spec *chan, char *buf)
 {
 	struct lmx2582_state *st = iio_priv(indio_dev);
 	//struct lmx2582_config *conf = st->conf;
@@ -1147,14 +1211,14 @@ static ssize_t lmx2582_read(struct iio_dev *indio_dev,
 	int ret = 0;
 
 	switch ((u32)private) {
-	case LMX2582_FREQ:
+	case LMX2582_CH_ATTR_FREQ:
 		val = st->outputs[chan->channel].frequency;
 		//lmx2582_pll_fract_n_get_rate(st);
 		break;
-	case LMX2582_PWRDOWN:
+	case LMX2582_CH_ATTR_PWRDOWN:
 		val = st->outputs[chan->channel].enabled ? 0 : 1;
 		break;
-	case LMX2582_CHANNEL_NAME:
+	case LMX2582_CH_ATTR_CHANNEL_NAME:
 		return sprintf(buf, "%s\n", lmx2582_ch_names[chan->channel]);
 	default:
 		ret = -EINVAL;
@@ -1171,16 +1235,7 @@ static int lmx2582_get_outmux(struct iio_dev *indio_dev,
 {
 	struct lmx2582_state *st = iio_priv(indio_dev);
 
-	switch(chan->channel) {
-	case LMX2582_CH_RFOUTA:
-		return st->conf->OUTA_MUX & 0x3;
-	case LMX2582_CH_RFOUTB:
-		return st->conf->OUTB_MUX & 0x3;
-	default:
-		break;
-	}
-
-	return -EINVAL;
+	return st->outputs[chan->channel].out_mux;
 }
 
 static int lmx2582_set_outmux(struct iio_dev *indio_dev,
@@ -1189,27 +1244,8 @@ static int lmx2582_set_outmux(struct iio_dev *indio_dev,
 {
 	struct lmx2582_state *st = iio_priv(indio_dev);
 
-	/* check mode */
-	switch (mode) {
-	case LMX2582_OUTx_MUX_VCO:
-	case LMX2582_OUTx_MUX_CHDIV:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	switch(chan->channel) {
-	case LMX2582_CH_RFOUTA:
-		st->conf->OUTA_MUX = mode & 0x3;
-		return lmx2582_setup(st, 0);
-	case LMX2582_CH_RFOUTB:
-		st->conf->OUTB_MUX = mode & 0x3;
-		return lmx2582_setup(st, 0);
-	default:
-		break;
-	}
-
-	return -EINVAL;
+	st->outputs[chan->channel].out_mux = mode & 0x3;
+	return lmx2582_setup(st, 0);
 }
 
 static const char * const lmx2582_out_mux_names[] = {
@@ -1237,9 +1273,9 @@ static const struct iio_chan_spec_ext_info lmx2582_ext_info[] = {
 	 * values > 2^32 in order to support the entire frequency range
 	 * in Hz. Using scale is a bit ugly.
 	 */
-	_LMX2582_EXT_INFO("frequency", LMX2582_FREQ, IIO_SEPARATE),
-	_LMX2582_EXT_INFO("powerdown", LMX2582_PWRDOWN, IIO_SEPARATE),
-	_LMX2582_EXT_INFO("name", LMX2582_CHANNEL_NAME, IIO_SEPARATE),
+	_LMX2582_EXT_INFO("frequency", LMX2582_CH_ATTR_FREQ, IIO_SEPARATE),
+	_LMX2582_EXT_INFO("powerdown", LMX2582_CH_ATTR_PWRDOWN, IIO_SEPARATE),
+	_LMX2582_EXT_INFO("name", LMX2582_CH_ATTR_CHANNEL_NAME, IIO_SEPARATE),
 	IIO_ENUM("out_mux", IIO_SEPARATE, &lmx2582_out_mux_available),
 	IIO_ENUM_AVAILABLE("out_mux", &lmx2582_out_mux_available),
 	{ },
@@ -1292,10 +1328,288 @@ static int lmx2582_write_raw(struct iio_dev *indio_dev,
 	return 0;
 }
 
+static ssize_t lmx2582_show(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct lmx2582_state *st = iio_priv(indio_dev);
+	int ret = 0;
+	u64 val = 0;
+
+	/* unique registers */
+	switch ((u32)this_attr->address) {
+	case LMX2582_ATTR_FPFD:
+		val = st->fpd;
+		break;
+	case LMX2582_ATTR_FVCO:
+		val = st->fvco;
+		break;
+	case LMX2582_ATTR_FOSC:
+		val = st->fosc;
+		break;
+	case LMX2582_ATTR_CHDIV_TOTAL:
+		val = st->chdiv_total;
+		break;
+	case LMX2582_ATTR_FCHDIV:
+		val = st->fchdiv;
+		break;
+	case LMX2582_ATTR_MULT:
+		val = st->conf->MULT;
+		break;
+	case LMX2582_ATTR_PLL_OSC_2X:
+		val = st->conf->OSC_2X;
+		break;
+	case LMX2582_ATTR_PLL_R_PRE:
+		val = st->conf->PLL_R_PRE;
+		break;
+	case LMX2582_ATTR_PLL_R:
+		val = st->conf->PLL_R;
+		break;
+	case LMX2582_ATTR_PLL_N_PRE:
+		val = st->conf->PLL_N_PRE;
+		break;
+	case LMX2582_ATTR_PLL_N:
+		val = st->conf->PLL_N;
+		break;
+	case LMX2582_ATTR_PLL_NUM:
+		val = st->conf->PLL_NUM;
+		break;
+	case LMX2582_ATTR_PLL_DEN:
+		val = st->conf->PLL_DEN;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG1:
+		val = st->conf->CHDIV_SEG1;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG2:
+		val = st->conf->CHDIV_SEG2;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG3:
+		val = st->conf->CHDIV_SEG3;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG_SEL:
+		val = st->conf->CHDIV_SEG_SEL;
+		break;
+	case LMX2582_ATTR_CP_IUP:
+		val = st->conf->CP_IUP;
+		break;
+	case LMX2582_ATTR_CP_IDN:
+		val = st->conf->CP_IDN;
+		break;
+	case LMX2582_ATTR_CP_ICOARSE:
+		val = st->conf->CP_ICOARSE;
+		break;
+	case LMX2582_ATTR_CP_EN:
+		val = st->conf->CP_EN;
+		break;
+	default:
+		ret = -ENODEV;
+		break;
+	}
+
+	if (ret == 0)
+		ret = sprintf(buf, "%lld\n", val);
+
+	return ret;
+}
+
+static void lmx2582_force_recalc_rate(struct lmx2582_state *st)
+{
+	int i;
+
+	for (i = 0; i < LMX2582_CLK_COUNT; i++) {
+		/* HACK: Use reparent to trigger notify */
+		clk_hw_reparent(&st->outputs[i].hw, NULL);
+		dev_dbg(&st->spi->dev, "recalc rate %d: %lu", i,
+			clk_get_rate(st->clks[i]));
+	}
+}
+
+static ssize_t lmx2582_store(struct device *dev,
+			     struct device_attribute *attr,
+			     const char *buf, size_t len)
+{
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct lmx2582_state *st = iio_priv(indio_dev);
+	int ret = 0;
+	u64 val;
+
+	ret = kstrtoull(buf, 0, &val);
+	if(ret)
+		return ret;
+
+	/* unique registers */
+	switch ((u32)this_attr->address) {
+	case LMX2582_ATTR_FPFD:
+	case LMX2582_ATTR_FVCO:
+	case LMX2582_ATTR_FOSC:
+	case LMX2582_ATTR_CHDIV_TOTAL:
+	case LMX2582_ATTR_FCHDIV:
+		ret = -EINVAL;
+		break;
+	case LMX2582_ATTR_MULT:
+		st->conf->MULT = val;
+		break;
+	case LMX2582_ATTR_PLL_OSC_2X:
+		st->conf->OSC_2X = val;
+		break;
+	case LMX2582_ATTR_PLL_R_PRE:
+		st->conf->PLL_R_PRE = val;
+		break;
+	case LMX2582_ATTR_PLL_R:
+		st->conf->PLL_R = val;
+		break;
+	case LMX2582_ATTR_PLL_N_PRE:
+		st->conf->PLL_N_PRE = val;
+		break;
+	case LMX2582_ATTR_PLL_N:
+		st->conf->PLL_N = val;
+		break;
+	case LMX2582_ATTR_PLL_NUM:
+		st->conf->PLL_NUM = val;
+		break;
+	case LMX2582_ATTR_PLL_DEN:
+		st->conf->PLL_DEN = val;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG1:
+		st->conf->CHDIV_SEG1 = val;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG2:
+		st->conf->CHDIV_SEG2 = val;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG3:
+		st->conf->CHDIV_SEG3 = val;
+		break;
+	case LMX2582_ATTR_CHDIV_SEG_SEL:
+		st->conf->CHDIV_SEG_SEL = val;
+		break;
+	case LMX2582_ATTR_CP_IUP:
+		st->conf->CP_IUP = val;
+		break;
+	case LMX2582_ATTR_CP_IDN:
+		st->conf->CP_IDN = val;
+		break;
+	case LMX2582_ATTR_CP_ICOARSE:
+		st->conf->CP_ICOARSE = val;
+		break;
+	case LMX2582_ATTR_CP_EN:
+		st->conf->CP_EN = val;
+		break;
+	default:
+		ret = -ENODEV;
+		break;
+	}
+
+	if (ret == 0) {
+		mutex_lock(&indio_dev->mlock);
+		ret = lmx2582_setup(st, 0);
+		mutex_unlock(&indio_dev->mlock);
+		lmx2582_force_recalc_rate(st);
+	}
+
+	return ret ? ret : len;
+}
+
+static IIO_DEVICE_ATTR(fvco, S_IRUGO,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_FVCO);
+
+static IIO_DEVICE_ATTR(fpfd, S_IRUGO,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_FPFD);
+
+static IIO_DEVICE_ATTR(fosc, S_IRUGO,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_FOSC);
+
+static IIO_DEVICE_ATTR(chdiv_total, S_IRUGO,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CHDIV_TOTAL);
+
+static IIO_DEVICE_ATTR(fchdiv, S_IRUGO,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_FCHDIV);
+
+static IIO_DEVICE_ATTR(pll_r, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_R);
+
+static IIO_DEVICE_ATTR(pll_r_pre, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_R_PRE);
+
+static IIO_DEVICE_ATTR(osc_2x, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_OSC_2X);
+
+static IIO_DEVICE_ATTR(multiplier, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_MULT);
+
+static IIO_DEVICE_ATTR(pll_n_pre, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_N_PRE);
+
+static IIO_DEVICE_ATTR(pll_n, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_N);
+
+static IIO_DEVICE_ATTR(pll_num, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_NUM);
+
+static IIO_DEVICE_ATTR(pll_den, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_PLL_DEN);
+
+static IIO_DEVICE_ATTR(chdiv_seg1, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CHDIV_SEG1);
+
+static IIO_DEVICE_ATTR(chdiv_seg2, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CHDIV_SEG2);
+
+static IIO_DEVICE_ATTR(chdiv_seg3, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CHDIV_SEG3);
+
+static IIO_DEVICE_ATTR(chdiv_seg_sel, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CHDIV_SEG_SEL);
+
+static IIO_DEVICE_ATTR(cp_iup, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CP_IUP);
+
+static IIO_DEVICE_ATTR(cp_idn, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CP_IDN);
+
+static IIO_DEVICE_ATTR(cp_icoarse, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CP_ICOARSE);
+
+static IIO_DEVICE_ATTR(cp_en, S_IRUGO | S_IWUSR,
+	lmx2582_show, lmx2582_store, LMX2582_ATTR_CP_EN);
+
+
+#define ATTR(_x_) &iio_dev_attr_##_x_.dev_attr.attr
+static struct attribute *lmx2582_attributes[] = {
+	ATTR(fvco),
+	ATTR(fpfd),
+	ATTR(fosc),
+	ATTR(chdiv_total),
+	ATTR(fchdiv),
+	ATTR(osc_2x),
+	ATTR(pll_r_pre),
+	ATTR(multiplier),
+	ATTR(pll_r),
+	ATTR(pll_n_pre),
+	ATTR(pll_n),
+	ATTR(pll_num),
+	ATTR(pll_den),
+	ATTR(chdiv_seg1),
+	ATTR(chdiv_seg2),
+	ATTR(chdiv_seg3),
+	ATTR(chdiv_seg_sel),
+	ATTR(cp_iup),
+	ATTR(cp_idn),
+	ATTR(cp_icoarse),
+	ATTR(cp_en),
+	NULL,
+};
+
+static const struct attribute_group lmx2582_attribute_group = {
+	.attrs = lmx2582_attributes,
+};
+
 static const struct iio_info lmx2582_info = {
 	.debugfs_reg_access = &lmx2582_reg_access,
 	.read_raw = &lmx2582_read_raw,
 	.write_raw = lmx2582_write_raw,
+	.attrs = &lmx2582_attribute_group,
 };
 
 static void lmx2582_property_u32(struct lmx2582_state *st,
@@ -1435,9 +1749,9 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 			st->outputs[channel].power = tmp;
 
 		/* Default to Divider */
-		st->outputs[channel].muxsel = LMX2582_OUTx_MUX_CHDIV;
+		st->outputs[channel].out_mux = LMX2582_OUTx_MUX_CHDIV;
 		if (fwnode_property_present(child, "lmx,mux-sel-vco"))
-			st->outputs[channel].muxsel = LMX2582_OUTx_MUX_VCO;
+			st->outputs[channel].out_mux = LMX2582_OUTx_MUX_VCO;
 	}
 
 	return conf;
@@ -1473,12 +1787,13 @@ static int lmx2582_clk_enable(struct clk_hw *hw)
 {
 	to_clk_priv(hw)->enabled = true;
 
-	return 0;
+	return lmx2582_setup(to_clk_priv(hw)->st, 0);
 }
 
 static void lmx2582_clk_disable(struct clk_hw *hw)
 {
 	to_clk_priv(hw)->enabled = false;
+	lmx2582_setup(to_clk_priv(hw)->st, 0);
 }
 
 static int lmx2582_clk_is_enabled(struct clk_hw *hw)
@@ -1538,6 +1853,7 @@ static int lmx2582_clk_register(struct iio_dev *indio_dev,
 
 	st->outputs[channel].hw.init = &init;
 	st->outputs[channel].indio_dev = indio_dev;
+	st->outputs[channel].st = st;
 	st->outputs[channel].num = channel;
 
 	clk_out = devm_clk_register(&st->spi->dev, &st->outputs[channel].hw);
