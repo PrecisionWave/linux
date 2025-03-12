@@ -1167,9 +1167,10 @@ static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 		LMX2582_R64_FJUMP_SIZE(conf->FJUMP_SIZE);
 
 	dev_info(&st->spi->dev,
-		 "VCO: %llu Hz, FPD %llu Hz, CAL %llu Hz, "
-		 "chdiv: %u, chdiv freq %lld Hz\n",
-		 st->fvco, st->fpd, st->fcal_clk, st->chdiv_total, st->fchdiv);
+		 "OSC: %llu Hz, VCO: %llu Hz, FPD: %llu Hz, CAL: %llu Hz, "
+		 "chdiv: %u, chdiv freq: %lld Hz\n",
+		 st->fosc, st->fvco, st->fpd, st->fcal_clk,
+		 st->chdiv_total, st->fchdiv);
 
 	ret = lmx2582_sync_config(st);
 	wake_up_interruptible(&st->wq_setup_done);
@@ -1476,52 +1477,140 @@ static ssize_t lmx2582_store(struct device *dev,
 		ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_MULT:
-		st->conf->MULT = val;
+		switch(val) {
+		case LMX2582_MULT_BYPASS:
+		case LMX2582_MULT_3:
+		case LMX2582_MULT_4:
+		case LMX2582_MULT_5:
+		case LMX2582_MULT_6:
+			st->conf->MULT = val;
+			break;
+		default:
+			ret = -EINVAL;
+		}
 		break;
 	case LMX2582_ATTR_PLL_OSC_2X:
-		st->conf->OSC_2X = val;
+		st->conf->OSC_2X = val ? true : false;
 		break;
 	case LMX2582_ATTR_PLL_R_PRE:
-		st->conf->PLL_R_PRE = val;
+		if (val < 4096)
+			st->conf->PLL_R_PRE = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_PLL_R:
-		st->conf->PLL_R = val;
+		if (val < 256)
+			st->conf->PLL_R = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_PLL_N_PRE:
-		st->conf->PLL_N_PRE = val;
+		switch(val) {
+		case LMX2582_PLL_N_PRE_DIV2:
+		case LMX2582_PLL_N_PRE_DIV4:
+			st->conf->PLL_N_PRE = val;
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
 		break;
 	case LMX2582_ATTR_PLL_N:
-		st->conf->PLL_N = val;
+		if (val < 4096)
+			st->conf->PLL_N = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_PLL_NUM:
-		st->conf->PLL_NUM = val;
+		if (val <= U32_MAX) 
+			st->conf->PLL_NUM = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_PLL_DEN:
-		st->conf->PLL_DEN = val;
+		if (val <= U32_MAX) 
+			st->conf->PLL_DEN = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_CHDIV_SEG1:
-		st->conf->CHDIV_SEG1 = val;
+		switch(val) {
+		case LMX2582_CHDIV_SEG1_DIV2:
+		case LMX2582_CHDIV_SEG1_DIV3:
+			st->conf->CHDIV_SEG1 = val;
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
 		break;
 	case LMX2582_ATTR_CHDIV_SEG2:
-		st->conf->CHDIV_SEG2 = val;
+		switch(val) {
+		case LMX2582_CHDIV_SEG2_PD:
+		case LMX2582_CHDIV_SEG2_DIV2:
+		case LMX2582_CHDIV_SEG2_DIV4:
+		case LMX2582_CHDIV_SEG2_DIV6:
+		case LMX2582_CHDIV_SEG2_DIV8:
+			st->conf->CHDIV_SEG2 = val;
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
 		break;
 	case LMX2582_ATTR_CHDIV_SEG3:
-		st->conf->CHDIV_SEG3 = val;
+		switch(val) {
+		case LMX2582_CHDIV_SEG3_PD:
+		case LMX2582_CHDIV_SEG3_DIV2:
+		case LMX2582_CHDIV_SEG3_DIV4:
+		case LMX2582_CHDIV_SEG3_DIV6:
+		case LMX2582_CHDIV_SEG3_DIV8:
+			st->conf->CHDIV_SEG3 = val;
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
 		break;
 	case LMX2582_ATTR_CHDIV_SEG_SEL:
-		st->conf->CHDIV_SEG_SEL = val;
+		switch(val) {
+		case LMX2582_CHDIV_SEG_SEL_PD:
+		case LMX2582_CHDIV_SEG_SEL_1:
+		case LMX2582_CHDIV_SEG_SEL_12:
+		case LMX2582_CHDIV_SEG_SEL_123:
+			st->conf->CHDIV_SEG_SEL = val;
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
 		break;
 	case LMX2582_ATTR_CP_IUP:
-		st->conf->CP_IUP = val;
+		if(val < 32)
+			st->conf->CP_IUP = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_CP_IDN:
-		st->conf->CP_IDN = val;
+		if(val < 32)
+			st->conf->CP_IDN = val;
+		else
+			ret = -EINVAL;
 		break;
 	case LMX2582_ATTR_CP_ICOARSE:
-		st->conf->CP_ICOARSE = val;
+		switch(val) {
+		case LMX2582_CP_ICOARSE_X1:
+		case LMX2582_CP_ICOARSE_X2:
+		case LMX2582_CP_ICOARSE_X1_5:
+		case LMX2582_CP_ICOARSE_X2_5:
+			st->conf->CP_ICOARSE = val;
+			break;
+		default:
+			ret = -EINVAL;
+		}
 		break;
 	case LMX2582_ATTR_CP_EN:
-		st->conf->CP_EN = val;
+		st->conf->CP_EN = val ? true : false;
 		break;
 	default:
 		ret = -ENODEV;
