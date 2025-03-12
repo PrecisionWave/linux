@@ -567,8 +567,9 @@ struct lmx2582_state {
 	struct clk		*clkin;
 	struct clk		*clks[LMX2582_CLK_COUNT];
 	struct clk_onecell_data	clk_data;
-
 	struct lmx2582_output	outputs[LMX2582_CLK_COUNT];
+	struct work_struct	workq;
+	struct wait_queue_head	wq_setup_done;
 
 	bool			has_clk_out_names;
 	const char		*lmx2582_clk_names[LMX2582_CLK_COUNT];
@@ -860,7 +861,7 @@ static u32 lmx2582_get_chdiv_total(struct lmx2582_config *conf)
 static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 {
 	struct lmx2582_config *conf = st->conf;
-	int i;
+	int i, ret;
 
 	if (parent_rate)
 		st->fosc = parent_rate;
@@ -1166,7 +1167,9 @@ static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 		 "chdiv: %u, chdiv freq %lld Hz\n",
 		 st->fvco, st->fpd, st->fcal_clk, st->chdiv_total, st->fchdiv);
 
-	return lmx2582_sync_config(st);
+	ret = lmx2582_sync_config(st);
+	wake_up_interruptible(&st->wq_setup_done);
+	return ret;
 }
 
 static ssize_t lmx2582_write(struct iio_dev *indio_dev, uintptr_t private,
@@ -1777,6 +1780,15 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 	return conf;
 }
 
+static void lmx2582_workq_handler(struct work_struct *workq)
+{
+	struct lmx2582_state *st =
+		container_of(workq, struct lmx2582_state, workq);
+	mutex_lock(&st->lock);
+	lmx2582_setup(st, 0);
+	mutex_unlock(&st->lock);
+}
+
 static long lmx2582_get_clk_attr(struct clk_hw *hw, long mask)
 {
 	struct iio_dev *indio_dev = to_clk_priv(hw)->indio_dev;
@@ -1830,12 +1842,14 @@ static int lmx2582_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 static int lmx2582_clk_enable(struct clk_hw *hw)
 {
 	to_clk_priv(hw)->enabled = true;
+	schedule_work(&to_clk_priv(hw)->st->workq);
 	return 0;
 }
 
 static void lmx2582_clk_disable(struct clk_hw *hw)
 {
 	to_clk_priv(hw)->enabled = false;
+	schedule_work(&to_clk_priv(hw)->st->workq);
 }
 
 
@@ -1971,7 +1985,9 @@ static int lmx2582_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, indio_dev);
 	st->indio_dev = indio_dev;
 	st->spi = spi;
+	init_waitqueue_head(&st->wq_setup_done);
 	mutex_init(&st->lock);
+	INIT_WORK(&st->workq, lmx2582_workq_handler);
 
 	if (spi->dev.of_node)
 		indio_dev->name = spi->dev.of_node->name;
