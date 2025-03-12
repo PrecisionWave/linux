@@ -23,7 +23,7 @@
 #include <linux/iio/sysfs.h>
 #include <linux/clk/clkscale.h>
 
-// #include <dt-bindings/iio/frequency/lmx2582.h>
+#include <dt-bindings/iio/frequency/lmx2582.h>
 
 
 /* LMX2582_R0 */
@@ -409,7 +409,7 @@ struct lmx2582_config {
 	u32 CHDIV_SEG3;
 
 	/* R37 */
-	bool PLL_N_PRE;
+	u32 PLL_N_PRE;
 
 	/* R38 */
 	u32 PLL_N;
@@ -479,11 +479,11 @@ static const struct lmx2582_config lmx2582_default_values = {
 	.PLL_R_PRE = 1,
 	/* REG13 */
 	.CP_EN = true,
-	.PFD_CTL = 0,
+	.PFD_CTL = LMX2582_PFD_CTL_DUAL,
 	/* REG14 */
-	.CP_IDN = 3,
-	.CP_IUP = 3,
-	.CP_ICOARSE = 0,
+	.CP_IDN = LMX2582_CP_I_0_468MA,
+	.CP_IUP = LMX2582_CP_I_0_468MA,
+	.CP_ICOARSE = LMX2582_CP_ICOARSE_X1,
 	/* REG19 */
 	.VCO_IDAC = 300,
 	/* REG20 */
@@ -504,18 +504,18 @@ static const struct lmx2582_config lmx2582_default_values = {
 	/* R34 */
 	.CHDIV_EN = true,
 	/* R35 */
-	.CHDIV_SEG2 = 1,
+	.CHDIV_SEG2 = LMX2582_CHDIV_SEG2_DIV2,
 	.CHDIV_SEG3_EN = false,
 	.CHDIV_SEG2_EN = false,
-	.CHDIV_SEG1 = 1,
+	.CHDIV_SEG1 = LMX2582_CHDIV_SEG1_DIV3,
 	.CHDIV_SEG1_EN = false,
 	/* R36 */
 	.CHDIV_DISTB_EN = false,
 	.CHDIV_DISTA_EN = true,
-	.CHDIV_SEG_SEL = 1,
-	.CHDIV_SEG3 = 1,
+	.CHDIV_SEG_SEL = LMX2582_CHDIV_SEG_SEL_1,
+	.CHDIV_SEG3 = LMX2582_CHDIV_SEG3_DIV2,
 	/* R37 */
-	.PLL_N_PRE = false,
+	.PLL_N_PRE = LMX2582_PLL_N_PRE_DIV2,
 	/* R38 */
 	.PLL_N = 27,
 	/* R39 */
@@ -797,26 +797,26 @@ static u32 lmx2582_get_chdiv_total(struct lmx2582_config *conf)
 	u32 divider3;
 
 	/* decode SEG1 */
-	if (conf->CHDIV_SEG1 == 0)
+	if (conf->CHDIV_SEG1 == LMX2582_CHDIV_SEG1_DIV2)
 		divider1 = 2;
 	else
 		divider1 = 3;
 
 	/* decode SEG2 */
 	switch (conf->CHDIV_SEG2) {
-	case 1:
+	case LMX2582_CHDIV_SEG2_DIV2:
 		divider2 = 2;
 		break;
-	case 2:
+	case LMX2582_CHDIV_SEG2_DIV4:
 		divider2 = 4;
 		break;
-	case 4:
+	case LMX2582_CHDIV_SEG2_DIV6:
 		divider2 = 6;
 		break;
-	case 8:
+	case LMX2582_CHDIV_SEG2_DIV8:
 		divider2 = 8;
 		break;
-	case 0:
+	case LMX2582_CHDIV_SEG2_PD:
 	default:
 		divider2 = 0;
 		break;
@@ -824,19 +824,19 @@ static u32 lmx2582_get_chdiv_total(struct lmx2582_config *conf)
 
 	/* decode SEG3 */
 	switch (conf->CHDIV_SEG3) {
-	case 1:
+	case LMX2582_CHDIV_SEG3_DIV2:
 		divider3 = 2;
 		break;
-	case 2:
+	case LMX2582_CHDIV_SEG3_DIV4:
 		divider3 = 4;
 		break;
-	case 4:
+	case LMX2582_CHDIV_SEG3_DIV6:
 		divider3 = 6;
 		break;
-	case 8:
+	case LMX2582_CHDIV_SEG3_DIV8:
 		divider3 = 8;
 		break;
-	case 0:
+	case LMX2582_CHDIV_SEG3_PD:
 	default:
 		divider3 = 0;
 		break;
@@ -844,14 +844,18 @@ static u32 lmx2582_get_chdiv_total(struct lmx2582_config *conf)
 	
 	/* decode mux */
 	switch (conf->CHDIV_SEG_SEL) {
-	case 1: /* only divider 1 active */
+	case LMX2582_CHDIV_SEG_SEL_1:
+		/* only divider 1 active */
 		return divider1;
-	case 2: /* divider 1 and 2 active */
+	case LMX2582_CHDIV_SEG_SEL_12:
+		/* divider 1 and 2 active */
 		return divider1 * divider2;
-	case 4: /* divider 1, 2 and 3 active */
+	case LMX2582_CHDIV_SEG_SEL_123:
+		/* divider 1, 2 and 3 active */
 		return divider1 * divider2 * divider3;
-	case 0: /* power down */
+	case LMX2582_CHDIV_SEG_SEL_PD:
 	default:
+		/* power down or invalid */
 		break;
 	}
 	/* power down or invalid setting */
@@ -1729,7 +1733,7 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 	lmx2582_property_u32(st, "lmx,cp-iup", &conf->CP_IUP, 0, 31);
 	lmx2582_property_u32(st, "lmx,cp-icoarse", &conf->CP_ICOARSE, 0, 3);
 
-	lmx2582_property_bool(st, "lmx,pll-n-pre-x4", &conf->PLL_N_PRE);
+	lmx2582_property_u32(st, "lmx,pll-n-pre", &conf->PLL_N_PRE, 0, 1);
 	lmx2582_property_u32(st, "lmx,pll-n", &conf->PLL_N, 0, 4095);
 	lmx2582_property_u32(st, "lmx,pll-den", &conf->PLL_DEN, 1, U32_MAX);
 	lmx2582_property_u32(st, "lmx,pll-num", &conf->PLL_NUM, 0, U32_MAX);
