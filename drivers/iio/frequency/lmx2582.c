@@ -561,6 +561,7 @@ struct lmx2582_output {
 
 struct lmx2582_state {
 	struct spi_device	*spi;
+	struct iio_dev		*indio_dev;
 	struct lmx2582_config	*conf;
 	struct dentry		*dent;
 	struct clk		*clkin;
@@ -1301,7 +1302,13 @@ static int lmx2582_read_raw(struct iio_dev *indio_dev,
 			int *val2,
 			long info)
 {
+	struct lmx2582_state *st = iio_priv(indio_dev);
+
 	switch (info) {
+	case IIO_CHAN_INFO_RAW:
+		*val = st->outputs[chan->channel].enabled;
+		return IIO_VAL_INT;
+	//case IIO_CHAN_INFO_FREQUENCY:
 	case IIO_CHAN_INFO_PHASE:
 		*val = 0;
 		return IIO_VAL_INT;
@@ -1319,13 +1326,26 @@ static int lmx2582_write_raw(struct iio_dev *indio_dev,
 			int val2,
 			long info)
 {
+	struct lmx2582_state *st = iio_priv(indio_dev);
+	int ret = 0;
+
 	switch (info) {
+	case IIO_CHAN_INFO_RAW:
+		st->outputs[chan->channel].enabled = val;
+		break;
+	//case IIO_CHAN_INFO_FREQUENCY:
 	case IIO_CHAN_INFO_PHASE:
 	default:
 		return -EINVAL;
 	}
 
-	return 0;
+	if (ret == 0) {
+		mutex_lock(&indio_dev->mlock);
+		ret = lmx2582_setup(st, 0);
+		mutex_unlock(&indio_dev->mlock);
+	}
+	
+	return ret;
 }
 
 static ssize_t lmx2582_show(struct device *dev, struct device_attribute *attr,
@@ -1757,6 +1777,30 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 	return conf;
 }
 
+static long lmx2582_get_clk_attr(struct clk_hw *hw, long mask)
+{
+	struct iio_dev *indio_dev = to_clk_priv(hw)->indio_dev;
+	int val, ret;
+	struct iio_chan_spec chan;
+
+	chan.channel = to_clk_priv(hw)->num;
+	ret = lmx2582_read_raw(indio_dev, &chan, &val, NULL, mask);
+	if (ret == IIO_VAL_INT)
+		return val;
+
+	return ret;
+}
+
+static long lmx2582_set_clk_attr(struct clk_hw *hw, long mask, unsigned long val)
+{
+	struct iio_dev *indio_dev = to_clk_priv(hw)->indio_dev;
+	struct iio_chan_spec chan;
+
+	chan.channel = to_clk_priv(hw)->num;
+
+	return lmx2582_write_raw(indio_dev, &chan, val, 0, mask);
+}
+
 static unsigned long lmx2582_clk_recalc_rate(struct clk_hw *hw,
 		unsigned long parent_rate)
 {
@@ -1776,8 +1820,8 @@ static long lmx2582_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 static int lmx2582_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 		unsigned long parent_rate)
 {
-	//struct lmx2582_state *st = to_clk_priv(hw)->st;
-
+	struct lmx2582_state *st = to_clk_priv(hw)->st;
+	return lmx2582_setup(st, parent_rate);
 	/*return lmx2582_setup(st, parent_rate,
 		from_ccf_scaled(rate, &to_clk_priv(hw)->scale));*/
 	return -EINVAL;
@@ -1786,15 +1830,14 @@ static int lmx2582_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 static int lmx2582_clk_enable(struct clk_hw *hw)
 {
 	to_clk_priv(hw)->enabled = true;
-
-	return lmx2582_setup(to_clk_priv(hw)->st, 0);
+	return 0;
 }
 
 static void lmx2582_clk_disable(struct clk_hw *hw)
 {
 	to_clk_priv(hw)->enabled = false;
-	lmx2582_setup(to_clk_priv(hw)->st, 0);
 }
+
 
 static int lmx2582_clk_is_enabled(struct clk_hw *hw)
 {
@@ -1828,8 +1871,10 @@ static void lmx2582_powerdown(void *data)
 {
 	struct lmx2582_state *st = data;
 
+	mutex_lock(&st->lock);
 	st->regs[LMX2582_R0] |= LMX2582_R0_POWERDOWN(1);
 	lmx2582_sync_config(st);
+	mutex_unlock(&st->lock);
 }
 
 static int lmx2582_clk_register(struct iio_dev *indio_dev,
@@ -1924,6 +1969,7 @@ static int lmx2582_probe(struct spi_device *spi)
 		return ret;
 
 	spi_set_drvdata(spi, indio_dev);
+	st->indio_dev = indio_dev;
 	st->spi = spi;
 	mutex_init(&st->lock);
 
