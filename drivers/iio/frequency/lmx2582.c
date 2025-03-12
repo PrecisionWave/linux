@@ -553,7 +553,6 @@ struct lmx2582_output {
 	struct lmx2582_state	*st;
 	unsigned int		num;
 	bool			enabled;
-	struct clock_scale	scale;
 	unsigned int		power;
 	unsigned int		out_mux;
 	unsigned long long	frequency;
@@ -570,6 +569,7 @@ struct lmx2582_state {
 	struct lmx2582_output	outputs[LMX2582_CLK_COUNT];
 	struct work_struct	workq;
 	struct wait_queue_head	wq_setup_done;
+	struct clock_scale	scale;
 
 	bool			has_clk_out_names;
 	const char		*lmx2582_clk_names[LMX2582_CLK_COUNT];
@@ -1445,6 +1445,8 @@ static void lmx2582_force_recalc_rate(struct lmx2582_state *st)
 {
 	int i;
 
+	dev_info(&st->spi->dev, "lmx2582_force_recalc_rate\n");
+
 	for (i = 0; i < LMX2582_CLK_COUNT; i++) {
 		/* HACK: Use reparent to trigger notify */
 		clk_hw_reparent(&st->outputs[i].hw, NULL);
@@ -1849,6 +1851,12 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 		st->has_clk_out_names = true;
 	}
 
+	ret = of_clk_get_scale(st->spi->dev.of_node, NULL, &st->scale);
+	if (ret < 0) {
+		st->scale.mult = 1;
+		st->scale.div = 10;
+	}
+
 	device_for_each_child_node(&st->spi->dev, child) {
 		ret = fwnode_property_read_u32(child, "reg", &channel);
 		if (ret)
@@ -1909,16 +1917,27 @@ static long lmx2582_set_clk_attr(struct clk_hw *hw, long mask, unsigned long val
 static unsigned long lmx2582_clk_recalc_rate(struct clk_hw *hw,
 		unsigned long parent_rate)
 {
+	struct lmx2582_state *st = to_clk_priv(hw)->st;
 	unsigned long long rate;
 
-	rate = lmx2582_pll_fract_n_get_rate(to_clk_priv(hw)->st);
+	rate = to_clk_priv(hw)->frequency;
 
-	return to_ccf_scaled(rate, &to_clk_priv(hw)->scale);
+	dev_info(&st->spi->dev,
+		"lmx2582_clk_recalc_rate rate=%llu, parent_rate=%lu\n",
+		rate, parent_rate);
+
+	return to_ccf_scaled(rate, &st->scale);
 }
 
 static long lmx2582_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 		unsigned long *parent_rate)
 {
+	struct lmx2582_state *st = to_clk_priv(hw)->st;
+
+	dev_info(&st->spi->dev,
+		"lmx2582_clk_round_rate rate=%lu, parent_rate=%lu\n",
+		rate, parent_rate ? *parent_rate : 0);
+
 	return rate;
 }
 
@@ -1926,10 +1945,15 @@ static int lmx2582_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 		unsigned long parent_rate)
 {
 	struct lmx2582_state *st = to_clk_priv(hw)->st;
+	unsigned long long scaled_rate;
+
+	scaled_rate = from_ccf_scaled(rate, &st->scale);
+
+	dev_info(&st->spi->dev,
+		"lmx2582_clk_set_rate for rate=%lu and parent_rate=%lu\n",
+		rate, parent_rate);
+
 	return lmx2582_setup(st, parent_rate);
-	/*return lmx2582_setup(st, parent_rate,
-		from_ccf_scaled(rate, &to_clk_priv(hw)->scale));*/
-	return -EINVAL;
 }
 
 static int lmx2582_clk_enable(struct clk_hw *hw)
@@ -1994,7 +2018,9 @@ static int lmx2582_clk_register(struct iio_dev *indio_dev,
 	char name[128];
 
 	if (!st->has_clk_out_names) {
-		snprintf(name, sizeof(name), "%s_RFout%c", indio_dev->name, 'A' + channel);
+		snprintf(name, sizeof(name),
+			 "%s_RFout%c", indio_dev->name,
+			 'A' + channel);
 		st->lmx2582_clk_names[channel] = name;
 	}
 	init.name = st->lmx2582_clk_names[channel];
