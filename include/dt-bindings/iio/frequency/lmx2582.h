@@ -10,6 +10,14 @@
 #ifndef _DT_BINDINGS_IIO_FREQUENCY_LMX2582_H_
 #define _DT_BINDINGS_IIO_FREQUENCY_LMX2582_H_
 
+/* Input signal path multiplier
+ * use for lmx,mult */
+#define LMX2582_MULT_BYPASS	1
+#define LMX2582_MULT_3		3
+#define LMX2582_MULT_4		4
+#define LMX2582_MULT_5		5
+#define LMX2582_MULT_6		6
+
 /* PFD Mode
  * use for lmx,pfd-ctl */
 #define LMX2582_PFD_CTL_DUAL	0
