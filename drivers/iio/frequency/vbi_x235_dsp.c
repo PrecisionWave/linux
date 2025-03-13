@@ -353,7 +353,7 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		vbi_x235_dsp_write(st, ADDR_SETTINGS, temp32);
 		break;
 	case REG_LO_CONF_DELAY:
-		temp32 = vbi_x235_dsp_read(st, ADDR_LO_CONFIG_DELAY) & ~(0x3<<30);
+		temp32 = vbi_x235_dsp_read(st, ADDR_LO_CONFIG_DELAY) & ~(0x3FFFFFFF);
 		temp32 += ((uint32_t)val) & 0x3FFFFFFF;
 		vbi_x235_dsp_write(st, ADDR_LO_CONFIG_DELAY, temp32);
 		break;
