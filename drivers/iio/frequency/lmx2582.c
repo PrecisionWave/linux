@@ -22,6 +22,7 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <linux/clk/clkscale.h>
+#include <linux/rational.h>
 
 #include <dt-bindings/iio/frequency/lmx2582.h>
 
@@ -187,6 +188,108 @@
 #define LMX2582_CLK_COUNT			2
 #define LMX2582_PLL_N_MIN			9
 #define LMX2582_PLL_N_MAX			4095
+
+
+/* Tables from Datasheet */
+struct lmx2582_frequency_range {
+	unsigned long long min;
+	unsigned long long max;
+};
+
+struct lmx2582_chdiv_register_values {
+	u32 seg1;
+	u32 seg2;
+	u32 seg3;
+};
+
+struct lmx2582_channel_divider_min_max {
+	struct lmx2582_frequency_range		output_frequency_range;
+	struct lmx2582_chdiv_register_values	chdiv_register_values;
+	struct lmx2582_frequency_range		vco_frequency_range;
+	u32					total_divider;
+};
+
+#define MHZ_TO_HZ(_x_) ((_x_) * 1000ULL * 1000ULL)
+#define LMX2582_CHDIV_SEG1_DIV(x) LMX2582_CHDIV_SEG1_DIV##x
+#define LMX2582_CHDIV_SEG2_DIV1 LMX2582_CHDIV_SEG2_PD
+#define LMX2582_CHDIV_SEG2_DIV(x) LMX2582_CHDIV_SEG2_DIV##x
+#define LMX2582_CHDIV_SEG3_DIV1 LMX2582_CHDIV_SEG3_PD
+#define LMX2582_CHDIV_SEG3_DIV(x) LMX2582_CHDIV_SEG3_DIV##x
+#define CLOCK_SPEC_TABLE_ENTRY(fout_min, fout_max,                             \
+			       div_seg1, div_seg2, div_seg3, div_tot,          \
+			       fvco_min, fvco_max) {                           \
+		.output_frequency_range = {                                    \
+			.min = MHZ_TO_HZ(fout_min),                            \
+			.max = MHZ_TO_HZ(fout_max),                            \
+		},                                                             \
+		.chdiv_register_values = {                                     \
+			.seg1 = LMX2582_CHDIV_SEG1_DIV(div_seg1),              \
+			.seg2 = LMX2582_CHDIV_SEG2_DIV(div_seg2),              \
+			.seg3 = LMX2582_CHDIV_SEG3_DIV(div_seg3),              \
+		},                                                             \
+		.vco_frequency_range = {                                       \
+			.min = MHZ_TO_HZ(fvco_min),                            \
+			.max = MHZ_TO_HZ(fvco_max),                            \
+		},                                                             \
+		.total_divider = (div_tot)                                     \
+}
+
+const struct lmx2582_channel_divider_min_max lmx2582_divided_clock_spec[] = {
+	CLOCK_SPEC_TABLE_ENTRY(1775, 3550, 2, 1, 1,   2, 3550, 7100),
+	CLOCK_SPEC_TABLE_ENTRY(1184, 2200, 3, 1, 1,   3, 3552, 6600),
+	CLOCK_SPEC_TABLE_ENTRY( 888, 1184, 2, 2, 1,   4, 3552, 4736),
+	CLOCK_SPEC_TABLE_ENTRY( 592,  888, 3, 2, 1,   6, 3552, 5328),
+	CLOCK_SPEC_TABLE_ENTRY( 444,  592, 2, 4, 1,   8, 3552, 4736),
+	CLOCK_SPEC_TABLE_ENTRY( 296,  444, 2, 6, 1,  12, 3552, 5328),
+	CLOCK_SPEC_TABLE_ENTRY( 222,  296, 2, 8, 1,  16, 3552, 4736),
+	CLOCK_SPEC_TABLE_ENTRY( 148,  222, 3, 8, 1,  24, 3552, 5328),
+	CLOCK_SPEC_TABLE_ENTRY( 111,  148, 2, 8, 2,  32, 3552, 4736),
+	CLOCK_SPEC_TABLE_ENTRY(  99,  111, 3, 6, 2,  36, 3564, 3996),
+	CLOCK_SPEC_TABLE_ENTRY(  74,   99, 3, 8, 2,  48, 3552, 4752),
+	CLOCK_SPEC_TABLE_ENTRY(  56,   74, 2, 8, 4,  64, 3584, 4736),
+	CLOCK_SPEC_TABLE_ENTRY(  37,   56, 2, 8, 6,  96, 3552, 5376),
+	CLOCK_SPEC_TABLE_ENTRY(  28,   37, 2, 8, 8, 128, 3584, 4736),
+	CLOCK_SPEC_TABLE_ENTRY(  20,   28, 3, 8, 8, 192, 3840, 5376),
+	{},
+};
+
+struct lmx2582_input_output_range {
+	struct lmx2582_frequency_range fin;
+	struct lmx2582_frequency_range fout;
+};
+
+struct lmx2582_input_path_spec {
+	struct lmx2582_frequency_range fosc;
+	struct lmx2582_input_output_range oscin_doubler;
+	struct lmx2582_input_output_range pre_r_divider;
+	struct lmx2582_input_output_range multiplier;
+	struct lmx2582_input_output_range post_r_divider;
+	struct lmx2582_frequency_range fpfd;
+};
+
+static const struct lmx2582_input_path_spec lmx2582_input_path_spec = {
+	.fosc = {.min = MHZ_TO_HZ(5), .max = MHZ_TO_HZ(1400) },
+	.oscin_doubler = {
+		.fin  = {.min = MHZ_TO_HZ(5),  .max = MHZ_TO_HZ(200) },
+		.fout = {.min = MHZ_TO_HZ(10), .max = MHZ_TO_HZ(400) },
+	},
+	.pre_r_divider = {
+		.fin  = {.min = MHZ_TO_HZ(10), .max = MHZ_TO_HZ(1400) },
+		.fout = {.min = MHZ_TO_HZ(5),  .max = MHZ_TO_HZ(700) },
+	},
+	.multiplier = {
+		.fin  = {.min = MHZ_TO_HZ(40),  .max = MHZ_TO_HZ(70) },
+		.fout = {.min = MHZ_TO_HZ(180), .max = MHZ_TO_HZ(250) },
+	},
+	.post_r_divider = {
+		.fin  = {.min = MHZ_TO_HZ(5),    .max = MHZ_TO_HZ(250) },
+		.fout = {.min = MHZ_TO_HZ(0.25), .max = MHZ_TO_HZ(125) },
+	},
+	/* Default architecture with dual-loop PFD can operate between
+	   5 and 200 MHz. Extended modes need special attention */
+	.fpfd = {.min = MHZ_TO_HZ(5), .max = MHZ_TO_HZ(200) },
+};
+
 
 /* iio attribute indexes */
 enum {
@@ -618,47 +721,6 @@ struct lmx2582_state {
 	u8			wrval[3] ____cacheline_aligned;
 	__be16			rdval ____cacheline_aligned;
 };
-
-
-/*
- * Factorize, approximate N = CLK1 * CLK2 where CLK1,2 are 12-bit registers
- * Either CLK1 or CLK2 must be greater than 1,
- * that is, CLK1 = CLK2 = 1 is not allowed.
- */
-static int lmx2582_factorize_clk_divs(u32 n, u32 *clk1, u32 *clk2)
-{
-	int i, c1, c2, n_calc, delta, delta_max = 0xFFFFFFU;
-
-	n = clamp(n, 2U, 0xFFFFFFU);
-
-	for (i = 0; i <= 12; i++) {
-		c1 = BIT(i);
-		if (c1 > 0xFFF)
-			c1--;
-
-		c2 = DIV_ROUND_CLOSEST(n, c1);
-
-		if (c2 > 0xFFF)
-			continue;
-
-		n_calc = c1 * c2;
-
-		if (n == n_calc) {
-			*clk1 = c1;
-			*clk2 = c2;
-			return 0;
-		}
-
-		delta = abs(n - n_calc);
-		if (delta < delta_max) {
-			*clk1 = c1;
-			*clk2 = c2;
-			delta_max = delta;
-		}
-	}
-
-	return delta_max;
-}
 
 
 /* real device access */
@@ -1912,7 +1974,6 @@ static void lmx2582_workq_handler(struct work_struct *workq)
 
 
 /* automatic PLL calculation */
-#if 0
 /*
 	https://e2e.ti.com/support/clock-timing-group/clock-and-timing/f/clock-timing-forum/1394542/lmx2582evm-formula-for-calculations
 	After studying the Python Code, we were able to make generalized formula.
@@ -1935,33 +1996,117 @@ static void lmx2582_workq_handler(struct work_struct *workq)
 	PLL_NUM	= round(PLL_DEN * (FracN - N));
 */
 
-static void find_pll_n_divider(struct lmx2582_state* st, unsigned long long freq)
+static void scale_ull(unsigned long long in_num, unsigned long long in_den,
+		      unsigned long* out_num, unsigned long* out_den)
 {
-	int i, j, k;
-	u32 chdiv_tot;
-	u64 fvco;
-	u64 fpfd = st->fpfd;
-	u32 pre = st->conf->PLL_N_PRE ? 2 : 4;
-	u32 pll_n;
+#if ULLONG_MAX == ULONG_MAX
+	*out_num = in_num;
+	*out_den = in_den;
+#else
+	unsigned long long num = in_num;
+	unsigned long long den = in_den;
 
-	for (i = 0; i < ARRAY_SIZE(chdiv_seg3_v); i++) {
-		for (j = 0; j < ARRAY_SIZE(chdiv_seg2_v); j++) {
-			for (k = 0; k < ARRAY_SIZE(chdiv_seg1_v); k++) {
-				chdiv_tot = chdiv_seg3_v[i];
-				chdiv_tot *= chdiv_seg2_v[j];
-				chdiv_tot *= chdiv_seg1_v[k];
-				fvco = freq * chdiv_tot;
-				if (LMX2582_CHECK_RANGE(fvco, FREQ_VCO))
-					continue;
-				pll_n = div64_u64(fvco, fpfd * pre);
-				if (pll_n < LMX2582_PLL_N_MIN)
-					continue;
-			}
-		}
+	while((num > (ULONG_MAX * 1ULL)) || (den > (ULONG_MAX * 1ULL))) {
+		num >>= 1;
+		den >>= 1;
 	}
-}
-#endif
 
+	*out_num = num;
+	*out_den = den;
+#endif
+}
+
+static int find_pll_n_divider(struct lmx2582_state* st,
+			      unsigned long long freq,
+			      bool allow_fractional,
+			      u32* pll_n, u32* pll_n_num, u32* pll_n_den,
+			      unsigned long long* fout)
+{
+	const struct lmx2582_channel_divider_min_max *entry;
+	unsigned long long fvco;
+	unsigned long long n;
+	unsigned long long error, fpd_n_pre;
+	unsigned long error_ul, fpd_n_pre_ul;
+	unsigned long num, den;
+	int i;
+	
+	fpd_n_pre = st->fpd * (st->conf->PLL_N_PRE ? 4 : 2);
+
+	for (i = 0; i < ARRAY_SIZE(lmx2582_divided_clock_spec); i++) {
+		entry = &lmx2582_divided_clock_spec[i];
+
+		fvco = freq * entry->total_divider;
+
+		/* check VCO range */
+		if(fvco < entry->vco_frequency_range.min)
+			continue;
+		if(fvco > entry->vco_frequency_range.max)
+			continue;
+
+		n = div64_u64(fvco, fpd_n_pre);
+
+		/* check N range */
+		if (n < LMX2582_PLL_N_MIN)
+			continue;
+		if (n > LMX2582_PLL_N_MAX)
+			continue;
+
+		/* found candidate */
+		error = fvco - n * fpd_n_pre;
+
+		/* integer-only has no error */
+		if (!allow_fractional && error != 0)
+			continue;
+
+		dev_dbg(&st->spi->dev, "find_pll_n_divider: freq: %lld"
+			", n: %lld, vco=%lld, total div: %u, error: %llu\n",
+			freq, n, fvco, entry->total_divider, error);
+
+		/* optimize fraction */
+		scale_ull(error, fpd_n_pre, &error_ul, &fpd_n_pre_ul);
+
+		rational_best_approximation(error_ul, fpd_n_pre_ul,
+					    U32_MAX, U32_MAX,
+					    &num, &den);
+
+		dev_dbg(&st->spi->dev,
+			"find_pll_n_divider: num: %lu, den: %lu\n",
+			num, den);
+
+		/* output values */
+		*fout = div_u64(fvco, entry->total_divider);
+		*pll_n_num = num;
+		*pll_n_den = den;
+		*pll_n = n;
+		return i;
+	}
+
+	/* no entry found */
+	return -1;
+}
+
+static void lmx2582_apply_settings(struct lmx2582_state* st,
+				   int clock_spec_index,
+				   u32 pll_n, u32 pll_num, u32 pll_den)
+{
+	const struct lmx2582_channel_divider_min_max *entry;
+	entry = &lmx2582_divided_clock_spec[clock_spec_index];
+
+	st->conf->PLL_N = pll_n;
+	st->conf->PLL_NUM = pll_num;
+	st->conf->PLL_DEN = pll_den;
+
+	st->conf->CHDIV_SEG1 = entry->chdiv_register_values.seg1;
+	st->conf->CHDIV_SEG2 = entry->chdiv_register_values.seg2;
+	st->conf->CHDIV_SEG3 = entry->chdiv_register_values.seg3;
+
+	if (entry->chdiv_register_values.seg3 != LMX2582_CHDIV_SEG3_PD)
+		st->conf->CHDIV_SEG_SEL = LMX2582_CHDIV_SEG_SEL_123;
+	else if (entry->chdiv_register_values.seg2 != LMX2582_CHDIV_SEG2_PD)
+		st->conf->CHDIV_SEG_SEL = LMX2582_CHDIV_SEG_SEL_12;
+	else
+		st->conf->CHDIV_SEG_SEL = LMX2582_CHDIV_SEG_SEL_1;
+}
 
 /* clock system integration */
 static unsigned long lmx2582_clk_recalc_rate(struct clk_hw *hw,
@@ -1972,7 +2117,7 @@ static unsigned long lmx2582_clk_recalc_rate(struct clk_hw *hw,
 
 	rate = to_clk_priv(hw)->frequency;
 
-	dev_info(&st->spi->dev,
+	dev_dbg(&st->spi->dev,
 		"lmx2582_clk_recalc_rate rate=%llu, parent_rate=%lu\n",
 		rate, parent_rate);
 
@@ -1984,19 +2129,47 @@ static long lmx2582_clk_round_rate(struct clk_hw *hw,
 				   unsigned long *parent_rate)
 {
 	struct lmx2582_state *st = to_clk_priv(hw)->st;
-	unsigned long tmp;
+	unsigned long long scaled_rate;
+	unsigned long long fout;
+	int ret;
+	u32 pll_n, pll_num, pll_den;
 
-	dev_info(&st->spi->dev,
-		"lmx2582_clk_round_rate rate=%lu, parent_rate=%lu\n",
-		rate, parent_rate ? *parent_rate : 0);
+	scaled_rate = from_ccf_scaled(rate, &st->scale);
+
+	dev_dbg(&st->spi->dev,
+		"lmx2582_clk_round_rate scaled_rate=%llu, parent_rate=%lu\n",
+		scaled_rate, parent_rate ? *parent_rate : 0);
 
 	if (!rate)
 		return 0;
+ 
+	/* try integer only first */
+	ret = find_pll_n_divider(st, scaled_rate, false,
+				 &pll_n, &pll_num, &pll_den, &fout);
+	if (ret >= 0)
+		dev_info(&st->spi->dev, "found integer-N only configuration\n");
+	if (ret < 0) {
+		dev_warn(&st->spi->dev,
+			 "Did not find valid integer pll N divider");
 
-	tmp = div_u64(st->fvco, rate);
-	tmp = clamp(tmp, 1UL,4095UL);
+		/* integer only failed. try fractional */
+		ret = find_pll_n_divider(st, scaled_rate, true,
+					 &pll_n, &pll_num, &pll_den, &fout);
 
-	return div_u64(st->fvco, tmp);
+		if (ret < 0) {
+			dev_err(&st->spi->dev,
+				"Did not find valid fractional pll N divider");
+			return -EINVAL;
+		}
+
+		dev_info(&st->spi->dev, "found fractional-N configuration\n");
+	}
+
+	dev_dbg(&st->spi->dev, "lmx2582_clk_round_rate: "
+		"pll_n=%u, pll_num=%u, pll_den=%u, fout=%llu\n",
+		pll_n, pll_num, pll_den, fout);
+
+	return to_ccf_scaled(fout, &st->scale);
 }
 
 static int lmx2582_clk_set_rate(struct clk_hw *hw,
@@ -2005,12 +2178,42 @@ static int lmx2582_clk_set_rate(struct clk_hw *hw,
 {
 	struct lmx2582_state *st = to_clk_priv(hw)->st;
 	unsigned long long scaled_rate;
+	unsigned long long fout;
+	int ret;
+	u32 pll_n, pll_num, pll_den;
 
 	scaled_rate = from_ccf_scaled(rate, &st->scale);
 
-	dev_info(&st->spi->dev,
+	dev_dbg(&st->spi->dev,
 		"lmx2582_clk_set_rate for rate=%lu and parent_rate=%lu\n",
 		rate, parent_rate);
+
+	/* try integer only first */
+	ret = find_pll_n_divider(st, scaled_rate, false,
+				 &pll_n, &pll_num, &pll_den, &fout);
+	if (ret >= 0)
+		dev_info(&st->spi->dev, "Found integer-N only configuration\n");
+	if (ret < 0) {
+		dev_warn(&st->spi->dev,
+			 "Did not find valid integer-N only configuration\n");
+
+		/* integer only failed. try fractional */
+		ret = find_pll_n_divider(st, scaled_rate, true,
+					 &pll_n, &pll_num, &pll_den, &fout);
+
+		if (ret < 0) {
+			dev_err(&st->spi->dev, "Did not find valid fractional-N"
+				" configuration\n");
+			return -EINVAL;
+		}
+
+		dev_info(&st->spi->dev, "Found fractional-N configuration\n");
+	}
+
+	dev_info(&st->spi->dev, "PLL: N=%u, NUM=%u, DEN=%u, fout=%llu Hz\n",
+		 pll_n, pll_num, pll_den, fout);
+	
+	lmx2582_apply_settings(st, ret, pll_n, pll_num, pll_den);
 
 	return lmx2582_setup(st, parent_rate);
 }
