@@ -40,6 +40,9 @@
 #define ADDR_SETTINGS		(6*4)
 #define ADDR_VERSION		(7*4)
 #define ADDR_OVER_UNDERFLOWS	(8*4)
+#define ADDR_TX_IQ_UNDERFLOWS	(9*4)
+#define ADDR_TX_IQ_DELAY	(10*4)
+#define ADDR_TX_IQ_BURST_LEN	(11*4)
 
 
 // expands to:
@@ -203,6 +206,9 @@ enum chan_num{
 	REG_TX_ENABLE_READ,
 	REG_TX_MANUAL_MODE,
 	REG_TX_MANUAL_EN,
+	REG_TX_IQ_UNDERFLOWS,
+	REG_TX_IQ_DELAY,
+	REG_TX_IQ_BURST_LEN,
 	REG_LO_CONF_DELAY,
 	REG_LO_CONF_COARSE_DELAY,
 	REG_GAIN_TX1,
@@ -438,6 +444,12 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		temp32 += (u32)val<<16;
 		vbi_x235_dsp_write(st, ADDR_SETTINGS, temp32);
 		break;
+	case REG_TX_IQ_DELAY:
+		vbi_x235_dsp_write(st, ADDR_TX_IQ_DELAY, (uint32_t)val);
+		break;
+	case REG_TX_IQ_BURST_LEN:
+		vbi_x235_dsp_write(st, ADDR_TX_IQ_BURST_LEN, (uint32_t)val);
+		break;
 	case REG_RX_BYP_DIS:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -566,6 +578,15 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 		break;
 	case REG_TX_ENABLE_READ:
 		val = (vbi_x235_dsp_read(st, ADDR_FREQ_READ) >>14) & 1;
+		break;
+	case REG_TX_IQ_UNDERFLOWS:
+		val = (vbi_x235_dsp_read(st, ADDR_TX_IQ_UNDERFLOWS) & 0xFFFF);
+		break;
+	case REG_TX_IQ_DELAY:
+		val = vbi_x235_dsp_read(st, ADDR_TX_IQ_DELAY);
+		break;
+	case REG_TX_IQ_BURST_LEN:
+		val = vbi_x235_dsp_read(st, ADDR_TX_IQ_BURST_LEN);
 		break;
 	case REG_RX_ADC_SEL:
 		val = (vbi_x235_dsp_read(st, ADDR_SETTINGS)>>11) & 1;
@@ -704,6 +725,21 @@ static IIO_DEVICE_ATTR(lo_tx_enable_read, S_IRUGO,
 			vbi_x235_dsp_store,
 			REG_TX_ENABLE_READ);
 
+static IIO_DEVICE_ATTR(tx_iq_underflows, S_IRUGO,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_TX_IQ_UNDERFLOWS);
+
+static IIO_DEVICE_ATTR(tx_iq_delay, S_IRUGO | S_IWUSR,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_TX_IQ_DELAY);
+
+static IIO_DEVICE_ATTR(tx_iq_burst_len, S_IRUGO | S_IWUSR,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_TX_IQ_BURST_LEN);
+
 static IIO_DEVICE_ATTR(rx_zf1_frequency, S_IRUGO | S_IWUSR,
 			vbi_x235_dsp_show,
 			vbi_x235_dsp_store,
@@ -824,6 +860,9 @@ static struct attribute *vbi_x235_dsp_attributes[] = {
 	&iio_dev_attr_rx_iq_overflows.dev_attr.attr,
 	&iio_dev_attr_fskmod_dma_rate.dev_attr.attr,
 	&iio_dev_attr_lo_tx_enable_read.dev_attr.attr,
+	&iio_dev_attr_tx_iq_underflows.dev_attr.attr,
+	&iio_dev_attr_tx_iq_delay.dev_attr.attr,
+	&iio_dev_attr_tx_iq_burst_len.dev_attr.attr,
 	&iio_dev_attr_rx_zf1_frequency.dev_attr.attr,
 	&iio_dev_attr_lo_manual_frequency.dev_attr.attr,
 	&iio_dev_attr_lo_enable_manual_tuning.dev_attr.attr,
