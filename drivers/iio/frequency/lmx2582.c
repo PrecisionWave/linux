@@ -1806,162 +1806,6 @@ static const struct iio_info lmx2582_info = {
 };
 
 
-/* device tree part */
-static void lmx2582_property_u32(struct lmx2582_state *st,
-				 const char *name,
-				 u32 *val, u32 min, u32 max)
-{
-	int ret;
-	u32 tmp;
-	bool out_of_range;
-
-	ret = device_property_read_u32(&st->spi->dev, name, &tmp);
-	if (ret == 0)
-		out_of_range = tmp > max || tmp < min;
-	else
-		out_of_range = true;
-
-	if (!out_of_range)
-			*val = tmp;
-
-	if (ret < 0 || out_of_range)
-		dev_warn(&st->spi->dev,
-			 "using default value for %s: %u",
-			 name,
-			 *val);
-
-	if (st->dent)
-		debugfs_create_u32(name, 0644, st->dent, val);
-}
-
-static void lmx2582_property_u64(struct lmx2582_state *st,
-				 const char *name,
-				 u64 *val, u64 min, u64 max)
-{
-	int ret;
-	u64 tmp;
-	bool out_of_range;
-
-	ret = device_property_read_u64(&st->spi->dev, name, &tmp);
-	if (ret == 0)
-		out_of_range = tmp > max || tmp < min;
-	else
-		out_of_range = true;
-
-	if (!out_of_range)
-			*val = tmp;
-
-	if (ret < 0 || out_of_range)
-		dev_warn(&st->spi->dev,
-			 "using default value for %s: %llu",
-			 name,
-			 *val);
-
-	if (st->dent)
-		debugfs_create_u64(name, 0644, st->dent, val);
-}
-
-static void lmx2582_property_bool(struct lmx2582_state *st,
-				  const char *name,
-				  bool *val)
-{
-	*val = device_property_read_bool(&st->spi->dev, name);
-
-	if (st->dent)
-		debugfs_create_bool(name, 0644, st->dent, val);
-}
-
-static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
-{
-	struct lmx2582_config *conf;
-	struct fwnode_handle *child;
-	unsigned int channel, tmp;
-	bool btemp;
-	int ret;
-
-	conf = devm_kzalloc(&st->spi->dev, sizeof(*conf), GFP_KERNEL);
-	if (!conf)
-		return NULL;
-	
-	/* copy default values */
-	memcpy(conf, &lmx2582_default_values, sizeof(*conf));
-
-	lmx2582_property_bool(st, "lmx,muxout-sel-readback", &btemp);
-	conf->MUXOUT_SEL = !btemp;
-
-	lmx2582_property_bool(st, "lmx,osc-2x", &conf->OSC_2X);
-
-	lmx2582_property_u32(st, "lmx,mult", &conf->MULT, 1, 6);
-	lmx2582_property_u32(st, "lmx,pll-r", &conf->PLL_R, 1, 128);
-	lmx2582_property_u32(st, "lmx,pll-r-pre", &conf->PLL_R_PRE, 1, 128);
-
-	lmx2582_property_u32(st, "lmx,pfd-ctl", &conf->PFD_CTL, 0, 3);
-
-	lmx2582_property_bool(st, "lmx,cp-disable", &btemp);
-	conf->CP_EN = !btemp;
-
-	lmx2582_property_u32(st, "lmx,cp-idn", &conf->CP_IDN, 0, 31);
-	lmx2582_property_u32(st, "lmx,cp-iup", &conf->CP_IUP, 0, 31);
-	lmx2582_property_u32(st, "lmx,cp-icoarse", &conf->CP_ICOARSE, 0, 3);
-
-	lmx2582_property_u32(st, "lmx,pll-n-pre", &conf->PLL_N_PRE, 0, 1);
-	lmx2582_property_u32(st, "lmx,pll-n", &conf->PLL_N, 0, 4095);
-	lmx2582_property_u32(st, "lmx,pll-den", &conf->PLL_DEN, 1, U32_MAX);
-	lmx2582_property_u32(st, "lmx,pll-num", &conf->PLL_NUM, 0, U32_MAX);
-
-	lmx2582_property_bool(st, "lmx,muxout-hdrv", &conf->MUXOUT_HDRV);
-
-	lmx2582_property_bool(st, "lmx,ld-type-calstat", &btemp);
-	conf->LD_TYPE = !btemp;
-
-	lmx2582_property_u32(st, "lmx,chdiv-seg1", &conf->CHDIV_SEG1, 0, 1);
-	lmx2582_property_u32(st, "lmx,chdiv-seg2", &conf->CHDIV_SEG2, 0, 8);
-	lmx2582_property_u32(st, "lmx,chdiv-seg3", &conf->CHDIV_SEG3, 0, 8);
-	lmx2582_property_u32(st, "lmx,chdiv-seg-sel", &conf->CHDIV_SEG_SEL, 0, 4);
-
-	ret = device_property_read_string_array(&st->spi->dev,
-				"clock-output-names",
-				st->lmx2582_clk_names,
-				LMX2582_CLK_COUNT);
-
-	if (ret < 0) {
-		dev_warn(&st->spi->dev, "Using the default clk names");
-		st->has_clk_out_names = false;
-	} else {
-		st->has_clk_out_names = true;
-	}
-
-	ret = of_clk_get_scale(st->spi->dev.of_node, NULL, &st->scale);
-	if (ret < 0) {
-		st->scale.mult = 1;
-		st->scale.div = 10;
-	}
-
-	device_for_each_child_node(&st->spi->dev, child) {
-		ret = fwnode_property_read_u32(child, "reg", &channel);
-		if (ret)
-			continue;
-		if (channel >= LMX2582_CLK_COUNT)
-			continue;
-
-		ret = fwnode_property_present(child, "lmx,output-enable");
-		st->outputs[channel].enabled = ret;
-
-		st->outputs[channel].power = 15;
-		ret = fwnode_property_read_u32(child, "lmx,output-power", &tmp);
-		if (ret == 0)
-			st->outputs[channel].power = tmp;
-
-		/* Default to Divider */
-		st->outputs[channel].out_mux = LMX2582_OUTx_MUX_CHDIV;
-		if (fwnode_property_present(child, "lmx,mux-sel-vco"))
-			st->outputs[channel].out_mux = LMX2582_OUTx_MUX_VCO;
-	}
-
-	return conf;
-}
-
-
 /* worker to execute sleepable work from non-sleepable contexts */
 static void lmx2582_workq_handler(struct work_struct *workq)
 {
@@ -2337,6 +2181,135 @@ static int lmx2582_clks_register(struct iio_dev *indio_dev)
 
 	return devm_add_action_or_reset(&st->spi->dev,
 					lmx2582_of_clk_del_provider, st);
+}
+
+
+/* device tree part */
+static void lmx2582_property_u32(struct lmx2582_state *st,
+				 const char *name,
+				 u32 *val, u32 min, u32 max)
+{
+	int ret;
+	u32 tmp;
+	bool out_of_range;
+
+	ret = device_property_read_u32(&st->spi->dev, name, &tmp);
+	if (ret == 0)
+		out_of_range = tmp > max || tmp < min;
+	else
+		out_of_range = true;
+
+	if (!out_of_range)
+			*val = tmp;
+
+	if (ret < 0 || out_of_range)
+		dev_warn(&st->spi->dev,
+			 "using default value for %s: %u",
+			 name,
+			 *val);
+
+	if (st->dent)
+		debugfs_create_u32(name, 0644, st->dent, val);
+}
+
+static void lmx2582_property_bool(struct lmx2582_state *st,
+				  const char *name,
+				  bool *val)
+{
+	*val = device_property_read_bool(&st->spi->dev, name);
+
+	if (st->dent)
+		debugfs_create_bool(name, 0644, st->dent, val);
+}
+
+static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
+{
+	struct lmx2582_config *conf;
+	struct fwnode_handle *child;
+	unsigned int channel, tmp;
+	bool btemp;
+	int ret;
+
+	conf = devm_kzalloc(&st->spi->dev, sizeof(*conf), GFP_KERNEL);
+	if (!conf)
+		return NULL;
+	
+	/* copy default values */
+	memcpy(conf, &lmx2582_default_values, sizeof(*conf));
+
+	lmx2582_property_bool(st, "lmx,muxout-sel-readback", &btemp);
+	conf->MUXOUT_SEL = !btemp;
+
+	lmx2582_property_bool(st, "lmx,osc-2x", &conf->OSC_2X);
+
+	lmx2582_property_u32(st, "lmx,mult", &conf->MULT, 1, 6);
+	lmx2582_property_u32(st, "lmx,pll-r", &conf->PLL_R, 1, 128);
+	lmx2582_property_u32(st, "lmx,pll-r-pre", &conf->PLL_R_PRE, 1, 128);
+
+	lmx2582_property_u32(st, "lmx,pfd-ctl", &conf->PFD_CTL, 0, 3);
+
+	lmx2582_property_bool(st, "lmx,cp-disable", &btemp);
+	conf->CP_EN = !btemp;
+
+	lmx2582_property_u32(st, "lmx,cp-idn", &conf->CP_IDN, 0, 31);
+	lmx2582_property_u32(st, "lmx,cp-iup", &conf->CP_IUP, 0, 31);
+	lmx2582_property_u32(st, "lmx,cp-icoarse", &conf->CP_ICOARSE, 0, 3);
+
+	lmx2582_property_u32(st, "lmx,pll-n-pre", &conf->PLL_N_PRE, 0, 1);
+	lmx2582_property_u32(st, "lmx,pll-n", &conf->PLL_N, 0, 4095);
+	lmx2582_property_u32(st, "lmx,pll-den", &conf->PLL_DEN, 1, U32_MAX);
+	lmx2582_property_u32(st, "lmx,pll-num", &conf->PLL_NUM, 0, U32_MAX);
+
+	lmx2582_property_bool(st, "lmx,muxout-hdrv", &conf->MUXOUT_HDRV);
+
+	lmx2582_property_bool(st, "lmx,ld-type-calstat", &btemp);
+	conf->LD_TYPE = !btemp;
+
+	lmx2582_property_u32(st, "lmx,chdiv-seg1", &conf->CHDIV_SEG1, 0, 1);
+	lmx2582_property_u32(st, "lmx,chdiv-seg2", &conf->CHDIV_SEG2, 0, 8);
+	lmx2582_property_u32(st, "lmx,chdiv-seg3", &conf->CHDIV_SEG3, 0, 8);
+	lmx2582_property_u32(st, "lmx,chdiv-seg-sel", &conf->CHDIV_SEG_SEL, 0, 4);
+
+	ret = device_property_read_string_array(&st->spi->dev,
+				"clock-output-names",
+				st->lmx2582_clk_names,
+				LMX2582_CLK_COUNT);
+
+	if (ret < 0) {
+		dev_warn(&st->spi->dev, "Using the default clk names");
+		st->has_clk_out_names = false;
+	} else {
+		st->has_clk_out_names = true;
+	}
+
+	ret = of_clk_get_scale(st->spi->dev.of_node, NULL, &st->scale);
+	if (ret < 0) {
+		st->scale.mult = 1;
+		st->scale.div = 10;
+	}
+
+	device_for_each_child_node(&st->spi->dev, child) {
+		ret = fwnode_property_read_u32(child, "reg", &channel);
+		if (ret)
+			continue;
+		if (channel >= LMX2582_CLK_COUNT)
+			continue;
+
+		ret = fwnode_property_present(child, "lmx,output-enable");
+		st->outputs[channel].enabled = ret;
+
+		st->outputs[channel].power = 15;
+		ret = fwnode_property_read_u32(child, "lmx,output-power", &tmp);
+		if (ret == 0)
+			st->outputs[channel].power = tmp;
+
+		/* Default to Divider */
+		st->outputs[channel].out_mux = LMX2582_OUTx_MUX_CHDIV;
+		if (fwnode_property_present(child, "lmx,mux-sel-vco"))
+			st->outputs[channel].out_mux = LMX2582_OUTx_MUX_VCO;
+	}
+
+	return conf;
 }
 
 
