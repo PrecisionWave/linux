@@ -306,8 +306,8 @@ struct lmx2582_pll_values {
 	u64 fvco;
 	u64 fout;
 	u32 pll_n;
-	u32 pll_n_den;
-	u32 pll_n_num;
+	u32 pll_den;
+	u32 pll_num;
 	u32 mash_order;
 	u32 chdiv_seg1;
 	u32 chdiv_seg2;
@@ -1962,8 +1962,8 @@ static int find_pll_n_divider(struct lmx2582_state* st,
 
 		/* output values */
 		if (values) {
-			values->pll_n_num = num;
-			values->pll_n_den = den;
+			values->pll_num = num;
+			values->pll_den = den;
 			values->pll_n = n;
 			values->mash_order = mash_order;
 			values->chdiv_seg1 = entry->chdiv_register_values.seg1;
@@ -1984,8 +1984,8 @@ static void lmx2582_apply_settings(struct lmx2582_state* st,
 				   const struct lmx2582_pll_values *values)
 {
 	st->conf->PLL_N = values->pll_n;
-	st->conf->PLL_NUM = values->pll_n_num;
-	st->conf->PLL_DEN = values->pll_n_den;
+	st->conf->PLL_NUM = values->pll_num;
+	st->conf->PLL_DEN = values->pll_den;
 
 	st->conf->CHDIV_SEG1 = values->chdiv_seg1;
 	st->conf->CHDIV_SEG2 = values->chdiv_seg2;
@@ -2076,7 +2076,7 @@ static long lmx2582_clk_round_rate(struct clk_hw *hw,
 
 	dev_dbg(&st->spi->dev, "lmx2582_clk_round_rate: "
 		"pll_n=%u, pll_num=%u, pll_den=%u, fout=%llu\n",
-		pll_values.pll_n, pll_values.pll_n_num, pll_values.pll_n_den,
+		pll_values.pll_n, pll_values.pll_num, pll_values.pll_den,
 		pll_values.fout);
 
 	return to_ccf_scaled(pll_values.fout, &st->scale);
@@ -2118,7 +2118,7 @@ static int lmx2582_clk_set_rate(struct clk_hw *hw,
 	}
 
 	dev_info(&st->spi->dev, "PLL: N=%u, NUM=%u, DEN=%u, fout=%llu Hz\n",
-		 pll_values.pll_n, pll_values.pll_n_num, pll_values.pll_n_den,
+		 pll_values.pll_n, pll_values.pll_num, pll_values.pll_den,
 		 pll_values.fout);
 	
 	lmx2582_apply_settings(st, &pll_values);
