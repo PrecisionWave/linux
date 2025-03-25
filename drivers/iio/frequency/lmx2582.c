@@ -141,12 +141,6 @@
 #define LMX2582_R46_OUTA_PD(x)			(((x) & 0x1) << 6)
 #define LMX2582_R46_MASH_ORDER(x)		(((x) & 0x7) << 0)
 
-#define LMX2582_MASH_ORDER_INTEGER_N		0
-#define LMX2582_MASH_ORDER_1ST			1
-#define LMX2582_MASH_ORDER_2ND			2
-#define LMX2582_MASH_ORDER_3RD			3
-#define LMX2582_MASH_ORDER_4TH			4
-
 /* LMX2582_R47 */
 #define LMX2582_R47_OUTA_MUX(x)			(((x) & 0x3) << 11)
 #define LMX2582_R47_OUTB_POW(x)			(((x) & 0x3f) << 0)
@@ -2324,6 +2318,9 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 	lmx2582_property_u32(st, "lmx,pll-n", &conf->PLL_N, 0, 4095);
 	lmx2582_property_u32(st, "lmx,pll-den", &conf->PLL_DEN, 1, U32_MAX);
 	lmx2582_property_u32(st, "lmx,pll-num", &conf->PLL_NUM, 0, U32_MAX);
+
+	lmx2582_property_u32(st, "lmx,mash-order", &conf->MASH_ORDER, 0, 4);
+	lmx2582_property_u32(st, "lmx,mash-seed", &conf->MASH_SEED, 0, U32_MAX);
 
 	lmx2582_property_bool(st, "lmx,muxout-hdrv", &conf->MUXOUT_HDRV);
 
