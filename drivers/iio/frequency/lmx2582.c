@@ -2020,6 +2020,48 @@ static void lmx2582_apply_settings(struct lmx2582_state* st,
 	}
 }
 
+static int lmx2582_find_pll_config(struct lmx2582_state *st,
+				   unsigned long long rate,
+				   struct lmx2582_pll_values *pll_values)
+{
+	int ret = -EINVAL;
+
+	dev_info(&st->spi->dev, "lmx2582_find_pll_config for rate=%llu Hz\n",
+		rate);
+
+	if (!rate || !pll_values)
+		return -EINVAL;
+ 
+	/* try integer only first */
+	ret = find_pll_n_divider(st, rate, false, pll_values);
+	if (ret >= 0) {
+		dev_info(&st->spi->dev, "found integer-N only configuration\n");
+	} else {
+		dev_info(&st->spi->dev,
+			 "Did not find valid integer-N only configuration."
+			 "Trying to find fractional-N configuration\n");
+
+		/* integer only failed. try fractional */
+		ret = find_pll_n_divider(st, rate, true, pll_values);
+
+		if (ret < 0) {
+			dev_err(&st->spi->dev,
+				"Did not find valid PLL configuration\n");
+			return -EINVAL;
+		}
+
+		dev_info(&st->spi->dev, "found fractional-N configuration\n");
+	}
+
+	dev_info(&st->spi->dev, "lmx2582_find_pll_config found "
+		"pll_n=%u, pll_num=%u, pll_den=%u, fout=%llu Hz\n",
+		pll_values->pll_n, pll_values->pll_num, pll_values->pll_den,
+		pll_values->fout);
+
+	return 0;
+}
+
+
 /* clock system integration */
 static unsigned long lmx2582_clk_recalc_rate(struct clk_hw *hw,
 					     unsigned long parent_rate)
@@ -2054,30 +2096,9 @@ static long lmx2582_clk_round_rate(struct clk_hw *hw,
 	if (!rate)
 		return 0;
  
-	/* try integer only first */
-	ret = find_pll_n_divider(st, scaled_rate, false, &pll_values);
-	if (ret >= 0)
-		dev_info(&st->spi->dev, "found integer-N only configuration\n");
-	if (ret < 0) {
-		dev_info(&st->spi->dev,
-			 "Did not find valid integer-N only configuration\n");
-
-		/* integer only failed. try fractional */
-		ret = find_pll_n_divider(st, scaled_rate, true, &pll_values);
-
-		if (ret < 0) {
-			dev_err(&st->spi->dev,
-				"Did not find valid PLL configuration\n");
-			return -EINVAL;
-		}
-
-		dev_info(&st->spi->dev, "found fractional-N configuration\n");
-	}
-
-	dev_dbg(&st->spi->dev, "lmx2582_clk_round_rate: "
-		"pll_n=%u, pll_num=%u, pll_den=%u, fout=%llu\n",
-		pll_values.pll_n, pll_values.pll_num, pll_values.pll_den,
-		pll_values.fout);
+	ret = lmx2582_find_pll_config(st, scaled_rate, &pll_values);
+	if (ret < 0)
+		return 0;
 
 	return to_ccf_scaled(pll_values.fout, &st->scale);
 }
@@ -2094,32 +2115,12 @@ static int lmx2582_clk_set_rate(struct clk_hw *hw,
 	scaled_rate = from_ccf_scaled(rate, &st->scale);
 
 	dev_dbg(&st->spi->dev,
-		"lmx2582_clk_set_rate for rate=%lu and parent_rate=%lu\n",
-		rate, parent_rate);
+		"lmx2582_clk_set_rate for rate=%llu Hz and parent_rate=%lu Hz\n",
+		scaled_rate, parent_rate);
 
-	/* try integer only first */
-	ret = find_pll_n_divider(st, scaled_rate, false, &pll_values);
-	if (ret >= 0)
-		dev_info(&st->spi->dev, "Found integer-N only configuration\n");
-	if (ret < 0) {
-		dev_info(&st->spi->dev,
-			 "Did not find valid integer-N only configuration\n");
-
-		/* integer only failed. try fractional */
-		ret = find_pll_n_divider(st, scaled_rate, true, &pll_values);
-
-		if (ret < 0) {
-			dev_err(&st->spi->dev,
-				"Did not find valid PLL configuration\n");
-			return -EINVAL;
-		}
-
-		dev_info(&st->spi->dev, "Found fractional-N configuration\n");
-	}
-
-	dev_info(&st->spi->dev, "PLL: N=%u, NUM=%u, DEN=%u, fout=%llu Hz\n",
-		 pll_values.pll_n, pll_values.pll_num, pll_values.pll_den,
-		 pll_values.fout);
+	ret = lmx2582_find_pll_config(st, scaled_rate, &pll_values);
+	if (ret < 0)
+		return ret;
 	
 	lmx2582_apply_settings(st, &pll_values);
 
