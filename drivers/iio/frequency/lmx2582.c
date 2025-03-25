@@ -37,6 +37,16 @@
 #define LMX2582_R0_RESET(x)			(((x) & 0x1) << 1)
 #define LMX2582_R0_POWERDOWN(x)			(((x) & 0x1) << 0)
 
+#define LMX2582_FCAL_HPFD_ADJ_LT_100MHz		0
+#define LMX2582_FCAL_HPFD_ADJ_100_TO_150MHz	1
+#define LMX2582_FCAL_HPFD_ADJ_150_TO_200MHz	2
+#define LMX2582_FCAL_HPFD_ADJ_GT_200MHz		3
+
+#define LMX2582_FCAL_LPFD_ADJ_GT_10MHz		0
+#define LMX2582_FCAL_LPFD_ADJ_5_TO_10MHz	1
+#define LMX2582_FCAL_LPFD_ADJ_2_5_TO_5MHz	2
+#define LMX2582_FCAL_LPFD_ADJ_LT_2_5MHz		3
+
 /* LMX2582_R1 */
 #define LMX2582_R1_CAL_CLK_DIV(x)		(((x) & 0x7) << 0)
 
@@ -214,6 +224,7 @@ struct lmx2582_channel_divider_min_max {
 };
 
 #define MHZ_TO_HZ(_x_) ((_x_) * 1000ULL * 1000ULL)
+#define KHZ_TO_HZ(_x_) ((_x_) * 1000ULL)
 #define LMX2582_CHDIV_SEG1_DIV(x) LMX2582_CHDIV_SEG1_DIV##x
 #define LMX2582_CHDIV_SEG2_DIV1 LMX2582_CHDIV_SEG2_PD
 #define LMX2582_CHDIV_SEG2_DIV(x) LMX2582_CHDIV_SEG2_DIV##x
@@ -579,6 +590,7 @@ struct lmx2582_config {
 	u32 AJUMP_SIZE;
 	u32 FJUMP_SIZE;
 };
+
 /* Default values */
 static const struct lmx2582_config lmx2582_default_values = {
 	/* REG0 */
@@ -1106,6 +1118,45 @@ static int lmx2582_setup(struct lmx2582_state *st, unsigned long parent_rate)
 		conf->CHDIV_SEG3_EN = false;
 		break;
 	}
+
+	/* Apply recommended PFD_DLY acoording to mash order */
+	switch(conf->MASH_ORDER) {
+	case LMX2582_MASH_ORDER_INTEGER_N:
+		st->conf->PFD_DLY = 1;
+		break;
+	case LMX2582_MASH_ORDER_1ST:
+		st->conf->PFD_DLY = 1;
+		break;
+	case LMX2582_MASH_ORDER_2ND:
+		st->conf->PFD_DLY = 2;
+		break;
+	case LMX2582_MASH_ORDER_3RD:
+		st->conf->PFD_DLY = 2;
+		break;
+	case LMX2582_MASH_ORDER_4TH:
+		st->conf->PFD_DLY = 8;
+		break;
+	}
+
+	/* VCO Calibration */
+	if (st->fpd < MHZ_TO_HZ(100))
+		conf->FCAL_HPFD_ADJ = LMX2582_FCAL_HPFD_ADJ_LT_100MHz;
+	else if (st->fpd < MHZ_TO_HZ(150))
+		conf->FCAL_HPFD_ADJ = LMX2582_FCAL_HPFD_ADJ_100_TO_150MHz;
+	else if (st->fpd < MHZ_TO_HZ(200))
+		conf->FCAL_HPFD_ADJ = LMX2582_FCAL_HPFD_ADJ_150_TO_200MHz;
+	else
+		conf->FCAL_HPFD_ADJ = LMX2582_FCAL_HPFD_ADJ_GT_200MHz;
+
+	if (st->fpd < KHZ_TO_HZ(2500))
+		conf->FCAL_LPFD_ADJ = LMX2582_FCAL_LPFD_ADJ_LT_2_5MHz;
+	else if (st->fpd < MHZ_TO_HZ(5))
+		conf->FCAL_LPFD_ADJ = LMX2582_FCAL_LPFD_ADJ_2_5_TO_5MHz;
+	else if (st->fpd < MHZ_TO_HZ(10))
+		conf->FCAL_LPFD_ADJ = LMX2582_FCAL_LPFD_ADJ_5_TO_10MHz;
+	else
+		conf->FCAL_LPFD_ADJ = LMX2582_FCAL_LPFD_ADJ_GT_10MHz;
+
 
 	/* R0 Bit Definitions */
 	st->regs[LMX2582_R0] =
@@ -1993,25 +2044,6 @@ static void lmx2582_apply_settings(struct lmx2582_state* st,
 		st->conf->CHDIV_SEG_SEL = LMX2582_CHDIV_SEG_SEL_1;
 
 	st->conf->MASH_ORDER = values->mash_order;
-	st->conf->MASH_SEED = 0;
-
-	switch(values->mash_order) {
-	case LMX2582_MASH_ORDER_INTEGER_N:
-		st->conf->PFD_DLY = 1;
-		break;
-	case LMX2582_MASH_ORDER_1ST:
-		st->conf->PFD_DLY = 1;
-		break;
-	case LMX2582_MASH_ORDER_2ND:
-		st->conf->PFD_DLY = 2;
-		break;
-	case LMX2582_MASH_ORDER_3RD:
-		st->conf->PFD_DLY = 2;
-		break;
-	case LMX2582_MASH_ORDER_4TH:
-		st->conf->PFD_DLY = 8;
-		break;
-	}
 }
 
 static int lmx2582_find_pll_config(struct lmx2582_state *st,
