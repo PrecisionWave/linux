@@ -98,4 +98,12 @@
 #define LMX2582_CHDIV_SEG_SEL_12	2
 #define LMX2582_CHDIV_SEG_SEL_123	4
 
+/* mash order
+ * use for lmx,mash-order */
+#define LMX2582_MASH_ORDER_INTEGER_N	0
+#define LMX2582_MASH_ORDER_1ST		1
+#define LMX2582_MASH_ORDER_2ND		2
+#define LMX2582_MASH_ORDER_3RD		3
+#define LMX2582_MASH_ORDER_4TH		4
+
 #endif /* _DT_BINDINGS_IIO_FREQUENCY_LMX2582_H_ */
