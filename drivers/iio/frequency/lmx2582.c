@@ -873,7 +873,7 @@ static int lmx2582_reg_access(struct iio_dev *indio_dev,
 	} else {
 		u16 tmp;
 		ret = lmx2582_spi_read(st, reg & 0x7f, &tmp);
-		*readval = tmp;
+		*readval = ((reg & 0x7f) << 16) | tmp;
 	}
 	mutex_unlock(&st->lock);
 
