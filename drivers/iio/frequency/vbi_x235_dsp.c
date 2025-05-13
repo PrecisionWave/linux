@@ -375,7 +375,7 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		vbi_x235_dsp_write(st, ADDR_LO_CONFIG_DELAY, temp32);
 		break;
 	case REG_FILTER_LE_DELAY:
-		vbi_x235_dsp_write(st, ADDR_FILTER_LE_DELAY, temp32);
+		vbi_x235_dsp_write(st, ADDR_FILTER_LE_DELAY, ((uint32_t)val));
 		break;
 	case REG_GAIN_TX1:
 		if(val<0 || val>0xFFFF){
