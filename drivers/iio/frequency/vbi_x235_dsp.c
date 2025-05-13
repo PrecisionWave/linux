@@ -43,6 +43,7 @@
 #define ADDR_TX_IQ_UNDERFLOWS	(9*4)
 #define ADDR_TX_IQ_DELAY	(10*4)
 #define ADDR_TX_IQ_BURST_LEN	(11*4)
+#define ADDR_FILTER_LE_DELAY	(12*4)
 
 
 // expands to:
@@ -211,6 +212,7 @@ enum chan_num{
 	REG_TX_IQ_BURST_LEN,
 	REG_LO_CONF_DELAY,
 	REG_LO_CONF_COARSE_DELAY,
+	REG_FILTER_LE_DELAY,
 	REG_GAIN_TX1,
 	REG_GAIN_TX2,
 	REG_LNA_RX1_EN,
@@ -371,6 +373,9 @@ static ssize_t vbi_x235_dsp_store(struct device *dev,
 		temp32 = vbi_x235_dsp_read(st, ADDR_LO_CONFIG_DELAY) & 0x3FFFFFFF;
 		temp32 += ((uint32_t)val) <<30;
 		vbi_x235_dsp_write(st, ADDR_LO_CONFIG_DELAY, temp32);
+		break;
+	case REG_FILTER_LE_DELAY:
+		vbi_x235_dsp_write(st, ADDR_FILTER_LE_DELAY, temp32);
 		break;
 	case REG_GAIN_TX1:
 		if(val<0 || val>0xFFFF){
@@ -623,6 +628,9 @@ static ssize_t vbi_x235_dsp_show(struct device *dev,
 	case REG_LO_CONF_COARSE_DELAY:
 		val = vbi_x235_dsp_read(st, ADDR_LO_CONFIG_DELAY) >>30;
 		break;
+	case REG_FILTER_LE_DELAY:
+		val = vbi_x235_dsp_read(st, ADDR_FILTER_LE_DELAY);
+		break;
 	case REG_GAIN_TX1:
 		val = (vbi_x235_dsp_read(st, ADDR_GAIN) & 0xFFFF);
 		break;
@@ -765,6 +773,11 @@ static IIO_DEVICE_ATTR(lo_config_coarse_delay, S_IRUGO | S_IWUSR,
 			vbi_x235_dsp_store,
 			REG_LO_CONF_COARSE_DELAY);
 
+static IIO_DEVICE_ATTR(filter_le_delay, S_IRUGO | S_IWUSR,
+			vbi_x235_dsp_show,
+			vbi_x235_dsp_store,
+			REG_FILTER_LE_DELAY);
+
 static IIO_DEVICE_ATTR(tx1_gain, S_IRUGO | S_IWUSR,
 			vbi_x235_dsp_show,
 			vbi_x235_dsp_store,
@@ -851,6 +864,7 @@ static IIO_DEVICE_ATTR(spi_data_d_invert, S_IRUGO | S_IWUSR,
 			REG_SPI_DATA_D_INVERT);
 
 
+
 static struct attribute *vbi_x235_dsp_attributes[] = {
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_adc1_peak_hold_value.dev_attr.attr,
@@ -868,6 +882,7 @@ static struct attribute *vbi_x235_dsp_attributes[] = {
 	&iio_dev_attr_lo_enable_manual_tuning.dev_attr.attr,
 	&iio_dev_attr_lo_config_delay.dev_attr.attr,
 	&iio_dev_attr_lo_config_coarse_delay.dev_attr.attr,
+	&iio_dev_attr_filter_le_delay.dev_attr.attr,
 	&iio_dev_attr_tx1_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_gain.dev_attr.attr,
 	&iio_dev_attr_rx1_lna_enable.dev_attr.attr,
