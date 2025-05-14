@@ -690,7 +690,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		temp32 = (int)temp64 & 0xFFFF;
+		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[0] = temp32;
 		temp32 |= 0<<16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
@@ -707,7 +707,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		temp32 = (int)temp64 & 0xFFFF;
+		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[1] = temp32;
 		temp32 |= 1<<16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
@@ -724,7 +724,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		temp32 = (int)temp64 & 0xFFFF;
+		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[2] = temp32;
 		temp32 |= 2<<16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
@@ -741,7 +741,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		val = 3*val;
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->fs_adc);
-		temp32 = (int)temp64 & 0xFFFF;
+		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[3] = temp32;
 		temp32 |= 3<<16;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
