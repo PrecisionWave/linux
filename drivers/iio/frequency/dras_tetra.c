@@ -296,6 +296,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 	struct dras_tetra_state *st = iio_priv(indio_dev);
 	long val;
 	int ret;
+	int i;
 	u32 temp32;
 	u32 temp32_1;
 	u64 temp64;
