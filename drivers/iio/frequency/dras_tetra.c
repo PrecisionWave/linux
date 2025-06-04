@@ -633,7 +633,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		st->gain_tx1 = val;
 		st->gain_tx1_reg = (st->pa_comp_gain_tx1 * val)>>8;
-		if(st->gain_tx1_reg > 0xFFFFF)
+		if(st->gain_tx1_reg > 0xFFFF)
 			st->gain_tx1_reg = 0xFFFF;
 		if(st->rf_mute)
 			break;
@@ -647,7 +647,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		st->gain_tx2 = val;
 		st->gain_tx2_reg = (st->pa_comp_gain_tx2 * val)>>8;
-		if(st->gain_tx2_reg > 0xFFFFF)
+		if(st->gain_tx2_reg > 0xFFFF)
 			st->gain_tx2_reg = 0xFFFF;
 		if(st->rf_mute)
 			break;
@@ -659,15 +659,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		// txgain
 		st->pa_comp_gain_tx1 = val;
-		st->gain_tx1_reg = (st->gain_tx1 * val)>>8;
-		if(st->gain_tx1_reg > 0xFFFFF)
-			st->gain_tx1_reg = 0xFFFF;
-		if(st->rf_mute)
-			break;
-		dras_tetra_write(st, ADDR_TX21_GAIN,
-			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		// testtones
 		temp32 = 0;
 		for(i=0; i<=1; i++){
@@ -678,21 +670,21 @@ static ssize_t dras_tetra_store(struct device *dev,
 			temp32 += temp32_1 << (i*16);
 		}
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
+		// txgain
+		st->gain_tx1_reg = (st->gain_tx1 * val)>>8;
+		if(st->gain_tx1_reg > 0xFFFF)
+			st->gain_tx1_reg = 0xFFFF;
+		if(st->rf_mute)
+			break;
+		dras_tetra_write(st, ADDR_TX21_GAIN,
+			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		break;
 	case REG_TX2_PA_COMP_GAIN:
 		if(val<0 || val>0xFFFF){
 			ret = -EINVAL;
 			break;
 		}
-		// txgain
 		st->pa_comp_gain_tx2 = val;
-		st->gain_tx2_reg = (st->gain_tx2 * val)>>8;
-		if(st->gain_tx2_reg > 0xFFFFF)
-			st->gain_tx2_reg = 0xFFFF;
-		if(st->rf_mute)
-			break;
-		dras_tetra_write(st, ADDR_TX21_GAIN,
-			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		// testtones
 		temp32 = 0;
 		for(i=0; i<=1; i++){
@@ -703,6 +695,14 @@ static ssize_t dras_tetra_store(struct device *dev,
 			temp32 += temp32_1 << (i*16);
 		}
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
+		// txgain
+		st->gain_tx2_reg = (st->gain_tx2 * val)>>8;
+		if(st->gain_tx2_reg > 0xFFFF)
+			st->gain_tx2_reg = 0xFFFF;
+		if(st->rf_mute)
+			break;
+		dras_tetra_write(st, ADDR_TX21_GAIN,
+			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		break;
 	case REG_BAND1_AGC_TARGET:
 		if(val>0xFFF){
