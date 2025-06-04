@@ -166,6 +166,8 @@ enum chan_num{
 	REG_ALL_CH(REG_FILTER_SELECTION),	// being expanded for all channels
 	REG_TX1_GAIN,
 	REG_TX2_GAIN,
+	REG_TX1_PA_COMP_GAIN,
+	REG_TX2_PA_COMP_GAIN,
 	REG_BAND1_RX_FREQUENCY,
 	REG_BAND2_RX_FREQUENCY,
 	REG_BAND1_TX_FREQUENCY,
@@ -219,6 +221,10 @@ struct dras_tetra_state {
 	uint32_t		tetra_clk;
 	u32			gain_tx1;
 	u32			gain_tx2;
+	u32			pa_comp_gain_tx1;
+	u32			pa_comp_gain_tx2;
+	u32			gain_tx1_reg;
+	u32			gain_tx2_reg;
 	bool			rf_mute;
 	u32			nb_dds_inc[2*NB_OF_TETRA_CHANNELS];
 	u32			wb_dds_inc[4];
@@ -290,6 +296,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 	long val;
 	int ret;
 	u32 temp32;
+	u32 temp32_1;
 	u64 temp64;
 	u32 ch;
 	int match;
@@ -475,6 +482,9 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_comp_gain_tx1 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF0000;
 		temp32 += ((uint32_t)val) & 0xFFFF;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
@@ -485,6 +495,9 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_comp_gain_tx1 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
 		temp32 += ((uint32_t)val) <<16;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
@@ -495,6 +508,9 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_comp_gain_tx2 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF0000;
 		temp32 += ((uint32_t)val) & 0xFFFF;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
@@ -505,6 +521,9 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_comp_gain_tx2 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
 		temp32 += ((uint32_t)val) <<16;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
@@ -607,10 +626,13 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		st->gain_tx1 = val;
+		st->gain_tx1_reg = (st->pa_comp_gain_tx1 * val)>>8;
+		if(st->gain_tx1_reg > 0xFFFFF)
+			st->gain_tx1_reg = 0xFFFF;
 		if(st->rf_mute)
 			break;
 		dras_tetra_write(st, ADDR_TX21_GAIN,
-			(st->gain_tx2 << 16) | st->gain_tx1);
+			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		break;
 	case REG_TX2_GAIN:
 		if(val<0 || val>0xFFFF){
@@ -618,10 +640,41 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		}
 		st->gain_tx2 = val;
+		st->gain_tx2_reg = (st->pa_comp_gain_tx2 * val)>>8;
+		if(st->gain_tx2_reg > 0xFFFFF)
+			st->gain_tx2_reg = 0xFFFF;
 		if(st->rf_mute)
 			break;
 		dras_tetra_write(st, ADDR_TX21_GAIN,
-			(st->gain_tx2 << 16) | st->gain_tx1);
+			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
+		break;
+	case REG_TX1_PA_COMP_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		st->pa_comp_gain_tx1 = val;
+		st->gain_tx1_reg = (st->gain_tx1 * val)>>8;
+		if(st->gain_tx1_reg > 0xFFFFF)
+			st->gain_tx1_reg = 0xFFFF;
+		if(st->rf_mute)
+			break;
+		dras_tetra_write(st, ADDR_TX21_GAIN,
+			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
+		break;
+	case REG_TX2_PA_COMP_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		st->pa_comp_gain_tx2 = val;
+		st->gain_tx2_reg = (st->gain_tx2 * val)>>8;
+		if(st->gain_tx2_reg > 0xFFFFF)
+			st->gain_tx2_reg = 0xFFFF;
+		if(st->rf_mute)
+			break;
+		dras_tetra_write(st, ADDR_TX21_GAIN,
+			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		break;
 	case REG_BAND1_AGC_TARGET:
 		if(val>0xFFF){
@@ -705,7 +758,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		else{
 			dras_tetra_write(st, ADDR_TX21_GAIN,
-				(st->gain_tx2 << 16) | st->gain_tx1);
+				(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		}
 		break;
 	case REG_EN_UL_TEST:
@@ -871,18 +924,23 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE1:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
+		val = (st->pa_comp_gain_tx1 * val) >> 8;
+		val = (val << 8) / st->pa_comp_gain_tx1;
 		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE2:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1)>>16;
+		val = (val << 8) / st->pa_comp_gain_tx1;
 		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE1:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
+		val = (val << 8) / st->pa_comp_gain_tx2;
 		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE2:
 		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2)>>16;
+		val = (val << 8) / st->pa_comp_gain_tx2;
 		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
 		break;
 	case REG_BAND1_FILTER_SELECTION:
@@ -946,6 +1004,12 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_TX2_GAIN:
 		val = st->gain_tx2;
+		break;
+	case REG_TX1_PA_COMP_GAIN:
+		val = st->pa_comp_gain_tx1;
+		break;
+	case REG_TX2_PA_COMP_GAIN:
+		val = st->pa_comp_gain_tx2;
 		break;
 	case REG_RX_BURST_LENGTH1:
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH);
@@ -1038,6 +1102,16 @@ static IIO_DEVICE_ATTR(tx2_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_TX2_GAIN);
+
+static IIO_DEVICE_ATTR(tx1_pa_comp_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_PA_COMP_GAIN);
+
+static IIO_DEVICE_ATTR(tx2_pa_comp_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_PA_COMP_GAIN);
 
 static IIO_DEVICE_ATTR(band1_rx_frequency, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -1263,6 +1337,8 @@ static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(filter_selection),
 	&iio_dev_attr_tx1_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_gain.dev_attr.attr,
+	&iio_dev_attr_tx1_pa_comp_gain.dev_attr.attr,
+	&iio_dev_attr_tx2_pa_comp_gain.dev_attr.attr,
 	&iio_dev_attr_band1_rx_frequency.dev_attr.attr,
 	&iio_dev_attr_band2_rx_frequency.dev_attr.attr,
 	&iio_dev_attr_band1_tx_frequency.dev_attr.attr,
