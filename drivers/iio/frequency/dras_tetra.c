@@ -225,6 +225,7 @@ struct dras_tetra_state {
 	u32			pa_comp_gain_tx2;
 	u32			gain_tx1_reg;
 	u32			gain_tx2_reg;
+	u32			testtone_ampl[4];
 	bool			rf_mute;
 	u32			nb_dds_inc[2*NB_OF_TETRA_CHANNELS];
 	u32			wb_dds_inc[4];
@@ -481,6 +482,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_ampl[0] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		val = (st->pa_comp_gain_tx1 * val) >> 8;
 		if(val>0xFFFF)
@@ -494,6 +496,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_ampl[1] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		val = (st->pa_comp_gain_tx1 * val) >> 8;
 		if(val>0xFFFF)
@@ -507,6 +510,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_ampl[2] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		val = (st->pa_comp_gain_tx2 * val) >> 8;
 		if(val>0xFFFF)
@@ -520,6 +524,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_ampl[3] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
 		val = (st->pa_comp_gain_tx2 * val) >> 8;
 		if(val>0xFFFF)
@@ -653,6 +658,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		// txgain
 		st->pa_comp_gain_tx1 = val;
 		st->gain_tx1_reg = (st->gain_tx1 * val)>>8;
 		if(st->gain_tx1_reg > 0xFFFFF)
@@ -661,12 +667,23 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		dras_tetra_write(st, ADDR_TX21_GAIN,
 			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
+		// testtones
+		temp32 = 0;
+		for(i=0; i<=1; i++){
+			temp32_1 = (st->testtone_ampl[i]*46286)>>15; // val*10^(3/20)*2^15
+			temp32_1 = (st->pa_comp_gain_tx1 * temp32_1) >> 8;
+			if(temp32_1>0xFFFF)
+				temp32_1 = 0xFFFF;
+			temp32 += temp32_1 << (i*16);
+		}
+		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX1, temp32);
 		break;
 	case REG_TX2_PA_COMP_GAIN:
 		if(val<0 || val>0xFFFF){
 			ret = -EINVAL;
 			break;
 		}
+		// txgain
 		st->pa_comp_gain_tx2 = val;
 		st->gain_tx2_reg = (st->gain_tx2 * val)>>8;
 		if(st->gain_tx2_reg > 0xFFFFF)
@@ -675,6 +692,16 @@ static ssize_t dras_tetra_store(struct device *dev,
 			break;
 		dras_tetra_write(st, ADDR_TX21_GAIN,
 			(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
+		// testtones
+		temp32 = 0;
+		for(i=0; i<=1; i++){
+			temp32_1 = (st->testtone_ampl[i+2]*46286)>>15; // val*10^(3/20)*2^15
+			temp32_1 = (st->pa_comp_gain_tx2 * temp32_1) >> 8;
+			if(temp32_1>0xFFFF)
+				temp32_1 = 0xFFFF;
+			temp32 += temp32_1 << (i*16);
+		}
+		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
 		break;
 	case REG_BAND1_AGC_TARGET:
 		if(val>0xFFF){
@@ -923,25 +950,16 @@ static ssize_t dras_tetra_show(struct device *dev,
 			val -= st->tetra_clk>>2;
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE1:
-		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1) & 0xFFFF;
-		val = (st->pa_comp_gain_tx1 * val) >> 8;
-		val = (val << 8) / st->pa_comp_gain_tx1;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_ampl[0];
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE2:
-		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX1)>>16;
-		val = (val << 8) / st->pa_comp_gain_tx1;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_ampl[1];
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE1:
-		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2) & 0xFFFF;
-		val = (val << 8) / st->pa_comp_gain_tx2;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_ampl[2];
 		break;
 	case REG_TX2_TESTTONE_AMPLITUDE2:
-		val = dras_tetra_read(st, ADDR_TESTTONE_AMPL_TX2)>>16;
-		val = (val << 8) / st->pa_comp_gain_tx2;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_ampl[3];
 		break;
 	case REG_BAND1_FILTER_SELECTION:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 0) & 3;
@@ -1514,6 +1532,8 @@ static int dras_tetra_probe(struct platform_device *pdev)
 
 	/* initially mute TX of both TX */
 	st->rf_mute = true;
+	st->pa_comp_gain_tx1 = 256;
+	st->pa_comp_gain_tx2 = 256;
 
 	//dras_tetra_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, 2389333); 	// Fs/10 > 10Hz update rate
 	//dras_tetra_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, 2048);	// 11.7kHz RBW @ 2k FFT
