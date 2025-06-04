@@ -34,8 +34,8 @@
 #define ADDR_OFFSET_TLAST0		21*4 // 4bits per port, port0..7
 #define ADDR_OFFSET_TLAST1		22*4 // 4bits per port, port8..15
 #define ADDR_MUTE_LEN			23*4
-#define ADDR_BEST_SOURCE1		24*4
-#define ADDR_BEST_SOURCE2		25*4
+//#define ADDR_BEST_SOURCE1		24*4
+//#define ADDR_BEST_SOURCE2		25*4
 #define ADDR_MAXGAIN_DL			26*4
 #define ADDR_TARGET_PWR_DL		27*4
 #define ADDR_SQUELCH_DL			28*4
@@ -548,10 +548,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_BEST_SOURCE)){
 			match = 1;
-			if(ch<8)
-				val = (dras_radio_repeater_read(st, ADDR_BEST_SOURCE1) >> (4*ch)) & 0xF;
-			else
-				val = (dras_radio_repeater_read(st, ADDR_BEST_SOURCE2) >> (4*(ch-8))) & 0xF;
+			val = (dras_radio_repeater_read(st, ADDR_RSSI(ch))>>15) & 0xF;
 			break;
 		}
 	}
