@@ -750,8 +750,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		// testtones
 		temp32 = 0;
 		for(i=0; i<=1; i++){
-			temp32_1 = (st->testtone_fm_ampl[i]*46286)>>15; // val*10^(3/20)*2^15
-			temp32_1 = (st->pa_fm_comp_gain_tx1 * temp32_1) >> 8;
+			temp32_1 = (st->pa_fm_comp_gain_tx1 * st->testtone_fm_ampl[i]) >> 8;
 			if(temp32_1>0xFFFF)
 				temp32_1 = 0xFFFF;
 			temp32 += temp32_1 << (i*16);
@@ -775,8 +774,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		// testtones
 		temp32 = 0;
 		for(i=0; i<=1; i++){
-			temp32_1 = (st->testtone_fm_ampl[i+2]*46286)>>15; // val*10^(3/20)*2^15
-			temp32_1 = (st->pa_fm_comp_gain_tx2 * temp32_1) >> 8;
+			temp32_1 = (st->pa_fm_comp_gain_tx2 * st->testtone_fm_ampl[i+2]) >> 8;
 			if(temp32_1>0xFFFF)
 				temp32_1 = 0xFFFF;
 			temp32 += temp32_1 << (i*16);
