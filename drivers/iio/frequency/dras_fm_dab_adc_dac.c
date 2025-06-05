@@ -388,6 +388,8 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 				break;
 			}
 			st->gain_dab_tx[ch] = val;
+			val = (st->pa_dab_comp_gain_tx1 * val)>>8;
+			st->gain_dab_tx_reg[ch] = val;
 			if(!st->rf_mute){
 				temp32 = val + ((ch+1)<<16);
 				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
@@ -431,6 +433,72 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 	/* unique registers */
 	switch ((u32)this_attr->address) {
 
+	case REG_TX1_DAB_PA_COMP_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		st->pa_dab_comp_gain_tx1 = val;
+		// testtone1
+		temp32_1 = (st->testtone_dab_ampl[0]*46286)>>15; // val*10^(3/20)*2^15
+		temp32_1 = (st->pa_dab_comp_gain_tx1 * temp32_1) >> 8;
+		if(temp32_1>0xFFFF)
+			temp32_1 = 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) & 0xFFFF;
+		temp32 += temp32_1 << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE0, temp32);
+		// testtone2
+		temp32_1 = (st->testtone_dab_ampl[1]*46286)>>15; // val*10^(3/20)*2^15
+		temp32_1 = (st->pa_dab_comp_gain_tx1 * temp32_1) >> 8;
+		if(temp32_1>0xFFFF)
+			temp32_1 = 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) & 0xFFFF;
+		temp32 += temp32_1 << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE1, temp32);
+		// txgain
+		for(ch=0; ch<NB_OF_DAB_CHANNELS; ch++){
+			st->gain_dab_tx_reg[ch] = (st->gain_dab_tx[ch] * st->pa_dab_comp_gain_tx1) >> 8;
+			if(st->gain_dab_tx_reg[ch] > 0xFFFF)
+				st->gain_dab_tx_reg[ch] = 0xFFFF;
+			temp32 = st->gain_dab_tx_reg[ch] + ((ch+1)<<16);
+			if(!st->rf_mute)
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
+		}
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
+		break;
+	case REG_TX2_DAB_PA_COMP_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		st->pa_dab_comp_gain_tx2 = val;
+		// testtone1
+		temp32_1 = (st->testtone_dab_ampl[2]*46286)>>15; // val*10^(3/20)*2^15
+		temp32_1 = (st->pa_dab_comp_gain_tx2 * temp32_1) >> 8;
+		if(temp32_1>0xFFFF)
+			temp32_1 = 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) & 0xFFFF;
+		temp32 += temp32_1 << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE2, temp32);
+		// testtone2
+		temp32_1 = (st->testtone_dab_ampl[3]*46286)>>15; // val*10^(3/20)*2^15
+		temp32_1 = (st->pa_dab_comp_gain_tx2 * temp32_1) >> 8;
+		if(temp32_1>0xFFFF)
+			temp32_1 = 0xFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) & 0xFFFF;
+		temp32 += temp32_1 << 16;
+		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
+		// txgain
+		for(ch=0; ch<NB_OF_DAB_CHANNELS; ch++){
+			st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = (st->gain_dab_tx[ch+NB_OF_DAB_CHANNELS] * st->pa_dab_comp_gain_tx2) >> 8;
+			if(st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] > 0xFFFF)
+				st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = 0xFFFF;
+			temp32 = st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] + ((ch+1+NB_OF_DAB_CHANNELS)<<16);
+			if(!st->rf_mute)
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
+		}
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
+		break;
 	case REG_TX_DAB_DDS_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -1057,12 +1125,12 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN, 0);
 		}else{
 			for(ch=0; ch<(2*NB_OF_DAB_CHANNELS); ch++){
-				temp32 = st->gain_dab_tx[ch] + ((ch+1)<<16);
+				temp32 = st->gain_dab_tx_reg[ch] + ((ch+1)<<16);
 				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
 			}
 			dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
 			dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN,
-					(st->gain_fm_tx2 << 16) | st->gain_fm_tx1);
+					(st->gain_fm_tx2_reg << 16) | st->gain_fm_tx1_reg);
 		}
 		break;
 	case REG_UNIT_ID:
