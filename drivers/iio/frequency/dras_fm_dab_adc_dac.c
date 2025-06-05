@@ -1017,7 +1017,11 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_dab_ampl[0] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_dab_comp_gain_tx1 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) & 0xFFFF;
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE0, temp32);
@@ -1027,7 +1031,11 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_dab_ampl[1] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_dab_comp_gain_tx1 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) & 0xFFFF;
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE1, temp32);
@@ -1037,7 +1045,11 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_dab_ampl[2] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_dab_comp_gain_tx2 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) & 0xFFFF;
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE2, temp32);
@@ -1047,7 +1059,11 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
+		st->testtone_dab_ampl[3] = val;
 		val = ((u32)val*46286)>>15; // val*10^(3/20)*2^15
+		val = (st->pa_dab_comp_gain_tx2 * val) >> 8;
+		if(val>0xFFFF)
+			val = 0xFFFF;
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) & 0xFFFF;
 		temp32 += (u32)val << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
@@ -1536,20 +1552,16 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val += st->fs_adc>>1;
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE0:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE0) >> 16;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_dab_ampl[0];
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE1:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE1) >> 16;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_dab_ampl[1];
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE2:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE2) >> 16;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_dab_ampl[2];
 		break;
 	case REG_TX_DAB_TESTTONE_AMPLITUDE3:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_TESTTONE3) >> 16;
-		val = ((u32)val<<15)/46286; // val*2^15/(10^(3/20)*2^15)
+		val = st->testtone_dab_ampl[3];
 		break;
 	case REG_WATCHDOG_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 2) & 0x1;
