@@ -462,7 +462,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += temp32_1 << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE1, temp32);
 		// txgain
-		for(ch=0; ch<2*NB_OF_DAB_CHANNELS; ch++){
+		for(ch=0; ch<NB_OF_DAB_CHANNELS; ch++){
 			st->gain_dab_tx_reg[ch] = (st->gain_dab_tx[ch] * st->pa_dab_comp_gain_tx1) >> 8;
 			if(st->gain_dab_tx_reg[ch] > 0xFFFF)
 				st->gain_dab_tx_reg[ch] = 0xFFFF;
@@ -495,7 +495,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += temp32_1 << 16;
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
 		// txgain
-		for(ch=0; ch<2*NB_OF_DAB_CHANNELS; ch++){
+		for(ch=0; ch<NB_OF_DAB_CHANNELS; ch++){
 			st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = (st->gain_dab_tx[ch+NB_OF_DAB_CHANNELS] * st->pa_dab_comp_gain_tx2) >> 8;
 			if(st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] > 0xFFFF)
 				st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = 0xFFFF;
