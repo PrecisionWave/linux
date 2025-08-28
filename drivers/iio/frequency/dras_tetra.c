@@ -52,6 +52,8 @@
 #define ADDR_BAND2_RSSI			(24*4)
 #define ADDR_RX_BURST_LENGTH2		(25*4)
 #define ADDR_RX_BURST_PERIOD2		(26*4)
+#define ADDR_TX_AVG_PWR			(27*4)
+#define ADDR_TX_PEAK_PWR		(28*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -198,6 +200,10 @@ enum chan_num{
 	REG_TX1_TESTTONE_AMPLITUDE2,
 	REG_TX2_TESTTONE_AMPLITUDE1,
 	REG_TX2_TESTTONE_AMPLITUDE2,
+	REG_TX1_AVG_PWR,
+	REG_TX2_AVG_PWR,
+	REG_TX1_PEAK_PWR,
+	REG_TX2_PEAK_PWR,
 	REG_RX_BURST_LENGTH1,
 	REG_RX_BURST_PERIOD1,
 	REG_RX_DMA1_SOURCE_BAND1_RX1_BAND2_RX2,
@@ -962,6 +968,18 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_TX2_TESTTONE_AMPLITUDE2:
 		val = st->testtone_ampl[3];
 		break;
+	case REG_TX1_AVG_PWR:
+		val = dras_tetra_read(st, ADDR_TX_AVG_PWR) & 0xFFFF;
+		break;
+	case REG_TX2_AVG_PWR:
+		val = dras_tetra_read(st, ADDR_TX_AVG_PWR) >>16;
+		break;
+	case REG_TX1_PEAK_PWR:
+		val = dras_tetra_read(st, ADDR_TX_PEAK_PWR) & 0xFFFF;
+		break;
+	case REG_TX2_PEAK_PWR:
+		val = dras_tetra_read(st, ADDR_TX_PEAK_PWR) >>16;
+		break;
 	case REG_BAND1_FILTER_SELECTION:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 0) & 3;
 		val++;
@@ -1282,6 +1300,26 @@ static IIO_DEVICE_ATTR(tx2_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX2_TESTTONE_AMPLITUDE2);
 
+static IIO_DEVICE_ATTR(tx1_avg_power, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_AVG_PWR);
+
+static IIO_DEVICE_ATTR(tx2_avg_power, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_AVG_PWR);
+
+static IIO_DEVICE_ATTR(tx1_peak_power, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_PEAK_PWR);
+
+static IIO_DEVICE_ATTR(tx2_peak_power, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_PEAK_PWR);
+
 static IIO_DEVICE_ATTR(rx_burst_length1, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1388,6 +1426,10 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx1_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_tx2_testtone_amplitude1.dev_attr.attr,
 	&iio_dev_attr_tx2_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx1_avg_power.dev_attr.attr,
+	&iio_dev_attr_tx2_avg_power.dev_attr.attr,
+	&iio_dev_attr_tx1_peak_power.dev_attr.attr,
+	&iio_dev_attr_tx2_peak_power.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length1.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period1.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length2.dev_attr.attr,
