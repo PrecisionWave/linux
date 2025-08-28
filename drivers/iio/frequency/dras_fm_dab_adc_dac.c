@@ -40,8 +40,10 @@
 #define ADDR_PPS_SETTINGS		(12*4)
 #define ADDR_HASH			(13*4)
 #define ADDR_RANDOMNUMBER		(14*4)
+#define ADDR_TX_FM_PEAK_POWER		(15*4)
 
 // FM Band
+#define ADDR_TX_FM_AVG_POWER		(1*16+0)*4
 #define ADDR_RX_FM_BAND_BURST_LENGTH	(1*16+1)*4
 #define ADDR_RX_FM_BAND_BURST_PERIOD	(1*16+2)*4
 #define ADDR_TX_FM_BAND_GAIN		(1*16+3)*4
@@ -62,7 +64,9 @@
 #define ADDR_RX_DAB_CHANNEL_FREQUENCY	(2*16+0)*4
 #define ADDR_RX_DAB_BAND_BURST_LENGTH	(2*16+1)*4
 #define ADDR_RX_DAB_BAND_BURST_PERIOD	(2*16+2)*4
+#define ADDR_TX_DAB_AVG_POWER		(2*16+3)*4
 #define ADDR_TX_DAB_DDS_BI		(2*16+4)*4
+#define ADDR_TX_DAB_PEAK_POWER		(2*16+5)*4
 #define ADDR_DL_ORDER_SYNC		(2*16+7)*4 // 5bits per channel, 24 channels
 #define ADDR_TX_DAB_GAIN		(2*16+8)*4
 #define ADDR_RX_DAB_SYNC_SETTINGS	(2*16+9)*4
@@ -245,6 +249,14 @@ enum chan_num{
 	REG_TX_DAB_TESTTONE_AMPLITUDE1,
 	REG_TX_DAB_TESTTONE_AMPLITUDE2,
 	REG_TX_DAB_TESTTONE_AMPLITUDE3,
+	REG_TX1_FM_AVG_PWR,
+	REG_TX2_FM_AVG_PWR,
+	REG_TX1_FM_PEAK_PWR,
+	REG_TX2_FM_PEAK_PWR,
+	REG_TX1_DAB_AVG_PWR,
+	REG_TX2_DAB_AVG_PWR,
+	REG_TX1_DAB_PEAK_PWR,
+	REG_TX2_DAB_PEAK_PWR,
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
 	REG_SATURATION_MUTING_OCCURRENCE,
@@ -1563,6 +1575,30 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_TX_DAB_TESTTONE_AMPLITUDE3:
 		val = st->testtone_dab_ampl[3];
 		break;
+	case REG_TX1_FM_AVG_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_AVG_POWER) & 0xFFFF;
+		break;
+	case REG_TX2_FM_AVG_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_AVG_POWER) >> 16;
+		break;
+	case REG_TX1_FM_PEAK_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_PEAK_POWER) & 0xFFFF;
+		break;
+	case REG_TX2_FM_PEAK_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_PEAK_POWER) >> 16;
+		break;
+	case REG_TX1_DAB_AVG_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_AVG_POWER) & 0xFFFF;
+		break;
+	case REG_TX2_DAB_AVG_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_AVG_POWER) >> 16;
+		break;
+	case REG_TX1_DAB_PEAK_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_PEAK_POWER) & 0xFFFF;
+		break;
+	case REG_TX2_DAB_PEAK_PWR:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_PEAK_POWER) >> 16;
+		break;
 	case REG_WATCHDOG_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 2) & 0x1;
 		break;
@@ -1995,6 +2031,46 @@ static IIO_DEVICE_ATTR(tx2_dab_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_DAB_TESTTONE_AMPLITUDE3);
 
+static IIO_DEVICE_ATTR(tx1_fm_avg_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_FM_AVG_PWR);
+
+static IIO_DEVICE_ATTR(tx2_fm_avg_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_FM_AVG_PWR);
+
+static IIO_DEVICE_ATTR(tx1_fm_peak_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_FM_PEAK_PWR);
+
+static IIO_DEVICE_ATTR(tx2_fm_peak_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_FM_PEAK_PWR);
+
+static IIO_DEVICE_ATTR(tx1_dab_avg_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_DAB_AVG_PWR);
+
+static IIO_DEVICE_ATTR(tx2_dab_avg_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_DAB_AVG_PWR);
+
+static IIO_DEVICE_ATTR(tx1_dab_peak_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_DAB_PEAK_PWR);
+
+static IIO_DEVICE_ATTR(tx2_dab_peak_power, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_DAB_PEAK_PWR);
+
 static IIO_DEVICE_ATTR(watchdog_enable, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -2188,6 +2264,14 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_tx1_dab_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_tx2_dab_testtone_amplitude1.dev_attr.attr,
 	&iio_dev_attr_tx2_dab_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_avg_power.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_avg_power.dev_attr.attr,
+	&iio_dev_attr_tx1_fm_peak_power.dev_attr.attr,
+	&iio_dev_attr_tx2_fm_peak_power.dev_attr.attr,
+	&iio_dev_attr_tx1_dab_avg_power.dev_attr.attr,
+	&iio_dev_attr_tx2_dab_avg_power.dev_attr.attr,
+	&iio_dev_attr_tx1_dab_peak_power.dev_attr.attr,
+	&iio_dev_attr_tx2_dab_peak_power.dev_attr.attr,
 	&iio_dev_attr_watchdog_enable.dev_attr.attr,
 	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
 	&iio_dev_attr_saturation_muting_occurrence.dev_attr.attr,
