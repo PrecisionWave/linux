@@ -524,6 +524,8 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_RSSI_MIN)){
 			match = 1;
 			val = (dras_radio_repeater_read(st, ADDR_RSSI_PEAK_UL(ch))>>15) & 0x7FFF;
+			if(val==32767)
+				val=0;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_RSSI)){
@@ -539,6 +541,8 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_RSSI_MIN)){
 			match = 1;
 			val = (dras_radio_repeater_read(st, ADDR_RSSI_PEAK_DL(ch))>>15) & 0x7FFF;
+			if(val==32767)
+				val=0;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_GAIN_MAX)){
@@ -554,11 +558,15 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_GAIN_MIN)){
 			match = 1;
 			val = dras_radio_repeater_read(st, ADDR_GAIN_UL(ch))>>16;
+			if(val==65535)
+				val=0;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_GAIN_MIN)){
 			match = 1;
 			val = dras_radio_repeater_read(st, ADDR_GAIN_DL(ch))>>16;
+			if(val==65535)
+				val=0;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_TARGET_POWER)){
