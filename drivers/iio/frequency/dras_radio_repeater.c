@@ -803,12 +803,12 @@ IIO_DEVICE_ATTR_ALL_CH(uplink_best_source_min, S_IRUGO,
 			dras_radio_repeater_store,
 			REG_BEST_SOURCE_MIN);
 
-IIO_DEVICE_ATTR_ALL_CH(uplink_mute, S_IRUGO,
+IIO_DEVICE_ATTR_ALL_CH(uplink_unmute, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_UL_MUTE);
 
-IIO_DEVICE_ATTR_ALL_CH(downlink_mute, S_IRUGO,
+IIO_DEVICE_ATTR_ALL_CH(downlink_unmute, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_DL_MUTE);
@@ -876,8 +876,8 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	IIO_ATTR_ALL_CH(downlink_squelch),
 	IIO_ATTR_ALL_CH(uplink_gain_limit),
 	IIO_ATTR_ALL_CH(downlink_gain_limit),
-	IIO_ATTR_ALL_CH(uplink_mute),
-	IIO_ATTR_ALL_CH(downlink_mute),
+	IIO_ATTR_ALL_CH(uplink_unmute),
+	IIO_ATTR_ALL_CH(downlink_unmute),
 	IIO_ATTR_ALL_CH(channel_enable),
 	IIO_ATTR_ALL_CH(enable_frequency_translation),
 	IIO_ATTR_ALL_CH(uplink_best_source_max),
