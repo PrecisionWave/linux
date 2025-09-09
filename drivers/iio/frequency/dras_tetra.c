@@ -1055,7 +1055,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_BAND1_RSSI_MIN:
 		val = dras_tetra_read(st, ADDR_BAND1_RSSI_MAX_MIN) >> 16;
-		if(val==32767)
+		if(val==65535)
 			val=0;
 		break;
 	case REG_BAND2_RSSI_MAX:
@@ -1063,7 +1063,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_BAND2_RSSI_MIN:
 		val = dras_tetra_read(st, ADDR_BAND2_RSSI_MAX_MIN) >> 16;
-		if(val==32767)
+		if(val==65535)
 			val=0;
 		break;
 	case REG_BAND1_UNMUTE:
@@ -1077,7 +1077,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_BAND1_GAIN_MIN:
 		val = dras_tetra_read(st, ADDR_BAND1_GAIN_MAX_MIN) >> 16;
-		if(val==32767)
+		if(val==65535)
 			val=0;
 		break;
 	case REG_BAND2_GAIN_MAX:
@@ -1085,7 +1085,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_BAND2_GAIN_MIN:
 		val = dras_tetra_read(st, ADDR_BAND2_GAIN_MAX_MIN) >> 16;
-		if(val==32767)
+		if(val==65535)
 			val=0;
 		break;
 	case REG_TX1_GAIN:
