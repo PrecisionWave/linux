@@ -43,10 +43,10 @@
 #define ADDR_TESTTONE_AMPL_TX1		(15*4)
 #define ADDR_TESTTONE_AMPL_TX2		(16*4)
 #define ADDR_BAND1_AGC_TARGET		(17*4)
-#define ADDR_BAND1_AGC_MAXGAIN		(18*4)
+#define ADDR_BAND1_AGC_GAIN_LIMIT	(18*4)
 #define ADDR_BAND1_AGC_SQUELCH		(19*4)
 #define ADDR_BAND2_AGC_TARGET		(20*4)
-#define ADDR_BAND2_AGC_MAXGAIN		(21*4)
+#define ADDR_BAND2_AGC_GAIN_LIMIT	(21*4)
 #define ADDR_BAND2_AGC_SQUELCH		(22*4)
 #define ADDR_BAND1_RSSI			(23*4)
 #define ADDR_BAND2_RSSI			(24*4)
@@ -54,6 +54,10 @@
 #define ADDR_RX_BURST_PERIOD2		(26*4)
 #define ADDR_TX_AVG_PWR			(27*4)
 #define ADDR_TX_PEAK_PWR		(28*4)
+#define ADDR_BAND1_RSSI_MAX_MIN		(29*4)
+#define ADDR_BAND2_RSSI_MAX_MIN		(30*4)
+#define ADDR_BAND1_GAIN_MAX_MIN		(31*4)
+#define ADDR_BAND2_GAIN_MAX_MIN		(32*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -185,13 +189,23 @@ enum chan_num{
 	REG_BAND1_WIDEBAND_MODE,
 	REG_BAND2_WIDEBAND_MODE,
 	REG_BAND1_AGC_TARGET,
-	REG_BAND1_AGC_MAXGAIN,
+	REG_BAND1_AGC_GAIN_LIMIT,
 	REG_BAND1_AGC_SQUELCH,
 	REG_BAND2_AGC_TARGET,
-	REG_BAND2_AGC_MAXGAIN,
+	REG_BAND2_AGC_GAIN_LIMIT,
 	REG_BAND2_AGC_SQUELCH,
+	REG_BAND1_GAIN_MAX,
+	REG_BAND2_GAIN_MAX,
+	REG_BAND1_GAIN_MIN,
+	REG_BAND2_GAIN_MIN,
 	REG_BAND1_RSSI,
 	REG_BAND2_RSSI,
+	REG_BAND1_RSSI_MAX,
+	REG_BAND2_RSSI_MAX,
+	REG_BAND1_RSSI_MIN,
+	REG_BAND2_RSSI_MIN,
+	REG_BAND1_UNMUTE,
+	REG_BAND2_UNMUTE,
 	REG_TX1_TESTTONE_FREQUENCY1,
 	REG_TX1_TESTTONE_FREQUENCY2,
 	REG_TX2_TESTTONE_FREQUENCY1,
@@ -717,12 +731,12 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		dras_tetra_write(st, ADDR_BAND1_AGC_TARGET, (u32)val);
 		break;
-	case REG_BAND1_AGC_MAXGAIN:
+	case REG_BAND1_AGC_GAIN_LIMIT:
 		if(val>0xFFFFFF){
 			ret = -EINVAL;
 			break;
 		}
-		dras_tetra_write(st, ADDR_BAND1_AGC_MAXGAIN, (u32)val);
+		dras_tetra_write(st, ADDR_BAND1_AGC_GAIN_LIMIT, (u32)val);
 		break;
 	case REG_BAND1_AGC_SQUELCH:
 		if(val>0xFFFF){
@@ -738,12 +752,12 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		dras_tetra_write(st, ADDR_BAND2_AGC_TARGET, (u32)val);
 		break;
-	case REG_BAND2_AGC_MAXGAIN:
+	case REG_BAND2_AGC_GAIN_LIMIT:
 		if(val>0xFFFFFF){
 			ret = -EINVAL;
 			break;
 		}
-		dras_tetra_write(st, ADDR_BAND2_AGC_MAXGAIN, (u32)val);
+		dras_tetra_write(st, ADDR_BAND2_AGC_GAIN_LIMIT, (u32)val);
 		break;
 	case REG_BAND2_AGC_SQUELCH:
 		if(val>0xFFFF){
@@ -1015,8 +1029,8 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_BAND1_AGC_TARGET:
 		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFF;
 		break;
-	case REG_BAND1_AGC_MAXGAIN:
-		val = dras_tetra_read(st, ADDR_BAND1_AGC_MAXGAIN) & 0xFFFFFF;
+	case REG_BAND1_AGC_GAIN_LIMIT:
+		val = dras_tetra_read(st, ADDR_BAND1_AGC_GAIN_LIMIT) & 0xFFFFFF;
 		break;
 	case REG_BAND1_AGC_SQUELCH:
 		val = dras_tetra_read(st, ADDR_BAND1_AGC_SQUELCH) & 0x7FFF;
@@ -1024,8 +1038,8 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_BAND2_AGC_TARGET:
 		val = dras_tetra_read(st, ADDR_BAND2_AGC_TARGET) & 0xFFF;
 		break;
-	case REG_BAND2_AGC_MAXGAIN:
-		val = dras_tetra_read(st, ADDR_BAND2_AGC_MAXGAIN) & 0xFFFFFF;
+	case REG_BAND2_AGC_GAIN_LIMIT:
+		val = dras_tetra_read(st, ADDR_BAND2_AGC_GAIN_LIMIT) & 0xFFFFFF;
 		break;
 	case REG_BAND2_AGC_SQUELCH:
 		val = dras_tetra_read(st, ADDR_BAND2_AGC_SQUELCH) & 0x7FFF;
@@ -1035,6 +1049,36 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_BAND2_RSSI:
 		val = dras_tetra_read(st, ADDR_BAND2_RSSI) & 0xFFFF;
+		break;
+	case REG_BAND1_RSSI_MAX:
+		val = dras_tetra_read(st, ADDR_BAND1_RSSI_MAX_MIN) & 0xFFFF;
+		break;
+	case REG_BAND1_RSSI_MIN:
+		val = dras_tetra_read(st, ADDR_BAND1_RSSI_MAX_MIN) >> 16;
+		break;
+	case REG_BAND2_RSSI_MAX:
+		val = dras_tetra_read(st, ADDR_BAND2_RSSI_MAX_MIN) & 0xFFFF;
+		break;
+	case REG_BAND2_RSSI_MIN:
+		val = dras_tetra_read(st, ADDR_BAND2_RSSI_MAX_MIN) >> 16;
+		break;
+	case REG_BAND1_UNMUTE:
+		val = (dras_tetra_read(st, ADDR_BAND1_RSSI)>>16) & 0x1;
+		break;
+	case REG_BAND2_UNMUTE:
+		val = (dras_tetra_read(st, ADDR_BAND2_RSSI)>>16) & 0x1;
+		break;
+	case REG_BAND1_GAIN_MAX:
+		val = dras_tetra_read(st, ADDR_BAND1_GAIN_MAX_MIN) & 0xFFFF;
+		break;
+	case REG_BAND1_GAIN_MIN:
+		val = dras_tetra_read(st, ADDR_BAND1_GAIN_MAX_MIN) >> 16;
+		break;
+	case REG_BAND2_GAIN_MAX:
+		val = dras_tetra_read(st, ADDR_BAND2_GAIN_MAX_MIN) & 0xFFFF;
+		break;
+	case REG_BAND2_GAIN_MIN:
+		val = dras_tetra_read(st, ADDR_BAND2_GAIN_MAX_MIN) >> 16;
 		break;
 	case REG_TX1_GAIN:
 		val = st->gain_tx1;
@@ -1225,10 +1269,20 @@ static IIO_DEVICE_ATTR(band1_target, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_BAND1_AGC_TARGET);
 
-static IIO_DEVICE_ATTR(band1_maxgain, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_gain_limit, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_BAND1_AGC_MAXGAIN);
+			REG_BAND1_AGC_GAIN_LIMIT);
+
+static IIO_DEVICE_ATTR(band1_gain_max, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_GAIN_MAX);
+
+static IIO_DEVICE_ATTR(band1_gain_min, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_GAIN_MIN);
 
 static IIO_DEVICE_ATTR(band1_squelch, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -1240,25 +1294,65 @@ static IIO_DEVICE_ATTR(band2_target, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_BAND2_AGC_TARGET);
 
-static IIO_DEVICE_ATTR(band2_maxgain, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_gain_limit, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
-			REG_BAND2_AGC_MAXGAIN);
+			REG_BAND2_AGC_GAIN_LIMIT);
+
+static IIO_DEVICE_ATTR(band2_gain_max, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_GAIN_MAX);
+
+static IIO_DEVICE_ATTR(band2_gain_min, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_GAIN_MIN);
 
 static IIO_DEVICE_ATTR(band2_squelch, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND2_AGC_SQUELCH);
 
-static IIO_DEVICE_ATTR(band1_rssi, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band1_rssi, S_IRUGO,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND1_RSSI);
 
-static IIO_DEVICE_ATTR(band2_rssi, S_IRUGO | S_IWUSR,
+static IIO_DEVICE_ATTR(band2_rssi, S_IRUGO,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND2_RSSI);
+
+static IIO_DEVICE_ATTR(band1_rssi_max, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_RSSI_MAX);
+
+static IIO_DEVICE_ATTR(band2_rssi_max, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_RSSI_MAX);
+
+static IIO_DEVICE_ATTR(band1_rssi_min, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_RSSI_MIN);
+
+static IIO_DEVICE_ATTR(band2_rssi_min, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_RSSI_MIN);
+
+static IIO_DEVICE_ATTR(band1_unmute, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_UNMUTE);
+
+static IIO_DEVICE_ATTR(band2_unmute, S_IRUGO,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_UNMUTE);
 
 static IIO_DEVICE_ATTR(tx1_testtone_frequency1, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -1411,13 +1505,23 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_band1_wideband_mode.dev_attr.attr,
 	&iio_dev_attr_band2_wideband_mode.dev_attr.attr,
 	&iio_dev_attr_band1_target.dev_attr.attr,
-	&iio_dev_attr_band1_maxgain.dev_attr.attr,
+	&iio_dev_attr_band1_gain_limit.dev_attr.attr,
+	&iio_dev_attr_band1_gain_max.dev_attr.attr,
+	&iio_dev_attr_band1_gain_min.dev_attr.attr,
 	&iio_dev_attr_band1_squelch.dev_attr.attr,
 	&iio_dev_attr_band2_target.dev_attr.attr,
-	&iio_dev_attr_band2_maxgain.dev_attr.attr,
+	&iio_dev_attr_band2_gain_limit.dev_attr.attr,
+	&iio_dev_attr_band2_gain_max.dev_attr.attr,
+	&iio_dev_attr_band2_gain_min.dev_attr.attr,
 	&iio_dev_attr_band2_squelch.dev_attr.attr,
 	&iio_dev_attr_band1_rssi.dev_attr.attr,
 	&iio_dev_attr_band2_rssi.dev_attr.attr,
+	&iio_dev_attr_band1_rssi_max.dev_attr.attr,
+	&iio_dev_attr_band2_rssi_max.dev_attr.attr,
+	&iio_dev_attr_band1_rssi_min.dev_attr.attr,
+	&iio_dev_attr_band2_rssi_min.dev_attr.attr,
+	&iio_dev_attr_band1_unmute.dev_attr.attr,
+	&iio_dev_attr_band2_unmute.dev_attr.attr,
 	&iio_dev_attr_tx1_testtone_frequency1.dev_attr.attr,
 	&iio_dev_attr_tx1_testtone_frequency2.dev_attr.attr,
 	&iio_dev_attr_tx2_testtone_frequency1.dev_attr.attr,
