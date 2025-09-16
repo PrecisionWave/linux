@@ -92,14 +92,7 @@ enum outp_drv_mode {
 	CMOS_CONF8,
 	CMOS_CONF9
 };
-//
-//enum ref_sel_mode {
-//	NONEREVERTIVE_STAY_ON_REFB,
-//	REVERT_TO_REFA,
-//	SELECT_REFA,
-//	SELECT_REFB,
-//	EXT_REF_SEL
-//};
+
 
 /**
  * struct lmk04805_channel_spec - Output channel configuration
@@ -419,17 +412,8 @@ struct lmk04805_state {
 	struct gpio_desc*	status_ld;
 	struct gpio_desc*	status_holdover;
 	struct gpio_desc*	status_clkin0;
-//	/*
-//	 * DMA (thus cache coherency maintenance) requires the
-//	 * transfer buffers to live in their own cache lines.
-//	 */
-//	union {	//TODO
-//		__be32 d32;
-//		u8 d8[4];
-//	} data[2] ____cacheline_aligned;
 
-	uint32_t spi_buffer;
-
+	uint32_t spi_buffer ____cacheline_aligned;
 };
 
 int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
@@ -532,7 +516,7 @@ int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 
 	/* we never write to those registers */
 	if( (addr>16 && addr<24) || (addr > 31) ){
-		dev_err(&indio_dev->dev, "read failed - address \"0x%08x\" out of range", addr);
+		dev_err(&indio_dev->dev, "write failed - address \"0x%08x\" out of range", addr);
 		return -EINVAL;
 	}
 
@@ -561,47 +545,12 @@ int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 	return 0;
 }
 
-int lmk04805_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
-{
-	struct lmk04805_state *st = iio_priv(indio_dev);
-	int ret = 0;
-	u32 reg;
-	int i;
-
-	/* we never write to those registers */
-	if( (addr>16 && addr<24) || (addr > 31) ){
-		dev_err(&indio_dev->dev, "read failed - address \"0x%08x\" out of range", addr);
-		return -EINVAL;
-	}
-
-	/* generate register val */
-	reg = LMK04805_VALUE(val) | LMK04805_ADDR(addr);
-
-	for(i=-1; i<32; i++){
-		if(i == 17)
-			i=24;
-		if(i == -1)
-			ret = lmk04805_spi_write(indio_dev, 0x80160140); // perform RESET
-		else if( i == addr){
-			ret = lmk04805_spi_write(indio_dev, reg);
-			if(ret)
-				return ret;
-			/* update local register map */
-			st->pdata->reg_map[i] = reg;
-		}
-		else
-			ret = lmk04805_spi_write(indio_dev, st->pdata->reg_map[i]);
-		if(ret)
-			return ret;
-	}
-
-	return 0;
-}
-
 int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret = 0;
 	int i;
+
+	dev_info(&indio_dev->dev, "lmk04805_sync_all_registers");
 
 	for(i=-1; i<32; i++){
 		if(i == 17)
@@ -877,7 +826,8 @@ static ssize_t lmk04805_store(struct device *dev,
 			if(ret)
 				break;
 			lmk04805_inject_register_value(&reg, 5, 11, val);
-			ret = lmk04805_write_all(indio_dev, reg_num, reg);
+			st->pdata->reg_map[reg_num] = reg;
+			ret = lmk04805_sync_all_registers(indio_dev);
 			break;
 		}
 		else if((u32)this_attr->address == CLK_ATTR(ch, ATTR_CLK_TYPE)){
@@ -912,7 +862,8 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 6, 14, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		st->pdata->reg_map[reg_num] = reg;
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	case ATTR_PLL1_N:
 		if(val<1 || val>16383){
@@ -924,7 +875,8 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 6, 14, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		st->pdata->reg_map[reg_num] = reg;
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	case ATTR_PLL2_R:
 		if(val<1 || val>4095){
@@ -1011,7 +963,8 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 27, 5, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		st->pdata->reg_map[reg_num] = reg;
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	case ATTR_CLKIN_SELECT_MODE:
 		if(val<0 || val==2 || val==5 || val>6){
@@ -1023,7 +976,8 @@ static ssize_t lmk04805_store(struct device *dev,
 		if(ret)
 			break;
 		lmk04805_inject_register_value(&reg, 9, 3, val);
-		ret = lmk04805_write_all(indio_dev, reg_num, reg);
+		st->pdata->reg_map[reg_num] = reg;
+		ret = lmk04805_sync_all_registers(indio_dev);
 		break;
 	default:
 		ret = -ENODEV;
@@ -1134,7 +1088,8 @@ static int lmk04805_write_raw(struct iio_dev *indio_dev,
 		goto end;
 	}
 
-	ret = lmk04805_write_all(indio_dev, reg_num, reg);
+	st->pdata->reg_map[reg_num] = reg;
+	ret = lmk04805_sync_all_registers(indio_dev);
 
 end:
 	mutex_unlock(&indio_dev->mlock);
@@ -1313,18 +1268,21 @@ static int lmk04805_clk_is_enabled(struct clk_hw *hw)
 
 static int lmk04805_clk_prepare(struct clk_hw *hw)
 {
-	return lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_RAW, 0);
+	// return lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_RAW, 0);
+	return 0;
 }
 
 static void lmk04805_clk_unprepare(struct clk_hw *hw)
 {
-	lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_RAW, 1);
+	//lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_RAW, 1);
 }
 
 static int lmk04805_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			       unsigned long prate)
 {
-	return lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_FREQUENCY, rate);
+	//return lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_FREQUENCY, rate);
+	printk("lmk04805: Unexpected call to lmk04805_clk_set_rate\n");
+	return -EINVAL;
 }
 
 static long lmk04805_clk_round_rate(struct clk_hw *hw, unsigned long rate, unsigned long *prate)
@@ -1470,10 +1428,10 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	}
 
 	/* write all registers to the chip */
-	// lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x01);  // set POWERDOWN
-	// lmk04805_sync_all_registers(indio_dev);
-	// msleep(1000);	// give the lmk04805 some time to setup the clocks
-	// lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x00);  // reset POWERDOWN
+	lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x01);  // set POWERDOWN
+	lmk04805_sync_all_registers(indio_dev);
+	msleep(1000);	// give the lmk04805 some time to setup the clocks
+	lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x00);  // reset POWERDOWN
 	lmk04805_spi_write(indio_dev, st->pdata->reg_map[1]);
 	msleep(300);	// give the lmk04805 some time to setup the clocks
 
@@ -1485,10 +1443,6 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 		if (chan->channel_num < LMK04805_NUM_CHAN) {
 			struct clk *clk;
 			__set_bit(chan->channel_num, &active_mask);
-
-//
-//			ret = ad9523_vco_out_map(indio_dev, chan->channel_num,
-//					   chan->use_alt_clock_src);
 
 			st->lmk04805_channels[i].type = IIO_ALTVOLTAGE;
 			st->lmk04805_channels[i].output = 1;
@@ -1520,7 +1474,7 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 	const char *str;
 	int ret;
 	int i;
-        uint32_t attr;
+	uint32_t attr;
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
@@ -1813,7 +1767,14 @@ static int lmk04805_probe(struct spi_device *spi)
 	struct iio_dev *indio_dev;
 	struct lmk04805_state *st;
 	int ret;
-	//printk("lmk04805: calling probe()\n");
+
+	/* valid SPI device? */
+	if(&spi->dev == NULL) {
+		printk("\nlmk04805: &spi->dev = NULL\n\n");
+		return -ENODEV;
+	}
+
+	dev_dbg(&spi->dev, "lmk04805: calling probe()\n");
 
 	/* this device driver needs to be konfigured in the device-tree */
 	if(!spi->dev.of_node){
@@ -1829,27 +1790,19 @@ static int lmk04805_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, indio_dev);
 	st->spi = spi;
 
-	// ret = rename_iio_attribute(ATTR_REF(pll1_locked), "pll1_locked1");
-	// if(ret){
-	// 	if(ret == -1)
-	// 		printk("LMK04805: >>>> TEST: NULL Pointer 0");
-	// 	if(ret == -2)
-	// 		printk("LMK04805: >>>> TEST: NULL Pointer 1");
-	// }
-
 	/* obtain GPIOs connected to status pins */
 	st->status_ld = devm_gpiod_get_optional(&spi->dev, "status-ld", GPIOD_IN);
 	if (IS_ERR(st->status_ld))
-		printk("lmk04805: warning - couldn't acquire gpio for status-ld (error %ld)\n", PTR_ERR(st->status_ld));
+		dev_warn(&spi->dev, "lmk04805: warning - couldn't acquire gpio for status-ld (error %ld)\n", PTR_ERR(st->status_ld));
 	st->status_holdover = devm_gpiod_get_optional(&spi->dev, "status-holdover", GPIOD_IN);
 	if (IS_ERR(st->status_holdover))
-		printk("lmk04805: warning - couldn't acquire gpio for status-holdover (error %ld)\n", PTR_ERR(st->status_holdover));
+		dev_warn(&spi->dev, "lmk04805: warning - couldn't acquire gpio for status-holdover (error %ld)\n", PTR_ERR(st->status_holdover));
 	st->status_clkin0 = devm_gpiod_get_optional(&spi->dev, "status-clkin0", GPIOD_IN);
 	if (IS_ERR(st->status_clkin0))
-		printk("lmk04805: warning - couldn't acquire gpio for status-clkin0 (error %ld)\n", PTR_ERR(st->status_clkin0));
+		dev_warn(&spi->dev, "lmk04805: warning - couldn't acquire gpio for status-clkin0 (error %ld)\n", PTR_ERR(st->status_clkin0));
 
 	/* parse device-tree */
-	//printk("lmk04805: parsing device tree ..\n");
+	dev_dbg(&spi->dev, "lmk04805: parsing device tree ..\n");
 	ret = lmk04805_parse_dt(&spi->dev, st);
 	if(ret)
 		return ret;
@@ -1879,10 +1832,6 @@ static int lmk04805_probe(struct spi_device *spi)
 	ret = iio_device_register(indio_dev);
 	if (ret)
 		goto error_disable_reg;
-
-	/* valid SPI device? */
-	if(&spi->dev == NULL)
-		printk("\nlmk04805: &spi->dev = NULL\n\n");
 
 	dev_info(&spi->dev, "probed %s\n", indio_dev->name);
 	return 0;
