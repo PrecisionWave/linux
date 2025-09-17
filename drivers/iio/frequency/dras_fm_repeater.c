@@ -29,6 +29,7 @@
 #define ADDR_MAXGAIN			50*4
 #define ADDR_CHANNEL_EN			51*4
 #define ADDR_DSP_VERSION		52*4
+#define ADDR_MUTE			53*4
 
 // channel attributes
 #define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
@@ -191,6 +192,7 @@ enum chan_num{
 	REG_ALL_CH(REG_TX_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_RSSI),	// being expanded for all channels
 	REG_ALL_CH(REG_CHANNEL_ENABLE),	// being expanded for all channels
+	REG_ALL_CH(REG_MUTE),	// being expanded for all channels
 	REG_DSP_VERSION,
 	REG_TARGET_POWER,
 	REG_SQUELCH,
@@ -457,6 +459,11 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 			temp64 = div_s64(temp64,44); // fm_f_mix = clk*15/44
 			val += (int)temp64;
 			break;
+		}else if((u32)this_attr->address == REG_CH(ch, REG_MUTE)){
+			match = 1;
+			val = dras_fm_repeater_read(st, ADDR_MUTE);
+			val = (val >> ch) & 1;
+			break;
 		}
 	}
 	if(match){
@@ -498,6 +505,11 @@ IIO_DEVICE_ATTR_ALL_CH(channel_enable, S_IRUGO | S_IWUSR,
 			dras_fm_repeater_store,
 			REG_CHANNEL_ENABLE);
 
+IIO_DEVICE_ATTR_ALL_CH(mute, S_IRUGO,
+			dras_fm_repeater_show,
+			dras_fm_repeater_store,
+			REG_MUTE);
+
 IIO_DEVICE_ATTR_ALL_CH(rx_frequency, S_IRUGO | S_IWUSR,
 			dras_fm_repeater_show,
 			dras_fm_repeater_store,
@@ -536,6 +548,7 @@ static IIO_DEVICE_ATTR(max_gain, S_IRUGO | S_IWUSR,
 
 static struct attribute *dras_fm_repeater_attributes[] = {
 	IIO_ATTR_ALL_CH(channel_enable),
+	IIO_ATTR_ALL_CH(mute),
 	IIO_ATTR_ALL_CH(rx_frequency),
 	IIO_ATTR_ALL_CH(tx_frequency),
 	IIO_ATTR_ALL_CH(rssi),
