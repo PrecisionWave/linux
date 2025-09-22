@@ -360,11 +360,11 @@ static ssize_t dras_fm_repeater_store(struct device *dev,
 		dras_fm_repeater_write(st, ADDR_TARGET_PWR, temp32);
 		break;
 	case REG_SQUELCH:
-		if(val<0 || val>32767){
+		if(val<0 || val>131071){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_repeater_read(st, ADDR_SQUELCH) & 0xFFFF0000;
+		temp32 = dras_fm_repeater_read(st, ADDR_SQUELCH) & 0xFFFE0000;
 		temp32 += (u32)val;
 		dras_fm_repeater_write(st, ADDR_SQUELCH, temp32);
 		break;
@@ -482,7 +482,7 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 		val = dras_fm_repeater_read(st, ADDR_TARGET_PWR) & 0x7FFF;
 		break;
 	case REG_SQUELCH:
-		val = dras_fm_repeater_read(st, ADDR_SQUELCH) & 0x7FFF;
+		val = dras_fm_repeater_read(st, ADDR_SQUELCH) & 0x1FFFF;
 		break;
 	case REG_MAX_GAIN:
 		val = dras_fm_repeater_read(st, ADDR_MAXGAIN) & 0xFFFF;
