@@ -67,6 +67,7 @@
 #define ADDR_TX_DAB_AVG_POWER		(2*16+3)*4
 #define ADDR_TX_DAB_DDS_BI		(2*16+4)*4
 #define ADDR_TX_DAB_PEAK_POWER		(2*16+5)*4
+#define ADDR_DAB_MUTE			(2*16+6)*4
 #define ADDR_DL_ORDER_SYNC		(2*16+7)*4 // 5bits per channel, 24 channels
 #define ADDR_TX_DAB_GAIN		(2*16+8)*4
 #define ADDR_RX_DAB_SYNC_SETTINGS	(2*16+9)*4
@@ -186,6 +187,7 @@ enum chan_num{
 	REG_ALL_CH(REG_TX1_DAB_CHANNEL_GAIN),	// being expanded for all channels
 	REG_ALL_CH(REG_TX2_DAB_CHANNEL_GAIN),	// being expanded for all channels
 	REG_ALL_CH(REG_DAB_RSSI),	// being expanded for all channels
+	REG_ALL_CH(REG_DAB_MUTE),	// being expanded for all channels
 	REG_ALL_CH(REG_DAB_RESYNCS),	// being expanded for all channels
 	REG_ALL_CH(REG_DAB_SYNC_CORR),	// being expanded for all channels
 	REG_ALL_CH(REG_DAB_FREQ_ERR),	// being expanded for all channels
@@ -1267,6 +1269,12 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 			val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_RSSI(ch)) & 0xFFFFF;
 			break;
 		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_MUTE)){
+			match = 1;
+			val = dras_fm_dab_adc_dac_read(st, ADDR_DAB_MUTE);
+			val = (val >> ch) & 1;
+			break;
+		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DAB_RESYNCS)){
 			match = 1;
 			val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_RSSI(ch)) >>20) & 0xF;
@@ -1714,6 +1722,11 @@ IIO_DEVICE_ATTR_ALL_CH(dab_rssi, S_IRUGO,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_DAB_RSSI);
+
+IIO_DEVICE_ATTR_ALL_CH(dab_mute, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DAB_MUTE);
 
 IIO_DEVICE_ATTR_ALL_CH(dab_resyncs, S_IRUGO,
 			dras_fm_dab_adc_dac_show,
@@ -2201,6 +2214,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	IIO_ATTR_ALL_CH(tx2_dab_gain),
 	IIO_ATTR_ALL_CH(dab_frequency),
 	IIO_ATTR_ALL_CH(dab_rssi),
+	IIO_ATTR_ALL_CH(dab_mute),
 	IIO_ATTR_ALL_CH(dab_resyncs),
 	IIO_ATTR_ALL_CH(dab_sync_correction),
 	IIO_ATTR_ALL_CH(dab_frequency_error),
