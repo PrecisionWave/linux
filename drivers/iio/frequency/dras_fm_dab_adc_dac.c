@@ -567,7 +567,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		break;
 	case REG_RX_DAB_BAND_BURST_PERIOD:
 		if(val<1 || val>255){
-			ret = -EINVAL;
+			//ret = -EINVAL;
 			break;
 		}
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_PERIOD, (u32)val);
