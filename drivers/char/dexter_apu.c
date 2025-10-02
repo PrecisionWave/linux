@@ -21,6 +21,12 @@
 #include <linux/init.h>
 #include <linux/stat.h>
 
+#include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
+#include <linux/iio/buffer-dma.h>
+#include <linux/iio/buffer-dmaengine.h>
+#include <linux/iio/buffer.h>
+
 #include "dexter_apu.h"
 
 /* Device and char device-related information */
@@ -35,9 +41,15 @@ static int dexter_apu_count = 0;
 #define APU_CTRL_GPIO_OFFSET 0x10000U
 #define APU_CTRL_MBOX_OFFSET 0x20000U
 
+struct dexter_apu_priv_iio {
+	// IIO DMAs
+	struct iio_dev *iio_dev;
+	char name[10];
+};
+
 struct dexter_apu_priv {
 	struct platform_device *pdev;
-	struct device *device;
+	struct device *dev;
 	struct cdev cdev;
 	struct resource *res;
 	int minor;
@@ -49,6 +61,9 @@ struct dexter_apu_priv {
 	size_t apu_ddr_size;
 	dma_addr_t apu_ddr_addr;
 	void *apu_ddr;
+	// IIO DMAs
+	struct dexter_apu_priv_iio tx_dma;
+	struct dexter_apu_priv_iio rx_dma;
 };
 
 static struct dexter_apu_priv *dexter_apu_devices;
@@ -140,7 +155,7 @@ static int dexter_apu_mmap_apu_ddr(struct dexter_apu_priv *priv,
 
 	vm_pgoff = vma->vm_pgoff;
 	vma->vm_pgoff = 0;
-	ret = dma_mmap_coherent(priv->device, vma, priv->apu_ddr,
+	ret = dma_mmap_coherent(priv->dev, vma, priv->apu_ddr,
 				priv->apu_ddr_addr, len);
 
 	vma->vm_pgoff = vm_pgoff;
@@ -192,8 +207,6 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 	int err = -EINVAL;
 	int int_param;
 
-	// dev_info(priv->device, "ioctl: cmd = %08x\n", cmd);
-
 	switch (cmd) {
 	case DEXTER_APU_IOCTL_APU_RESET:
 		err = get_user(int_param, (int __user *)arg);
@@ -222,14 +235,107 @@ static const struct file_operations fops = {
 	.unlocked_ioctl = dexter_apu_ioctl,
 };
 
-/* Match table for of_platform binding */
-static const struct of_device_id dexter_apu_of_match[] = {
-	{
-		.compatible = "pcw,dexter-apu",
-	},
-	{}
+/* we need that dummy function to get a valid iio_info object */
+static int dummy_read_raw_dummy(struct iio_dev *indio_dev,
+				const struct iio_chan_spec *chan, int *val,
+				int *val2, long info)
+{
+	return -EINVAL;
+}
+
+static const struct iio_info iio_dummy_info = {
+	.read_raw = &dummy_read_raw_dummy,
 };
-MODULE_DEVICE_TABLE(of, dexter_apu_of_match);
+
+static struct iio_chan_spec iio_apu_tx_channels[] = {
+	{								
+		.type = IIO_VOLTAGE,					
+		.indexed = 1,						
+		.output = 1,						
+		.channel = 1,					
+		.address = 1,					
+		.scan_index = 1,					
+		.scan_type = {						
+			.sign = 's',					
+			.realbits = 16,					
+			.storagebits = 16,				
+		},							
+	},
+};
+
+static struct iio_chan_spec iio_apu_rx_channels[] = {
+	{								
+		.type = IIO_VOLTAGE,					
+		.indexed = 1,						
+		.output = 0,						
+		.channel = 0,					
+		.address = 0,					
+		.scan_index = 0,					
+		.scan_type = {						
+			.sign = 's',					
+			.realbits = 16,					
+			.storagebits = 16,				
+		},							
+	},
+};
+
+static int hw_submit_block_tx(struct iio_dma_buffer_queue *queue,
+			      struct iio_dma_buffer_block *block)
+{
+	return iio_dmaengine_buffer_submit_block(queue, block, DMA_TO_DEVICE);
+}
+
+static const struct iio_dma_buffer_ops dma_buffer_ops_tx = {
+	.submit = hw_submit_block_tx,
+	.abort = iio_dmaengine_buffer_abort,
+};
+
+static int hw_submit_block_rx(struct iio_dma_buffer_queue *queue,
+			      struct iio_dma_buffer_block *block)
+{
+	return iio_dmaengine_buffer_submit_block(queue, block, DMA_FROM_DEVICE);
+}
+
+static const struct iio_dma_buffer_ops dma_buffer_ops_rx = {
+	.submit = hw_submit_block_rx,
+	.abort = iio_dmaengine_buffer_abort,
+};
+
+static int dexter_apu_register_iio(struct device *dev, int minor,
+				   struct dexter_apu_priv_iio *ch_st,
+				   const char *ch_name,
+				   struct iio_chan_spec *ch)
+{
+	struct iio_buffer *buffer;
+	const struct iio_dma_buffer_ops *buffer_ops;
+
+	ch_st->iio_dev->dev.parent = dev;
+	sprintf(ch_st->name, "apu%d_%s", minor, ch_name);
+	ch_st->iio_dev->name = ch_st->name;
+	ch_st->iio_dev->modes = INDIO_DIRECT_MODE | INDIO_BUFFER_HARDWARE;
+	ch_st->iio_dev->channels = ch;
+	ch_st->iio_dev->num_channels = 1;
+	ch_st->iio_dev->direction =
+		ch->output ? IIO_DEVICE_DIRECTION_OUT : IIO_DEVICE_DIRECTION_IN;
+	ch_st->iio_dev->info = &iio_dummy_info;
+
+	buffer_ops = ch->output ? &dma_buffer_ops_tx : &dma_buffer_ops_rx;
+
+	buffer = devm_iio_dmaengine_buffer_alloc(ch_st->iio_dev->dev.parent,
+						 ch_name, buffer_ops,
+						 ch_st->iio_dev);
+	if (IS_ERR(buffer)) {
+		dev_err(dev,
+			"Failed to allocate IIO DMA buffer for channel %s\n",
+			ch_name);
+		return PTR_ERR(buffer);
+	}
+
+	iio_device_attach_buffer(ch_st->iio_dev, buffer);
+
+	//iio_device_set_drvdata(ch_st->dev, NULL);
+	return devm_iio_device_register(dev, ch_st->iio_dev);
+}
 
 static int dexter_apu_probe(struct platform_device *pdev)
 {
@@ -244,9 +350,28 @@ static int dexter_apu_probe(struct platform_device *pdev)
 	priv->apu_ddr_size = DEXTER_APU_DDR_SIZE_DEFAULT;
 	platform_set_drvdata(pdev, priv);
 
+	priv->tx_dma.iio_dev = devm_iio_device_alloc(&pdev->dev, 0);
+	if (IS_ERR(priv->tx_dma.iio_dev))
+		return PTR_ERR(priv->tx_dma.iio_dev);
+
+	priv->rx_dma.iio_dev = devm_iio_device_alloc(&pdev->dev, 0);
+	if (IS_ERR(priv->rx_dma.iio_dev))
+		return PTR_ERR(priv->rx_dma.iio_dev);
+
+	ret = dexter_apu_register_iio(&pdev->dev, minor, &priv->tx_dma, "tx",
+				      iio_apu_tx_channels);
+	if (ret < 0)
+		return ret;
+
+	ret = dexter_apu_register_iio(&pdev->dev, minor, &priv->rx_dma, "rx",
+				      iio_apu_rx_channels);
+	if (ret < 0)
+		return ret;
+
 	priv->reg = devm_platform_get_and_ioremap_resource(pdev, 0, &priv->res);
 	if (IS_ERR(priv->reg))
 		return PTR_ERR(priv->reg);
+
 	priv->reg_addr = priv->res->start;
 	priv->reg_length = priv->res->end - priv->res->start + 1;
 
@@ -262,19 +387,19 @@ static int dexter_apu_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto cleanup_dma;
 
-	priv->device = device_create(dexter_apu_class, NULL, dexter_apu_devt,
-				     priv, "apu%d", priv->minor);
-	if (IS_ERR(priv->device)) {
-		ret = PTR_ERR(priv->device);
+	priv->dev = device_create(dexter_apu_class, NULL, dexter_apu_devt, priv,
+				  "apu%d", priv->minor);
+	if (IS_ERR(priv->dev)) {
+		ret = PTR_ERR(priv->dev);
 		goto cleanup_cdev;
 	}
 
-	dev_info(priv->device, "Dexter APU attached for device %d.",
-		 priv->minor);
-	dev_info(priv->device, "Phys reg: 0x%08x - 0x%08x", priv->reg_addr,
+	dev_info(priv->dev, "Dexter APU attached for device %d.", priv->minor);
+	dev_info(priv->dev, "Phys reg: 0x%08x - 0x%08x", priv->reg_addr,
 		 priv->reg_addr + priv->reg_length - 1);
-	dev_info(priv->device, "Phys DMA: 0x%08x - 0x%08x", priv->apu_ddr_addr,
+	dev_info(priv->dev, "Phys DMA: 0x%08x - 0x%08x", priv->apu_ddr_addr,
 		 priv->apu_ddr_addr + priv->apu_ddr_size - 1);
+
 	return 0;
 
 cleanup_cdev:
@@ -284,6 +409,15 @@ cleanup_dma:
 			  priv->apu_ddr_addr);
 	return ret;
 }
+
+/* Match table for of_platform binding */
+static const struct of_device_id dexter_apu_of_match[] = {
+	{
+		.compatible = "pcw,dexter-apu",
+	},
+	{}
+};
+MODULE_DEVICE_TABLE(of, dexter_apu_of_match);
 
 static struct platform_driver dexter_apu_driver = {
 	.driver = {
