@@ -76,8 +76,14 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 		iowrite32(0, priv->reg + APU_CTRL_GPIO_OFFSET + 0x0);
 		// assert reset
 		iowrite32(1, priv->reg + APU_CTRL_GPIO_OFFSET + 0x8);
+
+		// sync memory
+		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
 	} else {
-		// assert reset
+		// sync memory
+		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+
+		// de-assert reset
 		iowrite32(0, priv->reg + APU_CTRL_GPIO_OFFSET + 0x8);
 		// wakeup
 		iowrite32(1, priv->reg + APU_CTRL_GPIO_OFFSET + 0x0);
@@ -157,7 +163,7 @@ static int dexter_apu_mmap_apu_ddr(struct dexter_apu_priv *priv,
 	vma->vm_pgoff = 0;
 	ret = dma_mmap_coherent(priv->dev, vma, priv->apu_ddr,
 				priv->apu_ddr_addr, len);
-
+	
 	vma->vm_pgoff = vm_pgoff;
 	return ret;
 }
@@ -223,6 +229,14 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 
 	case DEXTER_APU_IOCTL_GET_DDR_PHYS:
 		return put_u32(argp, priv->apu_ddr_addr);
+
+	case DEXTER_APU_IOCTL_SYNC_FOR_CPU:
+		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		return 0;
+
+	case DEXTER_APU_IOCTL_SYNC_FOR_DEVICE:
+		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		return 0;
 	}
 
 	return -EINVAL;
