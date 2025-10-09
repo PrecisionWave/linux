@@ -78,10 +78,10 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 		iowrite32(1, priv->reg + APU_CTRL_GPIO_OFFSET + 0x8);
 
 		// sync memory
-		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
 	} else {
 		// sync memory
-		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_TO_DEVICE);
 
 		// de-assert reset
 		iowrite32(0, priv->reg + APU_CTRL_GPIO_OFFSET + 0x8);
@@ -231,13 +231,42 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		return put_u32(argp, priv->apu_ddr_addr);
 
 	case DEXTER_APU_IOCTL_SYNC_FOR_CPU:
-		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		err = get_user(int_param, (int __user *)arg);
+		if (err)
+			return err;
+		dexter_apu_reset(priv, int_param);
+		switch(int_param) {
+			case DEXTER_APU_DMA_FROM_DEVICE:
+			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+			break;
+			case DEXTER_APU_DMA_TO_DEVICE:
+			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+			break;
+			case DEXTER_APU_DMA_BIDIR:
+			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+			break;
+
+		}
 		return 0;
 
 	case DEXTER_APU_IOCTL_SYNC_FOR_DEVICE:
-		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		err = get_user(int_param, (int __user *)arg);
+		if (err)
+			return err;
+		dexter_apu_reset(priv, int_param);
+		switch(int_param) {
+			case DEXTER_APU_DMA_FROM_DEVICE:
+			dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+			break;
+			case DEXTER_APU_DMA_TO_DEVICE:
+			dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+			break;
+			case DEXTER_APU_DMA_BIDIR:
+			dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+			break;
+
+		}
 		return 0;
-	}
 
 	return -EINVAL;
 }
