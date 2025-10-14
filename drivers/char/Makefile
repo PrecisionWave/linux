@@ -48,3 +48,5 @@ obj-$(CONFIG_XILLYBUS)		+= xillybus/
 obj-$(CONFIG_POWERNV_OP_PANEL)	+= powernv-op-panel.o
 obj-$(CONFIG_ADI)		+= adi.o
 obj-$(CONFIG_AXI_INTR_MONITOR) += axi-intr-monitor.o
+
+obj-$(CONFIG_DEXTER_APU)	+= dexter_apu.o
