@@ -1110,6 +1110,10 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, (u32)val);
 		break;
 	case REG_RX_FM_BAND_BURST_PERIOD:
+		if(val<1 || val>255){
+			//ret = -EINVAL;
+			break;
+		}
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, (u32)val);
 		break;
 	case REG_WATCHDOG_ENABLE:
@@ -1446,7 +1450,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH);
 		break;
 	case REG_RX_FM_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_PERIOD);
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_PERIOD) & 0xFF;
 		break;
 	case REG_TX1_BUFFER_GAIN:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_GAIN12) & 0xFFFF;
