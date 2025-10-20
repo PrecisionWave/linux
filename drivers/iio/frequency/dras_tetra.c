@@ -58,6 +58,7 @@
 #define ADDR_BAND2_RSSI_MAX_MIN		(30*4)
 #define ADDR_BAND1_GAIN_MAX_MIN		(31*4)
 #define ADDR_BAND2_GAIN_MAX_MIN		(32*4)
+#define ADDR_TX12_BUFFER_GAIN		(33*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -214,6 +215,9 @@ enum chan_num{
 	REG_TX1_TESTTONE_AMPLITUDE2,
 	REG_TX2_TESTTONE_AMPLITUDE1,
 	REG_TX2_TESTTONE_AMPLITUDE2,
+	REG_TX_BUFFER_ENABLE,
+	REG_TX1_BUFFER_GAIN,
+	REG_TX2_BUFFER_GAIN,
 	REG_TX1_AVG_PWR,
 	REG_TX2_AVG_PWR,
 	REG_TX1_PEAK_PWR,
@@ -554,6 +558,24 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val) <<16;
 		dras_tetra_write(st, ADDR_TESTTONE_AMPL_TX2, temp32);
 		break;
+	case REG_TX1_BUFFER_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) & 0xFFFF0000;
+		temp32 += (uint32_t)val;
+		dras_tetra_write(st, ADDR_TX12_BUFFER_GAIN, temp32);
+		break;
+	case REG_TX2_BUFFER_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) & 0xFFFF;
+		temp32 += ((uint32_t)val)<<16;
+		dras_tetra_write(st, ADDR_TX12_BUFFER_GAIN, temp32);
+		break;
 	case REG_BAND1_FILTER_SELECTION:
 		if(val<1 || val>4){
 			ret = -EINVAL;
@@ -644,6 +666,15 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<13);
 		temp32 += ((uint32_t)val)<<13;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_TX_BUFFER_ENABLE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<18);
+		temp32 += ((uint32_t)val)<<18;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_TX1_GAIN:
@@ -982,6 +1013,12 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_TX2_TESTTONE_AMPLITUDE2:
 		val = st->testtone_ampl[3];
 		break;
+	case REG_TX1_BUFFER_GAIN:
+		val = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) & 0xFFFF;
+		break;
+	case REG_TX2_BUFFER_GAIN:
+		val = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) >> 16;
+		break;
 	case REG_TX1_AVG_PWR:
 		val = dras_tetra_read(st, ADDR_TX_AVG_PWR) & 0xFFFF;
 		break;
@@ -1025,6 +1062,9 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_BAND2_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 13) & 1;
+		break;
+	case REG_TX_BUFFER_ENABLE:
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 18) & 1;
 		break;
 	case REG_BAND1_AGC_TARGET:
 		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFF;
@@ -1402,6 +1442,21 @@ static IIO_DEVICE_ATTR(tx2_testtone_amplitude2, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX2_TESTTONE_AMPLITUDE2);
 
+static IIO_DEVICE_ATTR(tx1_buffer_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_BUFFER_GAIN);
+
+static IIO_DEVICE_ATTR(tx2_buffer_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_BUFFER_GAIN);
+
+static IIO_DEVICE_ATTR(tx_buffer_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX_BUFFER_ENABLE);
+
 static IIO_DEVICE_ATTR(tx1_avg_power, S_IRUGO,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1538,6 +1593,9 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx1_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_tx2_testtone_amplitude1.dev_attr.attr,
 	&iio_dev_attr_tx2_testtone_amplitude2.dev_attr.attr,
+	&iio_dev_attr_tx1_buffer_gain.dev_attr.attr,
+	&iio_dev_attr_tx2_buffer_gain.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
 	&iio_dev_attr_tx1_avg_power.dev_attr.attr,
 	&iio_dev_attr_tx2_avg_power.dev_attr.attr,
 	&iio_dev_attr_tx1_peak_power.dev_attr.attr,
