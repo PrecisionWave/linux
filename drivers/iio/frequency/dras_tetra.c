@@ -801,6 +801,10 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, (u32)val);
 		break;
 	case REG_RX_BURST_PERIOD1:
+		if(val>0xFF){
+			//ret = -EINVAL;
+			break;
+		}
 		dras_tetra_write(st, ADDR_RX_BURST_PERIOD, (u32)val);
 		break;
 	case REG_RX_BURST_LENGTH2:
