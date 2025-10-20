@@ -251,6 +251,7 @@ enum chan_num{
 	REG_TX_DAB_TESTTONE_AMPLITUDE1,
 	REG_TX_DAB_TESTTONE_AMPLITUDE2,
 	REG_TX_DAB_TESTTONE_AMPLITUDE3,
+	REG_TXBUF_ENABLE,
 	REG_TX1_BUFFER_GAIN,
 	REG_TX2_BUFFER_GAIN,
 	REG_TX1_FM_AVG_PWR,
@@ -1125,6 +1126,15 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 2;
 		dras_fm_dab_adc_dac_write(st, ADDR_WATCHDOG, temp32);
 		break;
+	case REG_TXBUF_ENABLE:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) & ~(0x1<<0);
+		temp32 += (u32)val << 0;
+		dras_fm_dab_adc_dac_write(st, ADDR_WATCHDOG, temp32);
+		break;
 	case REG_WATCHDOG_TRIGGER:
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) & ~(0x1<<3);
 		temp32 += 1 << 3;
@@ -1644,6 +1654,9 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_WATCHDOG_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 2) & 0x1;
 		break;
+	case REG_TXBUF_ENABLE:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 0) & 0x1;
+		break;
 	case REG_WATCHDOG_TRIGGER:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 3) & 0x1;
 		break;
@@ -1941,6 +1954,11 @@ static IIO_DEVICE_ATTR(rx_fm_band_burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_FM_BAND_BURST_PERIOD);
+
+static IIO_DEVICE_ATTR(tx_buffer_enable, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TXBUF_ENABLE);
 
 static IIO_DEVICE_ATTR(tx1_buffer_gain, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
@@ -2295,6 +2313,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	//&iio_dev_attr_tx2_dab_sel_rep_mod1_mod2_mod12.dev_attr.attr,
 	&iio_dev_attr_rx_fm_band_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_fm_band_burst_period.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx1_fm_band_gain.dev_attr.attr,
