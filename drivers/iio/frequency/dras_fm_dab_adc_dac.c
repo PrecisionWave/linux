@@ -37,21 +37,23 @@
 #define ADDR_DAB_TESTTONE2		(8*4)
 #define ADDR_WATCHDOG			(9*4)
 #define ADDR_DAB_TESTTONE3		(10*4)
+#define ADDR_TX_DAB_AVG_POWER2		(11*4)
 #define ADDR_PPS_SETTINGS		(12*4)
 #define ADDR_HASH			(13*4)
 #define ADDR_RANDOMNUMBER		(14*4)
-#define ADDR_TX_FM_PEAK_POWER		(15*4)
+#define ADDR_TX_FM_PEAK_POWER2		(15*4)
 
 // FM Band
-#define ADDR_TX_FM_AVG_POWER		(1*16+0)*4
+#define ADDR_TX_FM_AVG_POWER1		(1*16+0)*4
 #define ADDR_RX_FM_BAND_BURST_LENGTH	(1*16+1)*4
-#define ADDR_RX_FM_BAND_BURST_PERIOD	(1*16+2)*4
+//#define ADDR_RX_FM_BAND_BURST_PERIOD	(1*16+2)*4
+#define ADDR_TX_FM_PEAK_POWER1		(1*16+2)*4
 #define ADDR_TX_FM_BAND_GAIN		(1*16+3)*4
 #define ADDR_TX_FM_TESTTONE_DDSINC21	(1*16+4)*4
 #define ADDR_TX_BUFFER_GAIN12		(1*16+5)*4
 #define ADDR_TX_FM_TESTTONE_AMPL21	(1*16+6)*4
 #define ADDR_TX_FM_TESTTONE_AMPL43	(1*16+7)*4
-#define ADDR_TX_FM_SEL			(1*16+8)*4
+#define ADDR_TX_FM_AVG_POWER2		(1*16+8)*4
 #define ADDR_RX_DAB_AGC_SQUELCH		(1*16+9)*4
 #define ADDR_BLOCK_MOD_STARTTDELAY	(1*16+10)*4
 #define ADDR_BI0			(1*16+11)*4
@@ -63,10 +65,11 @@
 // DAB Band
 #define ADDR_RX_DAB_CHANNEL_FREQUENCY	(2*16+0)*4
 #define ADDR_RX_DAB_BAND_BURST_LENGTH	(2*16+1)*4
-#define ADDR_RX_DAB_BAND_BURST_PERIOD	(2*16+2)*4
-#define ADDR_TX_DAB_AVG_POWER		(2*16+3)*4
+//#define ADDR_RX_DAB_BAND_BURST_PERIOD	(2*16+2)*4
+#define ADDR_TX_DAB_PEAK_POWER2		(2*16+2)*4
+#define ADDR_TX_DAB_AVG_POWER1		(2*16+3)*4
 #define ADDR_TX_DAB_DDS_BI		(2*16+4)*4
-#define ADDR_TX_DAB_PEAK_POWER		(2*16+5)*4
+#define ADDR_TX_DAB_PEAK_POWER1		(2*16+5)*4
 #define ADDR_DAB_MUTE			(2*16+6)*4
 #define ADDR_DL_ORDER_SYNC		(2*16+7)*4 // 5bits per channel, 24 channels
 #define ADDR_TX_DAB_GAIN		(2*16+8)*4
@@ -564,14 +567,22 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_CHANNEL_FREQUENCY, val);
 		break;
 	case REG_RX_DAB_BAND_BURST_LENGTH:
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, (u32)val);
+		if(val<1 || val>0xFFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & 0xFF000000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
 		break;
 	case REG_RX_DAB_BAND_BURST_PERIOD:
 		if(val<1 || val>255){
 			//ret = -EINVAL;
 			break;
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_PERIOD, (u32)val);
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & 0xFFFFFF;
+		temp32 += (u32)val << 24;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
 		break;
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
 		if(st->is_remote){
@@ -1108,14 +1119,22 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_DAB_TESTTONE3, temp32);
 		break;
 	case REG_RX_FM_BAND_BURST_LENGTH:
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, (u32)val);
+		if(val<1 || val>0xFFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFF000000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
 		break;
 	case REG_RX_FM_BAND_BURST_PERIOD:
 		if(val<1 || val>255){
 			//ret = -EINVAL;
 			break;
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_PERIOD, (u32)val);
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
+		temp32 += (u32)val << 24;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
 		break;
 	case REG_WATCHDOG_ENABLE:
 		if(val<0 || val>1){
@@ -1400,10 +1419,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		break;
 */
 	case REG_RX_DAB_BAND_BURST_LENGTH:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH);
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & 0xFFFFFF;
 		break;
 	case REG_RX_DAB_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_PERIOD) & 0xFF;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 24;
 		break;
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_MONITOR_BURST_LENGTH);
@@ -1457,10 +1476,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 17) & 0x1;
 		break;
 	case REG_RX_FM_BAND_BURST_LENGTH:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH);
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
 		break;
 	case REG_RX_FM_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_PERIOD) & 0xFF;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) >>24;
 		break;
 	case REG_TX1_BUFFER_GAIN:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_GAIN12) & 0xFFFF;
@@ -1628,28 +1647,28 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = st->testtone_dab_ampl[3];
 		break;
 	case REG_TX1_FM_AVG_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_AVG_POWER) & 0xFFFF;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_AVG_POWER1) & 0x7FFFFFFF;
 		break;
 	case REG_TX2_FM_AVG_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_AVG_POWER) >> 16;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_AVG_POWER2) & 0x7FFFFFFF;
 		break;
 	case REG_TX1_FM_PEAK_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_PEAK_POWER) & 0xFFFF;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_PEAK_POWER1) & 0x7FFFFFFF;
 		break;
 	case REG_TX2_FM_PEAK_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_PEAK_POWER) >> 16;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_FM_PEAK_POWER2) & 0x7FFFFFFF;
 		break;
 	case REG_TX1_DAB_AVG_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_AVG_POWER) & 0xFFFF;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_AVG_POWER1) & 0x7FFFFFFF;
 		break;
 	case REG_TX2_DAB_AVG_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_AVG_POWER) >> 16;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_AVG_POWER2) & 0x7FFFFFFF;
 		break;
 	case REG_TX1_DAB_PEAK_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_PEAK_POWER) & 0xFFFF;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_PEAK_POWER1) & 0x7FFFFFFF;
 		break;
 	case REG_TX2_DAB_PEAK_PWR:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_PEAK_POWER) >> 16;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_PEAK_POWER2) & 0x7FFFFFFF;
 		break;
 	case REG_WATCHDOG_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 2) & 0x1;
