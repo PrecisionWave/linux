@@ -52,13 +52,15 @@
 #define ADDR_BAND2_RSSI			(24*4)
 #define ADDR_RX_BURST_LENGTH2		(25*4)
 #define ADDR_RX_BURST_PERIOD2		(26*4)
-#define ADDR_TX_AVG_PWR			(27*4)
-#define ADDR_TX_PEAK_PWR		(28*4)
+#define ADDR_TX_AVG_PWR1		(27*4)
+#define ADDR_TX_PEAK_PWR1		(28*4)
 #define ADDR_BAND1_RSSI_MAX_MIN		(29*4)
 #define ADDR_BAND2_RSSI_MAX_MIN		(30*4)
 #define ADDR_BAND1_GAIN_MAX_MIN		(31*4)
 #define ADDR_BAND2_GAIN_MAX_MIN		(32*4)
 #define ADDR_TX12_BUFFER_GAIN		(33*4)
+#define ADDR_TX_AVG_PWR2		(34*4)
+#define ADDR_TX_PEAK_PWR2		(35*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -1024,16 +1026,16 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) >> 16;
 		break;
 	case REG_TX1_AVG_PWR:
-		val = dras_tetra_read(st, ADDR_TX_AVG_PWR) & 0xFFFF;
+		val = dras_tetra_read(st, ADDR_TX_AVG_PWR1) & 0x7FFFFFFF;
 		break;
 	case REG_TX2_AVG_PWR:
-		val = dras_tetra_read(st, ADDR_TX_AVG_PWR) >>16;
+		val = dras_tetra_read(st, ADDR_TX_AVG_PWR2) & 0x7FFFFFFF;
 		break;
 	case REG_TX1_PEAK_PWR:
-		val = dras_tetra_read(st, ADDR_TX_PEAK_PWR) & 0xFFFF;
+		val = dras_tetra_read(st, ADDR_TX_PEAK_PWR1) & 0x7FFFFFFF;
 		break;
 	case REG_TX2_PEAK_PWR:
-		val = dras_tetra_read(st, ADDR_TX_PEAK_PWR) >>16;
+		val = dras_tetra_read(st, ADDR_TX_PEAK_PWR2) & 0x7FFFFFFF;
 		break;
 	case REG_BAND1_FILTER_SELECTION:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 0) & 3;
