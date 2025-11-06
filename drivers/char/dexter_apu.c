@@ -267,6 +267,7 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 
 		}
 		return 0;
+	}
 
 	return -EINVAL;
 }
