@@ -66,8 +66,8 @@ struct dexter_apu_priv {
 	struct dexter_apu_priv_iio rx_dma;
 };
 
-static struct dexter_apu_priv *dexter_apu_devices;
 static int dexter_apu_devices_max = DEXTER_APU_DEV_MAX;
+static int dexter_apu_register_class(void);
 
 static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 {
@@ -78,10 +78,12 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 		iowrite32(1, priv->reg + APU_CTRL_GPIO_OFFSET + 0x8);
 
 		// sync memory
-		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
+					priv->apu_ddr_size, DMA_FROM_DEVICE);
 	} else {
 		// sync memory
-		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_TO_DEVICE);
+		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr,
+					   priv->apu_ddr_size, DMA_TO_DEVICE);
 
 		// de-assert reset
 		iowrite32(0, priv->reg + APU_CTRL_GPIO_OFFSET + 0x8);
@@ -163,7 +165,7 @@ static int dexter_apu_mmap_apu_ddr(struct dexter_apu_priv *priv,
 	vma->vm_pgoff = 0;
 	ret = dma_mmap_coherent(priv->dev, vma, priv->apu_ddr,
 				priv->apu_ddr_addr, len);
-	
+
 	vma->vm_pgoff = vm_pgoff;
 	return ret;
 }
@@ -191,11 +193,10 @@ static int dexter_apu_mmap(struct file *filep, struct vm_area_struct *vma)
 
 static int dexter_apu_open(struct inode *inode, struct file *filep)
 {
-	int minor = iminor(inode);
-	if (minor >= DEXTER_APU_DEV_MAX)
-		return -ENXIO;
+	struct dexter_apu_priv *priv;
+	priv = container_of(inode->i_cdev, struct dexter_apu_priv, cdev);
 
-	filep->private_data = &dexter_apu_devices[minor];
+	filep->private_data = priv;
 
 	return 0;
 }
@@ -235,17 +236,22 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		if (err)
 			return err;
 		dexter_apu_reset(priv, int_param);
-		switch(int_param) {
-			case DEXTER_APU_DMA_FROM_DEVICE:
-			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+		switch (int_param) {
+		case DEXTER_APU_DMA_FROM_DEVICE:
+			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
+						priv->apu_ddr_size,
+						DMA_FROM_DEVICE);
 			break;
-			case DEXTER_APU_DMA_TO_DEVICE:
-			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+		case DEXTER_APU_DMA_TO_DEVICE:
+			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
+						priv->apu_ddr_size,
+						DMA_FROM_DEVICE);
 			break;
-			case DEXTER_APU_DMA_BIDIR:
-			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		case DEXTER_APU_DMA_BIDIR:
+			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
+						priv->apu_ddr_size,
+						DMA_BIDIRECTIONAL);
 			break;
-
 		}
 		return 0;
 
@@ -254,17 +260,25 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		if (err)
 			return err;
 		dexter_apu_reset(priv, int_param);
-		switch(int_param) {
-			case DEXTER_APU_DMA_FROM_DEVICE:
-			dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+		switch (int_param) {
+		case DEXTER_APU_DMA_FROM_DEVICE:
+			dma_sync_single_for_device(priv->dev,
+						   priv->apu_ddr_addr,
+						   priv->apu_ddr_size,
+						   DMA_FROM_DEVICE);
 			break;
-			case DEXTER_APU_DMA_TO_DEVICE:
-			dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_FROM_DEVICE);
+		case DEXTER_APU_DMA_TO_DEVICE:
+			dma_sync_single_for_device(priv->dev,
+						   priv->apu_ddr_addr,
+						   priv->apu_ddr_size,
+						   DMA_FROM_DEVICE);
 			break;
-			case DEXTER_APU_DMA_BIDIR:
-			dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr, priv->apu_ddr_size, DMA_BIDIRECTIONAL);
+		case DEXTER_APU_DMA_BIDIR:
+			dma_sync_single_for_device(priv->dev,
+						   priv->apu_ddr_addr,
+						   priv->apu_ddr_size,
+						   DMA_BIDIRECTIONAL);
 			break;
-
 		}
 		return 0;
 	}
@@ -384,10 +398,16 @@ static int dexter_apu_register_iio(struct device *dev, int minor,
 static int dexter_apu_probe(struct platform_device *pdev)
 {
 	int minor = dexter_apu_count++;
-	struct dexter_apu_priv *priv = &dexter_apu_devices[minor];
+	struct dexter_apu_priv *priv;
 	int ret = 0;
 
-	memset(priv, 0, sizeof(*priv));
+	ret = dexter_apu_register_class();
+	if (ret < 0)
+		return ret;
+
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (IS_ERR(priv))
+		return PTR_ERR(priv);
 
 	priv->minor = minor;
 	priv->pdev = pdev;
@@ -472,20 +492,16 @@ static struct platform_driver dexter_apu_driver = {
 };
 module_platform_driver(dexter_apu_driver);
 
-static int __init dexter_apu_init(void)
+static int dexter_apu_register_class(void)
 {
 	int ret = 0;
 
-	dexter_apu_devices = vzalloc(array_size(
-		dexter_apu_devices_max, sizeof(struct dexter_apu_priv)));
-	if (!dexter_apu_devices)
-		return -ENOMEM;
+	if (dexter_apu_class)
+		return 0;
 
 	dexter_apu_class = class_create(THIS_MODULE, "dexter_apu");
-	if (IS_ERR(dexter_apu_class)) {
-		ret = PTR_ERR(dexter_apu_class);
-		goto cleanup_devices;
-	}
+	if (IS_ERR(dexter_apu_class))
+		return PTR_ERR(dexter_apu_class);
 
 	ret = alloc_chrdev_region(&dexter_apu_devt, 0, dexter_apu_devices_max,
 				  "apu");
@@ -497,9 +513,12 @@ static int __init dexter_apu_init(void)
 
 cleanup_class:
 	class_destroy(dexter_apu_class);
-cleanup_devices:
-	vfree(dexter_apu_devices);
 	return ret;
+}
+
+static int __init dexter_apu_init(void)
+{
+	return dexter_apu_register_class();
 }
 module_init(dexter_apu_init);
 
@@ -507,7 +526,6 @@ static void __exit dexter_apu_exit(void)
 {
 	unregister_chrdev_region(dexter_apu_devt, dexter_apu_devices_max);
 	class_destroy(dexter_apu_class);
-	vfree(dexter_apu_devices);
 }
 module_exit(dexter_apu_exit);
 
