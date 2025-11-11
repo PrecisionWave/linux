@@ -507,3 +507,9 @@ config DEXTER_APU
 	depends on HAS_IOMEM
 	help
 	  Driver to configure and manipulate the Dexter APU
+
+config DRAS_CPRI
+	tristate "DRAS CPRI UIO driver"
+	depends on HAS_IOMEM
+	help
+	  driver to allow user mode to access CPRI registers

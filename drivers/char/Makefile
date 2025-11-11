@@ -50,3 +50,4 @@ obj-$(CONFIG_ADI)		+= adi.o
 obj-$(CONFIG_AXI_INTR_MONITOR) += axi-intr-monitor.o
 
 obj-$(CONFIG_DEXTER_APU)	+= dexter_apu.o
+obj-$(CONFIG_DRAS_CPRI)		+= dras_cpri.o
