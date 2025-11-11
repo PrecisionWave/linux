@@ -37,6 +37,9 @@ static int dras_cpri_minor_count = 0;
 // Internal limits
 #define DRAS_CPRI_DEV_MAX 16
 #define DRAS_CPRI_MMAP_PORT_COUNT_MAX 16
+static int dras_cpri_devices_max = DRAS_CPRI_DEV_MAX;
+static int dras_cpri_port_count_max = DRAS_CPRI_MMAP_PORT_COUNT_MAX;
+static int dras_cpri_register_class(void);
 
 struct dras_cpri_reg {
 	struct resource *res;
@@ -53,10 +56,6 @@ struct dras_cpri_priv {
 	int minor;
 	int port_count;
 };
-
-static struct dras_cpri_priv *dras_cpri_devices;
-static int dras_cpri_devices_max = DRAS_CPRI_DEV_MAX;
-static int dras_cpri_port_count_max = DRAS_CPRI_MMAP_PORT_COUNT_MAX;
 
 #define DRAS_CPRI_MMAP_XLNX_PORT_REG_START (DRAS_CPRI_MMAP_XLNX_PORT_REG)
 #define DRAS_CPRI_MMAP_XLNX_PORT_REG_END                                       \
@@ -187,11 +186,10 @@ static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 
 static int dras_cpri_open(struct inode *inode, struct file *filep)
 {
-	int minor = iminor(inode);
-	if (minor >= dras_cpri_devices_max)
-		return -ENXIO;
+	struct dras_cpri_priv *priv;
+	priv = container_of(inode->i_cdev, struct dras_cpri_priv, cdev);
 
-	filep->private_data = &dras_cpri_devices[minor];
+	filep->private_data = priv;
 
 	return 0;
 }
@@ -226,12 +224,18 @@ static const struct file_operations fops = {
 
 static int dras_cpri_probe(struct platform_device *pdev)
 {
+	struct dras_cpri_priv *priv;
 	int minor = dras_cpri_minor_count++;
-	struct dras_cpri_priv *priv = &dras_cpri_devices[minor];
 	int ret = 0;
 	int index;
 
-	memset(priv, 0, sizeof(*priv));
+	ret = dras_cpri_register_class();
+	if(ret < 0)
+		return ret;
+
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (IS_ERR(priv))
+		return PTR_ERR(priv);
 
 	priv->minor = minor;
 	priv->pdev = pdev;
@@ -257,6 +261,8 @@ static int dras_cpri_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->portid_reg.iomem);
 
 	for (index = 0; index < dras_cpri_port_count_max; index++) {
+		dev_info(&pdev->dev, "Probing port %d\n", index);
+
 		/* no more resources */
 		if (pdev->num_resources < 1 + index * 2 + 1)
 			break;
@@ -308,15 +314,8 @@ static int dras_cpri_probe(struct platform_device *pdev)
 	dev_info(priv->dev, "DRAS CPRI attached for device %d with %d ports",
 		 priv->minor, priv->port_count);
 	for (index = 0; index < priv->port_count; index++) {
-		if (IS_ERR(priv->xlnx_regs[index].iomem) ||
-		    IS_ERR(priv->pcw_regs[index].iomem))
-			continue;
-		dev_info(priv->dev,
-			 "CPRI port %d @ 0x%08x - 0x%08x, %08x - %08x\n", index,
-			 priv->xlnx_regs[index].res->start,
-			 priv->xlnx_regs[index].res->end,
-			 priv->pcw_regs[index].res->start,
-			 priv->pcw_regs[index].res->end);
+		dev_info(priv->dev, "CPRI port %d @ %pR %pR\n", index,
+			 priv->xlnx_regs[index].res, priv->pcw_regs[index].res);
 	}
 
 	return 0;
@@ -344,20 +343,16 @@ static struct platform_driver dras_cpri_driver = {
 };
 module_platform_driver(dras_cpri_driver);
 
-static int __init dras_cpri_init(void)
+static int dras_cpri_register_class(void)
 {
 	int ret = 0;
 
-	dras_cpri_devices = vzalloc(array_size(dras_cpri_devices_max,
-					       sizeof(struct dras_cpri_priv)));
-	if (!dras_cpri_devices)
-		return -ENOMEM;
+	if(dras_cpri_class) 
+		return 0;
 
 	dras_cpri_class = class_create(THIS_MODULE, "dras_cpri");
-	if (IS_ERR(dras_cpri_class)) {
-		ret = PTR_ERR(dras_cpri_class);
-		goto cleanup_devices;
-	}
+	if (IS_ERR(dras_cpri_class)) 
+		return PTR_ERR(dras_cpri_class);
 
 	ret = alloc_chrdev_region(&dras_cpri_devt, 0, dras_cpri_devices_max,
 				  "cpri");
@@ -369,9 +364,12 @@ static int __init dras_cpri_init(void)
 
 cleanup_class:
 	class_destroy(dras_cpri_class);
-cleanup_devices:
-	vfree(dras_cpri_devices);
 	return ret;
+}
+
+static int __init dras_cpri_init(void)
+{
+	return dras_cpri_register_class();
 }
 module_init(dras_cpri_init);
 
@@ -379,7 +377,6 @@ static void __exit dras_cpri_exit(void)
 {
 	unregister_chrdev_region(dras_cpri_devt, dras_cpri_devices_max);
 	class_destroy(dras_cpri_class);
-	vfree(dras_cpri_devices);
 }
 module_exit(dras_cpri_exit);
 
