@@ -463,4 +463,10 @@ config RANDOM_TRUST_BOOTLOADER
 	  believe its RNG facilities may be faulty. This may also be configured
 	  at boot time with "random.trust_bootloader=on/off".
 
+config DEXTER_APU
+	tristate "Dexter APU driver"
+	depends on HAS_IOMEM
+	help
+	  Driver to configure and manipulate the Dexter APU
+
 endmenu
