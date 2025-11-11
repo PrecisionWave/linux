@@ -426,4 +426,11 @@ config AXI_INTR_MONITOR
 	tristate "AXI Interrupt Monitor"
 	depends on HAS_IOMEM
 
+config DEXTER_APU
+	tristate "Dexter APU driver"
+	depends on HAS_IOMEM
+	help
+	  Driver to configure and manipulate the Dexter APU
+
+
 endmenu
