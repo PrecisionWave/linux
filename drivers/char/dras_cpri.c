@@ -230,7 +230,7 @@ static int dras_cpri_probe(struct platform_device *pdev)
 	int index;
 
 	ret = dras_cpri_register_class();
-	if(ret < 0)
+	if (ret < 0)
 		return ret;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
@@ -347,11 +347,11 @@ static int dras_cpri_register_class(void)
 {
 	int ret = 0;
 
-	if(dras_cpri_class) 
+	if (dras_cpri_class)
 		return 0;
 
 	dras_cpri_class = class_create(THIS_MODULE, "dras_cpri");
-	if (IS_ERR(dras_cpri_class)) 
+	if (IS_ERR(dras_cpri_class))
 		return PTR_ERR(dras_cpri_class);
 
 	ret = alloc_chrdev_region(&dras_cpri_devt, 0, dras_cpri_devices_max,
