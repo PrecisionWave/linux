@@ -155,3 +155,7 @@ x509.genkey
 
 # Documentation toolchain
 sphinx_*/
+
+# pcw dt
+arch/arm64/boot/dts/xilinx/*.dts*
+arch/arm/boot/dts/*.dts*
