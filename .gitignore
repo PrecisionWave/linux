@@ -159,3 +159,5 @@ sphinx_*/
 # pcw dt
 arch/arm64/boot/dts/xilinx/*.dts*
 arch/arm/boot/dts/*.dts*
+config.old
+pcw_defconfig
