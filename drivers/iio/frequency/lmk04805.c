@@ -1282,6 +1282,8 @@ static int lmk04805_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 {
 	//return lmk04805_set_clk_attr(hw, IIO_CHAN_INFO_FREQUENCY, rate);
 	printk(KERN_ERR "lmk04805: Unexpected call to lmk04805_clk_set_rate\n");
+	printk(KERN_INFO "lmk04805: rate = %lu\n", rate);
+	printk(KERN_INFO "lmk04805: prate = %lu\n", prate);
 	dump_stack();
 	return -EINVAL;
 }
