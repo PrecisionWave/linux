@@ -51,6 +51,31 @@ struct dras_cpri_priv {
 	int port_count;
 };
 
+static int dras_cpri_mmap_page(struct dras_cpri_priv *priv,
+			       struct vm_area_struct *vma,
+			       resource_size_t res_start)
+{
+	size_t len;
+	unsigned long vm_pgoff;
+
+	len = vma->vm_end - vma->vm_start;
+	if (len > PAGE_SIZE)
+		return -EINVAL;
+
+	vm_pgoff = vma->vm_pgoff;
+	vma->vm_pgoff = 0;
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	if (remap_pfn_range(vma, vma->vm_start, res_start >> PAGE_SHIFT,
+			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
+		vma->vm_pgoff = vm_pgoff;
+		return -EAGAIN;
+	}
+
+	vma->vm_pgoff = vm_pgoff;
+	return 0;
+}
+
 #define DRAS_CPRI_MMAP_XLNX_PORT_REG_START (DRAS_CPRI_MMAP_XLNX_PORT_REG)
 #define DRAS_CPRI_MMAP_XLNX_PORT_REG_END                                       \
 	(DRAS_CPRI_MMAP_XLNX_PORT_REG_START + dras_cpri_port_count_max)
@@ -59,122 +84,44 @@ struct dras_cpri_priv {
 #define DRAS_CPRI_MMAP_PCW_PORT_REG_END                                        \
 	(DRAS_CPRI_MMAP_PCW_PORT_REG_START + dras_cpri_port_count_max)
 
-static int dras_cpri_mmap_portid_reg(struct dras_cpri_priv *priv,
-				     struct vm_area_struct *vma)
-{
-	size_t len;
-	unsigned long vm_pgoff;
-
-	len = vma->vm_end - vma->vm_start;
-	if (len > PAGE_SIZE)
-		return -EINVAL;
-
-	vm_pgoff = vma->vm_pgoff;
-	vma->vm_pgoff = 0;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
-	if (remap_pfn_range(vma, vma->vm_start,
-			    priv->portid_reg.res->start >> PAGE_SHIFT,
-			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
-		vma->vm_pgoff = vm_pgoff;
-		return -EAGAIN;
-	}
-
-	vma->vm_pgoff = vm_pgoff;
-	return 0;
-}
-
-static int dras_cpri_mmap_xlnx_reg(struct dras_cpri_priv *priv,
-				   struct vm_area_struct *vma)
-{
-	size_t len;
-	unsigned long vm_pgoff;
-	int index;
-
-	if (vma->vm_pgoff < DRAS_CPRI_MMAP_XLNX_PORT_REG_START)
-		return -EINVAL;
-	if (vma->vm_pgoff >= DRAS_CPRI_MMAP_XLNX_PORT_REG_END)
-		return -EINVAL;
-
-	index = vma->vm_pgoff - DRAS_CPRI_MMAP_XLNX_PORT_REG_START;
-	if (index >= dras_cpri_port_count_max)
-		return -EINVAL;
-	if (index >= priv->port_count)
-		return -EINVAL;
-
-	len = vma->vm_end - vma->vm_start;
-	if (len > PAGE_SIZE)
-		return -EINVAL;
-
-	vm_pgoff = vma->vm_pgoff;
-	vma->vm_pgoff = 0;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
-	if (remap_pfn_range(vma, vma->vm_start,
-			    (priv->xlnx_regs[index].res->start) >> PAGE_SHIFT,
-			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
-		vma->vm_pgoff = vm_pgoff;
-		return -EAGAIN;
-	}
-
-	vma->vm_pgoff = vm_pgoff;
-	return 0;
-}
-
-static int dras_cpri_mmap_pcw_reg(struct dras_cpri_priv *priv,
-				  struct vm_area_struct *vma)
-{
-	size_t len;
-	unsigned long vm_pgoff;
-	int index;
-
-	if (vma->vm_pgoff < DRAS_CPRI_MMAP_PCW_PORT_REG_START)
-		return -EINVAL;
-	if (vma->vm_pgoff >= DRAS_CPRI_MMAP_PCW_PORT_REG_END)
-		return -EINVAL;
-
-	index = vma->vm_pgoff - DRAS_CPRI_MMAP_PCW_PORT_REG_START;
-	if (index >= dras_cpri_port_count_max)
-		return -EINVAL;
-	if (index >= priv->port_count)
-		return -EINVAL;
-
-	len = vma->vm_end - vma->vm_start;
-	if (len > PAGE_SIZE)
-		return -EINVAL;
-
-	vm_pgoff = vma->vm_pgoff;
-	vma->vm_pgoff = 0;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
-	if (remap_pfn_range(vma, vma->vm_start,
-			    (priv->pcw_regs[index].res->start) >> PAGE_SHIFT,
-			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
-		vma->vm_pgoff = vm_pgoff;
-		return -EAGAIN;
-	}
-
-	vma->vm_pgoff = vm_pgoff;
-	return 0;
-}
-
 static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 {
 	struct dras_cpri_priv *priv = filep->private_data;
+	resource_size_t res_start = 0;
 
 	// dev_info(priv->dev, "mmap for vma->vm_pgoff %lx\n", vma->vm_pgoff);
 
-	if (vma->vm_pgoff == DRAS_CPRI_MMAP_PORTID_REG)
-		return dras_cpri_mmap_portid_reg(priv, vma);
+	switch (vma->vm_pgoff) {
+	case DRAS_CPRI_MMAP_PORTID_REG:
+		res_start = priv->portid_reg.res->start;
+		break;
 
-	if ((vma->vm_pgoff >= DRAS_CPRI_MMAP_XLNX_PORT_REG_START) &&
-	    (vma->vm_pgoff < DRAS_CPRI_MMAP_XLNX_PORT_REG_END))
-		return dras_cpri_mmap_xlnx_reg(priv, vma);
+	default:
+		if ((vma->vm_pgoff >= DRAS_CPRI_MMAP_XLNX_PORT_REG_START) &&
+		    (vma->vm_pgoff < DRAS_CPRI_MMAP_XLNX_PORT_REG_END)) {
+			int index = vma->vm_pgoff -
+				    DRAS_CPRI_MMAP_XLNX_PORT_REG_START;
+			if (index >= priv->port_count)
+				return -EINVAL;
+			res_start = priv->xlnx_regs[index].res->start;
+			break;
+		}
 
-	if ((vma->vm_pgoff >= DRAS_CPRI_MMAP_PCW_PORT_REG_START) &&
-	    (vma->vm_pgoff < DRAS_CPRI_MMAP_PCW_PORT_REG_END))
-		return dras_cpri_mmap_pcw_reg(priv, vma);
+		if ((vma->vm_pgoff >= DRAS_CPRI_MMAP_PCW_PORT_REG_START) &&
+		    (vma->vm_pgoff < DRAS_CPRI_MMAP_PCW_PORT_REG_END)) {
+			int index = vma->vm_pgoff -
+				    DRAS_CPRI_MMAP_PCW_PORT_REG_START;
+			if (index >= priv->port_count)
+				return -EINVAL;
+			res_start = priv->pcw_regs[index].res->start;
+			break;
+		}
 
+		return -EINVAL;
+	}
+
+	if (res_start > 0)
+		return dras_cpri_mmap_page(priv, vma, res_start);
 	return -EINVAL;
 }
 
