@@ -14,6 +14,7 @@
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm_types.h>
@@ -47,6 +48,9 @@ struct dras_cpri_priv {
 	struct dras_cpri_reg *xlnx_regs;
 	struct dras_cpri_reg *pcw_regs;
 	struct dras_cpri_reg portid_reg;
+	struct dras_cpri_reg recclk_reg;
+	struct dras_cpri_reg freqcntr_reg;
+	struct dras_cpri_reg clkmon_regs[2];
 	int minor;
 	int port_count;
 };
@@ -94,6 +98,22 @@ static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 	switch (vma->vm_pgoff) {
 	case DRAS_CPRI_MMAP_PORTID_REG:
 		res_start = priv->portid_reg.res->start;
+		break;
+
+	case DRAS_CPRI_MMAP_RECCLK_REG:
+		res_start = priv->portid_reg.res->start;
+		break;
+
+	case DRAS_CPRI_MMAP_FREQCNTR_REG:
+		res_start = priv->portid_reg.res->start;
+		break;
+
+	case DRAS_CPRI_MMAP_CLKMON_REG + 0:
+		res_start = priv->clkmon_regs[0].res->start;
+		break;
+
+	case DRAS_CPRI_MMAP_CLKMON_REG + 1:
+		res_start = priv->clkmon_regs[1].res->start;
 		break;
 
 	default:
@@ -145,8 +165,6 @@ static long dras_cpri_ioctl(struct file *filep, unsigned int cmd,
 {
 	struct dras_cpri_priv *priv = filep->private_data;
 	void __user *argp = (void __user *)arg;
-	//int err = -EINVAL;
-	//int int_param;
 
 	switch (cmd) {
 	case DRAS_CPRI_IOCTL_GET_CPRI_PORT_COUNT:
@@ -162,6 +180,28 @@ static const struct file_operations fops = {
 	.mmap = dras_cpri_mmap,
 	.unlocked_ioctl = dras_cpri_ioctl,
 };
+
+static int dras_cpri_map_optional_reg(struct platform_device *pdev,
+				      char *child_name, int index,
+				      struct dras_cpri_reg *cpri_reg)
+{
+	struct device_node *np;
+	np = of_get_child_by_name(pdev->dev.of_node, child_name);
+	if (np) {
+		cpri_reg->res = devm_kzalloc(&pdev->dev, sizeof(*cpri_reg->res),
+					     GFP_KERNEL);
+		if (IS_ERR(cpri_reg->res))
+			return PTR_ERR(cpri_reg->res);
+
+		// resource is optional
+		if (of_address_to_resource(np, index, cpri_reg->res))
+			return 0;
+
+		cpri_reg->iomem =
+			devm_ioremap_resource(&pdev->dev, cpri_reg->res);
+	}
+	return 0;
+}
 
 static int dras_cpri_probe(struct platform_device *pdev)
 {
@@ -202,11 +242,11 @@ static int dras_cpri_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->portid_reg.iomem);
 
 	for (index = 0; index < dras_cpri_port_count_max; index++) {
-		dev_info(&pdev->dev, "Probing port %d\n", index);
-
 		/* no more resources */
 		if (pdev->num_resources < 1 + index * 2 + 1)
 			break;
+
+		dev_info(&pdev->dev, "Probing port %d\n", index);
 
 		priv->xlnx_regs[index].iomem =
 			devm_platform_get_and_ioremap_resource(
@@ -239,6 +279,11 @@ static int dras_cpri_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	dras_cpri_map_optional_reg(pdev, "recclk", 0, &priv->recclk_reg);
+	dras_cpri_map_optional_reg(pdev, "freqcntr", 0, &priv->freqcntr_reg);
+	dras_cpri_map_optional_reg(pdev, "clkmon", 0, &priv->clkmon_regs[0]);
+	dras_cpri_map_optional_reg(pdev, "clkmon", 1, &priv->clkmon_regs[1]);
+
 	cdev_init(&priv->cdev, &fops);
 	priv->cdev.owner = THIS_MODULE;
 	ret = cdev_add(&priv->cdev, dras_cpri_devt, 1);
@@ -254,10 +299,22 @@ static int dras_cpri_probe(struct platform_device *pdev)
 
 	dev_info(priv->dev, "DRAS CPRI attached for device %d with %d ports",
 		 priv->minor, priv->port_count);
+
+	dev_info(priv->dev, "CPRI PORTID register @ %pR\n", priv->portid_reg.res);
+
 	for (index = 0; index < priv->port_count; index++) {
 		dev_info(priv->dev, "CPRI port %d @ %pR %pR\n", index,
 			 priv->xlnx_regs[index].res, priv->pcw_regs[index].res);
 	}
+
+	if(priv->recclk_reg.iomem)
+		dev_info(priv->dev, "CPRI RECCLK control @ %pR\n", priv->recclk_reg.res);
+	if(priv->freqcntr_reg.iomem)
+		dev_info(priv->dev, "CPRI Frequency counter @ %pR\n", priv->freqcntr_reg.res);
+	if(priv->clkmon_regs[0].iomem)
+		dev_info(priv->dev, "CPRI clkmon csr 0 @ %pR\n", priv->clkmon_regs[0].res);
+	if(priv->clkmon_regs[1].iomem)
+		dev_info(priv->dev, "CPRI clkmon csr 1 @ %pR\n", priv->clkmon_regs[1].res);
 
 	return 0;
 
