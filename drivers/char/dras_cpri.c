@@ -21,12 +21,6 @@
 #include <linux/init.h>
 #include <linux/stat.h>
 
-#include <linux/iio/iio.h>
-#include <linux/iio/sysfs.h>
-#include <linux/iio/buffer-dma.h>
-#include <linux/iio/buffer-dmaengine.h>
-#include <linux/iio/buffer.h>
-
 #include "dras_cpri.h"
 
 /* Device and char device-related information */
