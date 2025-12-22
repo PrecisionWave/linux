@@ -394,7 +394,8 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	struct dras_fm_dab_adc_dac_state *st = iio_priv(indio_dev);
 	long val;
-	int ret, i;
+	unsigned long uval;
+	int ret, ret_b, i;
 	u64 temp64;
 	u32 temp32, temp32_1;
 	u32 ch;
@@ -406,7 +407,8 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 	 * hexadecimal (beginning with 0x)
 	 */
 	ret = kstrtol(buf, 0, &val);
-	if (ret < 0)
+	ret_b = kstrtoul(buf, 0, &uval);
+	if (ret < 0 && ret_b < 0)
 		return ret;
 
 	/* channel registers */
@@ -1171,13 +1173,13 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		break;
 */
 	case REG_TX_BUFFER_MASK:
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MASK, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MASK, (u32)uval);
 		break;
 	case REG_RX_BUFFER_MASK:
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_BUFFER_MASK, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_BUFFER_MASK, (u32)uval);
 		break;
 	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)uval);
 		break;
 	case REG_TX1_BUFFER_MUTES_FM_CHANNELS:
 		if(val<0 || val>1){
@@ -1299,28 +1301,28 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -ENODEV;
 			break;
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_BI0, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_BI0, (u32)uval);
 		break;
 	case REG_BI1:
 		if(st->is_remote){
 			ret = -ENODEV;
 			break;
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_BI1, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_BI1, (u32)uval);
 		break;
 	case REG_BI2:
 		if(st->is_remote){
 			ret = -ENODEV;
 			break;
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_BI2, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_BI2, (u32)uval);
 		break;
 	case REG_BI3:
 		if(st->is_remote){
 			ret = -ENODEV;
 			break;
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_BI3, (u32)val);
+		dras_fm_dab_adc_dac_write(st, ADDR_BI3, (u32)uval);
 		break;
 	case REG_HASH:
 		if(st->is_remote){
