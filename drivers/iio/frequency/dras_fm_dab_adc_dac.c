@@ -409,7 +409,8 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 	ret = kstrtol(buf, 0, &val);
 	ret_b = kstrtoul(buf, 0, &uval);
 	if (ret < 0 && ret_b < 0)
-		return ret;
+		return ret & ret_b;
+	ret = 0;
 
 	/* channel registers */
 	mutex_lock(&indio_dev->mlock);
