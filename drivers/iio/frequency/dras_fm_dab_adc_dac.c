@@ -90,6 +90,10 @@
 #define ADDR_BLOCK_DEMOD_FRAMES_SINCE_SOT(x)	(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+3)*4
 #define ADDR_BLOCK_UNDERRUN_FRAMES_SINCE_RST(x)	(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+4)*4
 
+#define ADDR_TX_BUFFER_MASK 		(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+0)*4
+#define ADDR_RX_BUFFER_MASK 		(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+1)*4
+#define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK 	(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+2)*4
+
 #define MIN_GAIN			0x0000
 #define MAX_GAIN			0xFFFF
 #define MAX_DAB_FREQUENCY		240000000
@@ -203,7 +207,8 @@ enum chan_num{
 	REG_ADC_BER_ALTERNATE,
 	REG_ADC_BER_CHECKER,
 	REG_RX_DAB_BAND_BURST_LENGTH,
-	REG_RX_DAB_BAND_BURST_PERIOD,
+	REG_BURST_PERIOD,
+	//REG_RX_DAB_BAND_BURST_PERIOD,
 	REG_RX_DAB_MONITOR_BURST_LENGTH,
 	REG_RX_DAB_MONITOR_BURST_PERIOD,
 	REG_RX_DAB_MONITOR_DISABLE_SYNC,
@@ -227,7 +232,7 @@ enum chan_num{
 	//REG_TX1_DAB_SEL_REP_MOD1_MOD2_MOD12,
 	//REG_TX2_DAB_SEL_REP_MOD1_MOD2_MOD12,
 	REG_RX_FM_BAND_BURST_LENGTH,
-	REG_RX_FM_BAND_BURST_PERIOD,
+	//REG_RX_FM_BAND_BURST_PERIOD,
 	REG_TX1_FM_BAND_GAIN,
 	REG_TX2_FM_BAND_GAIN,
 	REG_TX1_DAC_OVF,
@@ -254,7 +259,14 @@ enum chan_num{
 	REG_TX_DAB_TESTTONE_AMPLITUDE1,
 	REG_TX_DAB_TESTTONE_AMPLITUDE2,
 	REG_TX_DAB_TESTTONE_AMPLITUDE3,
-	REG_TXBUF_ENABLE,
+	//REG_TXBUF_ENABLE,
+	REG_TX_BUFFER_MASK,
+	REG_RX_BUFFER_MASK,
+	REG_TX_BUFFER_MUTE_CHANNEL_MASK,
+	REG_TX1_BUFFER_MUTES_FM_CHANNELS,
+	REG_TX2_BUFFER_MUTES_FM_CHANNELS,
+	REG_TX1_BUFFER_MUTES_DAB_CHANNELS,
+	REG_TX2_BUFFER_MUTES_DAB_CHANNELS,
 	REG_TX1_BUFFER_GAIN,
 	REG_TX2_BUFFER_GAIN,
 	REG_TX1_FM_AVG_PWR,
@@ -575,14 +587,14 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
 		break;
-	case REG_RX_DAB_BAND_BURST_PERIOD:
+	case REG_BURST_PERIOD:
 		if(val<1 || val>255){
 			//ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & 0xFFFFFF;
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
 		temp32 += (u32)val << 24;
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
 		break;
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
 		if(st->is_remote){
@@ -1127,6 +1139,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
 		break;
+/*
 	case REG_RX_FM_BAND_BURST_PERIOD:
 		if(val<1 || val>255){
 			//ret = -EINVAL;
@@ -1136,6 +1149,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 24;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
 		break;
+*/
 	case REG_WATCHDOG_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -1145,6 +1159,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 2;
 		dras_fm_dab_adc_dac_write(st, ADDR_WATCHDOG, temp32);
 		break;
+/*
 	case REG_TXBUF_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -1153,6 +1168,52 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) & ~(0x1<<0);
 		temp32 += (u32)val << 0;
 		dras_fm_dab_adc_dac_write(st, ADDR_WATCHDOG, temp32);
+		break;
+*/
+	case REG_TX_BUFFER_MASK:
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MASK, (u32)val);
+		break;
+	case REG_RX_BUFFER_MASK:
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_BUFFER_MASK, (u32)val);
+		break;
+	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)val);
+		break;
+	case REG_TX1_BUFFER_MUTES_FM_CHANNELS:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & ~(0x1<<26);
+		temp32 += (u32)val << 26;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
+		break;
+	case REG_TX2_BUFFER_MUTES_FM_CHANNELS:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & ~(0x1<<27);
+		temp32 += (u32)val << 27;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
+		break;
+	case REG_TX1_BUFFER_MUTES_DAB_CHANNELS:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & ~(0x1<<24);
+		temp32 += (u32)val << 24;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
+		break;
+	case REG_TX2_BUFFER_MUTES_DAB_CHANNELS:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & ~(0x1<<25);
+		temp32 += (u32)val << 25;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
 		break;
 	case REG_WATCHDOG_TRIGGER:
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) & ~(0x1<<3);
@@ -1421,9 +1482,11 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_RX_DAB_BAND_BURST_LENGTH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & 0xFFFFFF;
 		break;
+/*
 	case REG_RX_DAB_BAND_BURST_PERIOD:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 24;
 		break;
+*/
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_MONITOR_BURST_LENGTH);
 		break;
@@ -1478,7 +1541,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_RX_FM_BAND_BURST_LENGTH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
 		break;
-	case REG_RX_FM_BAND_BURST_PERIOD:
+	case REG_BURST_PERIOD: //REG_RX_FM_BAND_BURST_PERIOD:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) >>24;
 		break;
 	case REG_TX1_BUFFER_GAIN:
@@ -1673,8 +1736,34 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_WATCHDOG_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 2) & 0x1;
 		break;
+/*
 	case REG_TXBUF_ENABLE:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 0) & 0x1;
+		break;
+*/
+	case REG_TX_BUFFER_MASK:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MASK);
+		ret = sprintf(buf, "%08x\n", temp32);
+		break;
+	case REG_RX_BUFFER_MASK:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_BUFFER_MASK);
+		ret = sprintf(buf, "%08x\n", temp32);
+		break;
+	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK);
+		ret = sprintf(buf, "%08x\n", temp32);
+		break;
+	case REG_TX1_BUFFER_MUTES_FM_CHANNELS:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 26) & 0x1;
+		break;
+	case REG_TX2_BUFFER_MUTES_FM_CHANNELS:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 27) & 0x1;
+		break;
+	case REG_TX1_BUFFER_MUTES_DAB_CHANNELS:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 24) & 0x1;
+		break;
+	case REG_TX2_BUFFER_MUTES_DAB_CHANNELS:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 25) & 0x1;
 		break;
 	case REG_WATCHDOG_TRIGGER:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_WATCHDOG) >> 3) & 0x1;
@@ -1854,11 +1943,16 @@ static IIO_DEVICE_ATTR(rx_dab_band_burst_length, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_DAB_BAND_BURST_LENGTH);
 
+static IIO_DEVICE_ATTR(burst_period, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_BURST_PERIOD);
+/*
 static IIO_DEVICE_ATTR(rx_dab_band_burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_DAB_BAND_BURST_PERIOD);
-
+*/
 static IIO_DEVICE_ATTR(rx_dab_monitor_burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -1968,16 +2062,52 @@ static IIO_DEVICE_ATTR(rx_fm_band_burst_length, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_FM_BAND_BURST_LENGTH);
-
+/*
 static IIO_DEVICE_ATTR(rx_fm_band_burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_RX_FM_BAND_BURST_PERIOD);
-
+*/
+/*
 static IIO_DEVICE_ATTR(tx_buffer_enable, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TXBUF_ENABLE);
+*/
+static IIO_DEVICE_ATTR(tx_buffer_mask, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_BUFFER_MASK);
+
+static IIO_DEVICE_ATTR(rx_buffer_mask, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_RX_BUFFER_MASK);
+
+static IIO_DEVICE_ATTR(tx_buffer_mute_channel_mask, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_BUFFER_MUTE_CHANNEL_MASK);
+
+static IIO_DEVICE_ATTR(tx1_buffer_mutes_fm_channels, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_BUFFER_MUTES_FM_CHANNELS);
+
+static IIO_DEVICE_ATTR(tx2_buffer_mutes_fm_channels, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_BUFFER_MUTES_FM_CHANNELS);
+
+static IIO_DEVICE_ATTR(tx1_buffer_mutes_dab_channels, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX1_BUFFER_MUTES_DAB_CHANNELS);
+
+static IIO_DEVICE_ATTR(tx2_buffer_mutes_dab_channels, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX2_BUFFER_MUTES_DAB_CHANNELS);
 
 static IIO_DEVICE_ATTR(tx1_buffer_gain, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
@@ -2308,7 +2438,8 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_adc_ber_alternate.dev_attr.attr,
 	&iio_dev_attr_adc_ber_checker.dev_attr.attr,
 	&iio_dev_attr_rx_dab_band_burst_length.dev_attr.attr,
-	&iio_dev_attr_rx_dab_band_burst_period.dev_attr.attr,
+	//&iio_dev_attr_rx_dab_band_burst_period.dev_attr.attr,
+	&iio_dev_attr_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_disable_sync.dev_attr.attr,
@@ -2331,8 +2462,15 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	//&iio_dev_attr_tx1_dab_sel_rep_mod1_mod2_mod12.dev_attr.attr,
 	//&iio_dev_attr_tx2_dab_sel_rep_mod1_mod2_mod12.dev_attr.attr,
 	&iio_dev_attr_rx_fm_band_burst_length.dev_attr.attr,
-	&iio_dev_attr_rx_fm_band_burst_period.dev_attr.attr,
-	&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
+	//&iio_dev_attr_rx_fm_band_burst_period.dev_attr.attr,
+	//&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
+	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_mute_channel_mask.dev_attr.attr,
+	&iio_dev_attr_tx1_buffer_mutes_fm_channels.dev_attr.attr,
+	&iio_dev_attr_tx2_buffer_mutes_fm_channels.dev_attr.attr,
+	&iio_dev_attr_tx1_buffer_mutes_dab_channels.dev_attr.attr,
+	&iio_dev_attr_tx2_buffer_mutes_dab_channels.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx1_fm_band_gain.dev_attr.attr,
