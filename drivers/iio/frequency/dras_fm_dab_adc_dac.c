@@ -260,6 +260,7 @@ enum chan_num{
 	REG_TX_DAB_TESTTONE_AMPLITUDE2,
 	REG_TX_DAB_TESTTONE_AMPLITUDE3,
 	//REG_TXBUF_ENABLE,
+	REG_EN_DTF_SEQUENCER,
 	REG_TX_BUFFER_MASK,
 	REG_RX_BUFFER_MASK,
 	REG_TX_BUFFER_MUTE_CHANNEL_MASK,
@@ -1182,6 +1183,15 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)uval);
 		break;
+	case REG_EN_DTF_SEQUENCER:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & ~(0x1<<28);
+		temp32 += (u32)val << 28;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
+		break;
 	case REG_TX1_BUFFER_MUTES_FM_CHANNELS:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -1756,6 +1766,9 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK);
 		ret = sprintf(buf, "%08x\n", temp32);
 		break;
+	case REG_EN_DTF_SEQUENCER:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 28) & 0x1;
+		break;
 	case REG_TX1_BUFFER_MUTES_FM_CHANNELS:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 26) & 0x1;
 		break;
@@ -2091,6 +2104,11 @@ static IIO_DEVICE_ATTR(tx_buffer_mute_channel_mask, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_BUFFER_MUTE_CHANNEL_MASK);
+
+static IIO_DEVICE_ATTR(enable_dtf_sequencer, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_EN_DTF_SEQUENCER);
 
 static IIO_DEVICE_ATTR(tx1_buffer_mutes_fm_channels, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
@@ -2470,6 +2488,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_mute_channel_mask.dev_attr.attr,
+	&iio_dev_attr_enable_dtf_sequencer.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_mutes_fm_channels.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_mutes_fm_channels.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_mutes_dab_channels.dev_attr.attr,
