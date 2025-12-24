@@ -29,7 +29,7 @@
 #define ADDR_WB_ROUTING_FILTERSEL	(1*4)
 #define ADDR_TX21_GAIN			(2*4)
 #define ADDR_RX_BURST_LENGTH		(3*4)
-#define ADDR_RX_BURST_PERIOD		(4*4)
+#define ADDR_TX_BUFFER_MASK		(4*4)
 #define ADDR_WB_DDS_INC			(5*4)
 #define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
 #define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
@@ -61,6 +61,8 @@
 #define ADDR_TX12_BUFFER_GAIN		(33*4)
 #define ADDR_TX_AVG_PWR2		(34*4)
 #define ADDR_TX_PEAK_PWR2		(35*4)
+#define ADDR_RX_BUFFER_MASK			(36*4)
+#define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(37*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -217,7 +219,13 @@ enum chan_num{
 	REG_TX1_TESTTONE_AMPLITUDE2,
 	REG_TX2_TESTTONE_AMPLITUDE1,
 	REG_TX2_TESTTONE_AMPLITUDE2,
-	REG_TX_BUFFER_ENABLE,
+	//REG_TX_BUFFER_ENABLE,
+	REG_EN_DTF_SEQUENCER,
+	REG_TX_BUFFER_MASK,
+	REG_RX_BUFFER_MASK,
+	REG_TX_BUFFER_MUTE_CHANNEL_MASK,
+	REG_TX1_BUFFER_MUTES_CHANNELS,
+	REG_TX2_BUFFER_MUTES_CHANNELS,
 	REG_TX1_BUFFER_GAIN,
 	REG_TX2_BUFFER_GAIN,
 	REG_TX1_AVG_PWR,
@@ -321,7 +329,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	struct dras_tetra_state *st = iio_priv(indio_dev);
 	long val;
-	int ret;
+	unsigned long uval;
+	int ret, ret_b;
 	int i;
 	u32 temp32;
 	u32 temp32_1;
@@ -335,8 +344,10 @@ static ssize_t dras_tetra_store(struct device *dev,
 	 * hexadecimal (beginning with 0x)
 	 */
 	ret = kstrtol(buf, 0, &val);
-	if (ret < 0)
-		return ret;
+	ret_b = kstrtoul(buf, 0, &uval);
+	if (ret < 0 && ret_b < 0)
+		return ret & ret_b;
+	ret = 0;
 
 	/* channel registers */
 	mutex_lock(&indio_dev->mlock);
@@ -670,6 +681,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<13;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
+/*
 	case REG_TX_BUFFER_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -678,6 +690,43 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<18);
 		temp32 += ((uint32_t)val)<<18;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+*/
+	case REG_TX_BUFFER_MASK:
+		dras_tetra_write(st, ADDR_TX_BUFFER_MASK, (u32)uval);
+		break;
+	case REG_RX_BUFFER_MASK:
+		dras_tetra_write(st, ADDR_RX_BUFFER_MASK, (u32)uval);
+		break;
+	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
+		dras_tetra_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)uval);
+		break;
+	case REG_EN_DTF_SEQUENCER:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0x1<<26);
+		temp32 += (u32)val << 26;
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
+		break;
+	case REG_TX1_BUFFER_MUTES_CHANNELS:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0x1<<24);
+		temp32 += (u32)val << 24;
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
+		break;
+	case REG_TX2_BUFFER_MUTES_CHANNELS:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0x1<<25);
+		temp32 += (u32)val << 25;
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
 		break;
 	case REG_TX1_GAIN:
 		if(val<0 || val>0xFFFF){
@@ -800,14 +849,22 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_BAND2_AGC_SQUELCH, (u32)val);
 		break;
 	case REG_RX_BURST_LENGTH1:
-		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, (u32)val);
+		if(val>0xFFFF){
+			//ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0xFFFF);
+		temp32 += ((uint32_t)val);
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
 		break;
 	case REG_RX_BURST_PERIOD1:
 		if(val>0xFF){
 			//ret = -EINVAL;
 			break;
 		}
-		dras_tetra_write(st, ADDR_RX_BURST_PERIOD, (u32)val);
+		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0xff<<16);
+		temp32 += ((uint32_t)val)<<16;
+		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
 		break;
 	case REG_RX_BURST_LENGTH2:
 		dras_tetra_write(st, ADDR_RX_BURST_LENGTH2, (u32)val);
@@ -1069,8 +1126,31 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_BAND2_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 13) & 1;
 		break;
+/*
 	case REG_TX_BUFFER_ENABLE:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 18) & 1;
+		break;
+*/
+	case REG_TX_BUFFER_MASK:
+		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MASK);
+		ret = sprintf(buf, "%08x\n", temp32);
+		break;
+	case REG_RX_BUFFER_MASK:
+		temp32 = dras_tetra_read(st, ADDR_RX_BUFFER_MASK);
+		ret = sprintf(buf, "%08x\n", temp32);
+		break;
+	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
+		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK);
+		ret = sprintf(buf, "%08x\n", temp32);
+		break;
+	case REG_EN_DTF_SEQUENCER:
+		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 26) & 0x1;
+		break;
+	case REG_TX1_BUFFER_MUTES_CHANNELS:
+		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 24) & 0x1;
+		break;
+	case REG_TX2_BUFFER_MUTES_CHANNELS:
+		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 25) & 0x1;
 		break;
 	case REG_BAND1_AGC_TARGET:
 		val = dras_tetra_read(st, ADDR_BAND1_AGC_TARGET) & 0xFFF;
@@ -1147,10 +1227,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = st->pa_comp_gain_tx2;
 		break;
 	case REG_RX_BURST_LENGTH1:
-		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH);
+		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & 0xFFFF;
 		break;
 	case REG_RX_BURST_PERIOD1:
-		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_PERIOD);
+		val = ((uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH)>>16) & 0xFF;
 		break;
 	case REG_RX_BURST_LENGTH2:
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH2);
@@ -1457,11 +1537,41 @@ static IIO_DEVICE_ATTR(tx2_buffer_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_TX2_BUFFER_GAIN);
-
+/*
 static IIO_DEVICE_ATTR(tx_buffer_enable, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_TX_BUFFER_ENABLE);
+*/
+static IIO_DEVICE_ATTR(tx_buffer_mask, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX_BUFFER_MASK);
+
+static IIO_DEVICE_ATTR(rx_buffer_mask, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BUFFER_MASK);
+
+static IIO_DEVICE_ATTR(tx_buffer_mute_channel_mask, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX_BUFFER_MUTE_CHANNEL_MASK);
+
+static IIO_DEVICE_ATTR(enable_dtf_sequencer, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_EN_DTF_SEQUENCER);
+
+static IIO_DEVICE_ATTR(tx1_buffer_mutes_channels, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_BUFFER_MUTES_CHANNELS);
+
+static IIO_DEVICE_ATTR(tx2_buffer_mutes_channels, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_BUFFER_MUTES_CHANNELS);
 
 static IIO_DEVICE_ATTR(tx1_avg_power, S_IRUGO,
 			dras_tetra_show,
@@ -1601,7 +1711,13 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx2_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_gain.dev_attr.attr,
-	&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
+	//&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
+	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_mute_channel_mask.dev_attr.attr,
+	&iio_dev_attr_enable_dtf_sequencer.dev_attr.attr,
+	&iio_dev_attr_tx1_buffer_mutes_channels.dev_attr.attr,
+	&iio_dev_attr_tx2_buffer_mutes_channels.dev_attr.attr,
 	&iio_dev_attr_tx1_avg_power.dev_attr.attr,
 	&iio_dev_attr_tx2_avg_power.dev_attr.attr,
 	&iio_dev_attr_tx1_peak_power.dev_attr.attr,
