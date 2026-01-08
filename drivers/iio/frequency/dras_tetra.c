@@ -702,11 +702,11 @@ static ssize_t dras_tetra_store(struct device *dev,
 		dras_tetra_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)uval);
 		break;
 	case REG_EN_DTF_SEQUENCER:
-		if(val<0 || val>1){
+		if(val<0 || val>3){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0x1<<26);
+		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0x3<<26);
 		temp32 += (u32)val << 26;
 		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
 		break;
@@ -1144,7 +1144,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		ret = sprintf(buf, "%08x\n", temp32);
 		break;
 	case REG_EN_DTF_SEQUENCER:
-		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 26) & 0x1;
+		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 26) & 0x3;
 		break;
 	case REG_TX1_BUFFER_MUTES_CHANNELS:
 		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 24) & 0x1;
