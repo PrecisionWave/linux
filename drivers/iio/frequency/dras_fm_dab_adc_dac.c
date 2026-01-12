@@ -93,6 +93,7 @@
 #define ADDR_TX_BUFFER_MASK 		(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+0)*4
 #define ADDR_RX_BUFFER_MASK 		(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+1)*4
 #define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK 	(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+2)*4
+#define ADDR_TX_BUFFER_MUTE_LENGTH	 (ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+3)*4
 
 #define MIN_GAIN			0x0000
 #define MAX_GAIN			0xFFFF
@@ -265,6 +266,7 @@ enum chan_num{
 	REG_TX_BUFFER_MASK,
 	REG_RX_BUFFER_MASK,
 	REG_TX_BUFFER_MUTE_CHANNEL_MASK,
+	REG_TX_BUFFER_MUTE_LENGTH,
 	REG_TX1_BUFFER_MUTES_FM_CHANNELS,
 	REG_TX2_BUFFER_MUTES_FM_CHANNELS,
 	REG_TX1_BUFFER_MUTES_DAB_CHANNELS,
@@ -1183,7 +1185,16 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_BUFFER_MASK, (u32)uval);
 		break;
 	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)uval);
+		if(val<0 || val>0xFFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK) & 0xFF000000;
+		temp32 += (u32)val;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, temp32);
+		break;
+	case REG_TX_BUFFER_MUTE_LENGTH:
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_LENGTH, (u32)uval);
 		break;
 	case REG_EN_DTF_SEQUENCER:
 		if(val<0 || val>3){
@@ -1784,6 +1795,9 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK);
 		ret = sprintf(buf, "%08x\n", temp32);
 		break;
+	case REG_TX_BUFFER_MUTE_LENGTH:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) & 0xFFFFFF;
+		break;
 	case REG_EN_DTF_SEQUENCER:
 		val = st->en_dtf_seq;
 		break;
@@ -2125,6 +2139,11 @@ static IIO_DEVICE_ATTR(tx_buffer_mute_channel_mask, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_TX_BUFFER_MUTE_CHANNEL_MASK);
+
+static IIO_DEVICE_ATTR(tx_buffer_mute_length, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_TX_BUFFER_MUTE_LENGTH);
 
 static IIO_DEVICE_ATTR(enable_dtf_sequencer, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
@@ -2514,6 +2533,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_mute_channel_mask.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_mute_length.dev_attr.attr,
 	&iio_dev_attr_enable_dtf_sequencer.dev_attr.attr,
 	&iio_dev_attr_start_dtf_sequencer.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_mutes_fm_channels.dev_attr.attr,

@@ -63,6 +63,7 @@
 #define ADDR_TX_PEAK_PWR2		(35*4)
 #define ADDR_RX_BUFFER_MASK			(36*4)
 #define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(37*4)
+#define ADDR_TX_BUFFER_MUTE_LENGTH		(38*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -224,6 +225,7 @@ enum chan_num{
 	REG_TX_BUFFER_MASK,
 	REG_RX_BUFFER_MASK,
 	REG_TX_BUFFER_MUTE_CHANNEL_MASK,
+	REG_TX_BUFFER_MUTE_LENGTH,
 	REG_TX1_BUFFER_MUTES_CHANNELS,
 	REG_TX2_BUFFER_MUTES_CHANNELS,
 	REG_TX1_BUFFER_GAIN,
@@ -701,6 +703,15 @@ static ssize_t dras_tetra_store(struct device *dev,
 	case REG_TX_BUFFER_MUTE_CHANNEL_MASK:
 		dras_tetra_write(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK, (u32)uval);
 		break;
+	case REG_TX_BUFFER_MUTE_LENGTH:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) & 0xFFFF0000;
+		temp32 += (u32)val;
+		dras_tetra_write(st, ADDR_TX_BUFFER_MUTE_LENGTH, temp32);
+		break;
 	case REG_EN_DTF_SEQUENCER:
 		if(val<0 || val>3){
 			ret = -EINVAL;
@@ -1143,6 +1154,9 @@ static ssize_t dras_tetra_show(struct device *dev,
 		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MUTE_CHANNEL_MASK);
 		ret = sprintf(buf, "%08x\n", temp32);
 		break;
+	case REG_TX_BUFFER_MUTE_LENGTH:
+		val = dras_tetra_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) & 0xFFFF;
+		break;
 	case REG_EN_DTF_SEQUENCER:
 		val = (dras_tetra_read(st, ADDR_RX_BURST_LENGTH) >> 26) & 0x3;
 		break;
@@ -1558,6 +1572,11 @@ static IIO_DEVICE_ATTR(tx_buffer_mute_channel_mask, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX_BUFFER_MUTE_CHANNEL_MASK);
 
+static IIO_DEVICE_ATTR(tx_buffer_mute_length, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX_BUFFER_MUTE_LENGTH);
+
 static IIO_DEVICE_ATTR(enable_dtf_sequencer, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1715,6 +1734,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_mute_channel_mask.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_mute_length.dev_attr.attr,
 	&iio_dev_attr_enable_dtf_sequencer.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_mutes_channels.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_mutes_channels.dev_attr.attr,
