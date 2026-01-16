@@ -64,6 +64,8 @@
 #define ADDR_RX_BUFFER_MASK			(36*4)
 #define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(37*4)
 #define ADDR_TX_BUFFER_MUTE_LENGTH		(38*4)
+#define ADDR_TX_DELAY			(39*4)
+#define ADDR_RX_DELAY			(40*4)
 
 #define MAX_BAND_FREQUENCY		20000000
 #define MIN_BAND_FREQUENCY		-20000000
@@ -212,6 +214,10 @@ enum chan_num{
 	REG_BAND2_RSSI_MIN,
 	REG_BAND1_UNMUTE,
 	REG_BAND2_UNMUTE,
+	REG_BAND1_TX_DELAY,
+	REG_BAND2_TX_DELAY,
+	REG_BAND1_RX_DELAY,
+	REG_BAND2_RX_DELAY,
 	REG_TX1_TESTTONE_FREQUENCY1,
 	REG_TX1_TESTTONE_FREQUENCY2,
 	REG_TX2_TESTTONE_FREQUENCY1,
@@ -859,6 +865,42 @@ static ssize_t dras_tetra_store(struct device *dev,
 		}
 		dras_tetra_write(st, ADDR_BAND2_AGC_SQUELCH, (u32)val);
 		break;
+	case REG_BAND1_TX_DELAY:
+		if(val>0xFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX_DELAY) & 0xFFFFF00000;
+		temp32 += ((uint32_t)val);
+		dras_tetra_write(st, ADDR_TX_DELAY, temp32);
+		break;
+	case REG_BAND2_TX_DELAY:
+		if(val>0xFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX_DELAY) & 0x00000FFFFF;
+		temp32 += ((uint32_t)val)<<10;
+		dras_tetra_write(st, ADDR_TX_DELAY, temp32);
+		break;
+	case REG_BAND1_RX_DELAY:
+		if(val>0xFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_RX_DELAY) & 0xFFFFF00000;
+		temp32 += ((uint32_t)val);
+		dras_tetra_write(st, ADDR_RX_DELAY, temp32);
+		break;
+	case REG_BAND2_RX_DELAY:
+		if(val>0xFFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_RX_DELAY) & 0x00000FFFFF;
+		temp32 += ((uint32_t)val)<<10;
+		dras_tetra_write(st, ADDR_RX_DELAY, temp32);
+		break;
 	case REG_RX_BURST_LENGTH1:
 		if(val>0xFFFF){
 			//ret = -EINVAL;
@@ -1228,6 +1270,18 @@ static ssize_t dras_tetra_show(struct device *dev,
 		if(val==65535)
 			val=0;
 		break;
+	case REG_BAND1_TX_DELAY:
+		val = dras_tetra_read(st, ADDR_TX_DELAY) & 0xFFFFF;
+		break;
+	case REG_BAND2_TX_DELAY:
+		val = (dras_tetra_read(st, ADDR_TX_DELAY)>>10) & 0xFFFFF;
+		break;
+	case REG_BAND1_RX_DELAY:
+		val = dras_tetra_read(st, ADDR_RX_DELAY) & 0xFFFFF;
+		break;
+	case REG_BAND2_RX_DELAY:
+		val = (dras_tetra_read(st, ADDR_RX_DELAY)>>10) & 0xFFFFF;
+		break;
 	case REG_TX1_GAIN:
 		val = st->gain_tx1;
 		break;
@@ -1401,6 +1455,26 @@ static IIO_DEVICE_ATTR(band2_tx2_enable, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_BAND2_TX2_ENABLE);
+
+static IIO_DEVICE_ATTR(band1_tx_delay, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_TX_DELAY);
+
+static IIO_DEVICE_ATTR(band2_tx_delay, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_TX_DELAY);
+
+static IIO_DEVICE_ATTR(band1_rx_delay, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_RX_DELAY);
+
+static IIO_DEVICE_ATTR(band2_rx_delay, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_RX_DELAY);
 
 static IIO_DEVICE_ATTR(band1_wideband_mode, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -1720,6 +1794,10 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_band2_rssi_min.dev_attr.attr,
 	&iio_dev_attr_band1_unmute.dev_attr.attr,
 	&iio_dev_attr_band2_unmute.dev_attr.attr,
+	&iio_dev_attr_band1_tx_delay.dev_attr.attr,
+	&iio_dev_attr_band2_tx_delay.dev_attr.attr,
+	&iio_dev_attr_band1_rx_delay.dev_attr.attr,
+	&iio_dev_attr_band2_rx_delay.dev_attr.attr,
 	&iio_dev_attr_tx1_testtone_frequency1.dev_attr.attr,
 	&iio_dev_attr_tx1_testtone_frequency2.dev_attr.attr,
 	&iio_dev_attr_tx2_testtone_frequency1.dev_attr.attr,
