@@ -209,7 +209,6 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		err = get_user(int_param, (int __user *)arg);
 		if (err)
 			return err;
-		dexter_apu_reset(priv, int_param);
 		switch (int_param) {
 		case DEXTER_APU_DMA_FROM_DEVICE:
 			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
@@ -233,7 +232,6 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		err = get_user(int_param, (int __user *)arg);
 		if (err)
 			return err;
-		dexter_apu_reset(priv, int_param);
 		switch (int_param) {
 		case DEXTER_APU_DMA_FROM_DEVICE:
 			dma_sync_single_for_device(priv->dev,
