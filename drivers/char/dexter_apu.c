@@ -20,6 +20,7 @@
 #include <linux/pgtable.h>
 #include <linux/init.h>
 #include <linux/stat.h>
+#include <linux/delay.h>
 
 #include "dexter_apu.h"
 
@@ -60,8 +61,10 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 	if (assert_reset) {
 		// sleep
 		iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
+		msleep(1);
 		// assert reset
 		iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+		msleep(1);
 
 		// sync memory
 		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
@@ -70,9 +73,12 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 		// sync memory
 		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr,
 					   priv->apu_ddr_size, DMA_TO_DEVICE);
+		msleep(1);
 
 		// de-assert reset
 		iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+		msleep(1);
+
 		// wakeup
 		iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
 	}
