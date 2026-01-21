@@ -20,6 +20,7 @@
 #include <linux/pgtable.h>
 #include <linux/init.h>
 #include <linux/stat.h>
+#include <linux/delay.h>
 
 #include "dexter_apu.h"
 
@@ -60,8 +61,10 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 	if (assert_reset) {
 		// sleep
 		iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
+		msleep(1);
 		// assert reset
 		iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+		msleep(1);
 
 		// sync memory
 		dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
@@ -70,9 +73,12 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 		// sync memory
 		dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr,
 					   priv->apu_ddr_size, DMA_TO_DEVICE);
+		msleep(1);
 
 		// de-assert reset
 		iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+		msleep(1);
+
 		// wakeup
 		iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
 	}
@@ -203,7 +209,6 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		err = get_user(int_param, (int __user *)arg);
 		if (err)
 			return err;
-		dexter_apu_reset(priv, int_param);
 		switch (int_param) {
 		case DEXTER_APU_DMA_FROM_DEVICE:
 			dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr,
@@ -227,7 +232,6 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		err = get_user(int_param, (int __user *)arg);
 		if (err)
 			return err;
-		dexter_apu_reset(priv, int_param);
 		switch (int_param) {
 		case DEXTER_APU_DMA_FROM_DEVICE:
 			dma_sync_single_for_device(priv->dev,
@@ -254,10 +258,76 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 	return -EINVAL;
 }
 
+static ssize_t dexter_apu_read(struct file *filep, char __user *to,
+			       size_t count, loff_t *ppos)
+{
+	struct dexter_apu_priv *priv = filep->private_data;
+	loff_t available = priv->apu_ddr_size;
+	loff_t pos = *ppos;
+	size_t ret;
+
+	dev_info(priv->dev, "read: count=%zu, pos=%lld", count, pos);
+
+	if (pos < 0)
+		return -EINVAL;
+	if (pos >= available || !count)
+		return 0;
+	if (count > available - pos)
+		count = available - pos;
+
+	dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr + pos, count,
+				DMA_FROM_DEVICE);
+	ret = copy_to_user(to, priv->apu_ddr + pos, count);
+	if (ret == count)
+		return -EFAULT;
+	count -= ret;
+	*ppos = pos + count;
+
+	return count;
+}
+
+static ssize_t dexter_apu_write(struct file *filep, const char __user *from,
+				size_t count, loff_t *ppos)
+{
+	struct dexter_apu_priv *priv = filep->private_data;
+	loff_t available = priv->apu_ddr_size;
+	loff_t pos = *ppos;
+	size_t res;
+
+	dev_info(priv->dev, "write: count=%zu, pos=%lld", count, pos);
+
+	if (pos < 0)
+		return -EINVAL;
+	if (pos >= available || !count)
+		return 0;
+	if (count > available - pos)
+		count = available - pos;
+	res = copy_from_user(priv->apu_ddr + pos, from, count);
+	if (res == count)
+		return -EFAULT;
+
+	dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr + pos, count,
+				   DMA_TO_DEVICE);
+
+	count -= res;
+	*ppos = pos + count;
+
+	return count;
+}
+
+static loff_t dexter_apu_llseek(struct file *filep, loff_t offset, int whence)
+{
+	struct dexter_apu_priv *priv = filep->private_data;
+	return fixed_size_llseek(filep, offset, whence, priv->apu_ddr_size);
+}
+
 static const struct file_operations fops = {
 	.owner = THIS_MODULE,
 	.open = dexter_apu_open,
 	.mmap = dexter_apu_mmap,
+	.write = dexter_apu_write,
+	.llseek = dexter_apu_llseek,
+	.read = dexter_apu_read,
 	.unlocked_ioctl = dexter_apu_ioctl,
 };
 
