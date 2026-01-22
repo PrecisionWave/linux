@@ -46,11 +46,11 @@
 #define ADDR_RSSI_UL(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
 #define ADDR_UL_ORDER(x)		(32+x)*4 // 8 channels per port, each with 4bits, 16 ports, port x from 0..15
 #define ADDR_PORT_ID(x)			(48+x)*4 // 12bit port id, port x from 0..15
-#define ADDR_RSSI_DL(x)			(64+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_GAIN_UL(x)			(80+x)*4
-#define ADDR_GAIN_DL(x)			(96+x)*4
-#define ADDR_RSSI_PEAK_UL(x)		(112+x)*4
-#define ADDR_RSSI_PEAK_DL(x)		(128+x)*4
+#define ADDR_RSSI_DL(x)			(128+x)*4 // 16bit LSB first rssi, second 16bit second rssi
+#define ADDR_GAIN_UL(x)			(144+x)*4
+#define ADDR_GAIN_DL(x)			(160+x)*4
+#define ADDR_RSSI_PEAK_UL(x)		(176+x)*4
+#define ADDR_RSSI_PEAK_DL(x)		(192+x)*4
 
 
 // expands to:
