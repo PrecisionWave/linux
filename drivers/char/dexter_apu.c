@@ -84,6 +84,27 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 	}
 }
 
+static void dexter_apu_start_from(struct dexter_apu_priv *priv,
+				  uint32_t start_address)
+{
+	// sync memory
+	dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr,
+				   priv->apu_ddr_size, DMA_TO_DEVICE);
+	msleep(1);
+
+	// assert reset
+	iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+	msleep(1);
+
+	// some implementations use reset_vector instead of wakeup
+	iowrite32(start_address, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
+	msleep(1);
+
+	// de-assert reset
+	iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+	msleep(1);
+}
+
 static int dexter_apu_mmap_page(struct dexter_apu_priv *priv,
 				struct vm_area_struct *vma,
 				const resource_size_t res_start,
@@ -187,6 +208,7 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 	void __user *argp = (void __user *)arg;
 	int err = -EINVAL;
 	int int_param;
+	uint32_t u32_param;
 
 	switch (cmd) {
 	case DEXTER_APU_IOCTL_APU_RESET:
@@ -194,6 +216,13 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		if (err)
 			return err;
 		dexter_apu_reset(priv, int_param);
+		return 0;
+
+	case DEXTER_APU_IOCTL_APU_START:
+		err = get_user(u32_param, (int __user *)arg);
+		if (err)
+			return err;
+		dexter_apu_start_from(priv, u32_param);
 		return 0;
 
 	case DEXTER_APU_IOCTL_GET_SRAM_SIZE:
