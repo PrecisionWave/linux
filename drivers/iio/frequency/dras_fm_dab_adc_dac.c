@@ -335,7 +335,6 @@ struct dras_fm_dab_adc_dac_state {
 	bool			rf_mute;
 	bool			is_remote;
 	u32			fm_testtone_inc[5];
-	u32			en_dtf_seq;
 
 	struct clk		*dsp_clk;
 	struct gpio_desc	*clk_ce_gpio;
@@ -1201,9 +1200,6 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		st->en_dtf_seq = val;
-		if(val==2)
-			val=3;
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) & ~(0x3<<28);
 		temp32 += (u32)val << 28;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_DAB_BAND_BURST_LENGTH, temp32);
@@ -1799,7 +1795,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) & 0xFFFFFF;
 		break;
 	case REG_EN_DTF_SEQUENCER:
-		val = st->en_dtf_seq;
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 28) & 0x3;
 		break;
 	case REG_START_DTF_SEQUENCER:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_BAND_BURST_LENGTH) >> 30) & 0x1;
