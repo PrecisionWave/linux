@@ -29,26 +29,22 @@ static dev_t dexter_apu_devt;
 static struct class *dexter_apu_class = NULL;
 static int dexter_apu_count = 0;
 
-// APU controls
-#define APU_CTRL_LENGTH 0x30000U
-#define APU_CTRL_SRAM_OFFSET 0x00000U
-#define APU_CTRL_SRAM_LENGTH 0x04000U
-#define APU_CTRL_GPIO_OFFSET 0x10000U
-#define APU_CTRL_MBOX_OFFSET 0x20000U
-
 struct dexter_apu_priv {
 	struct platform_device *pdev;
 	struct device *dev;
 	struct cdev cdev;
 	int minor;
-	// APU MMIO registers
-	struct resource *reg_res;
-	void __iomem *reg_virt;
-	// APU MMIO registers #2 (optional)
-	struct resource *reg2_res;
-	void __iomem *reg2_virt;
+	// APU SRAM registers
+	struct resource *sram_res;
+	void __iomem *sram_virt;
+	// APU GPIO registers
+	struct resource *gpio_res;
+	void __iomem *gpio_virt;
+	// APU MBOX registers
+	struct resource *mbox_res;
+	void __iomem *mbox_virt;
 	// DMA memory for APU DDR
-	size_t apu_ddr_size;
+	u32 apu_ddr_size;
 	dma_addr_t apu_ddr_addr;
 	void *apu_ddr;
 };
@@ -58,12 +54,15 @@ static int dexter_apu_register_class(void);
 
 static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 {
+	if (!priv->gpio_virt)
+		return;
+
 	if (assert_reset) {
 		// sleep
-		iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
+		iowrite32(0, priv->gpio_virt + 0x0);
 		msleep(1);
 		// assert reset
-		iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+		iowrite32(1, priv->gpio_virt + 0x8);
 		msleep(1);
 
 		// sync memory
@@ -76,32 +75,35 @@ static void dexter_apu_reset(struct dexter_apu_priv *priv, int assert_reset)
 		msleep(1);
 
 		// de-assert reset
-		iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+		iowrite32(0, priv->gpio_virt + 0x8);
 		msleep(1);
 
 		// wakeup
-		iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
+		iowrite32(1, priv->gpio_virt + 0x0);
 	}
 }
 
 static void dexter_apu_start_from(struct dexter_apu_priv *priv,
 				  uint32_t start_address)
 {
+	if (!priv->gpio_virt)
+		return;
+
 	// sync memory
 	dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr,
 				   priv->apu_ddr_size, DMA_TO_DEVICE);
 	msleep(1);
 
 	// assert reset
-	iowrite32(1, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+	iowrite32(1, priv->gpio_virt + 0x8);
 	msleep(1);
 
 	// some implementations use reset_vector instead of wakeup
-	iowrite32(start_address, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x0);
+	iowrite32(start_address, priv->gpio_virt + 0x0);
 	msleep(1);
 
 	// de-assert reset
-	iowrite32(0, priv->reg_virt + APU_CTRL_GPIO_OFFSET + 0x8);
+	iowrite32(0, priv->gpio_virt + 0x8);
 	msleep(1);
 }
 
@@ -159,25 +161,25 @@ static int dexter_apu_mmap(struct file *filep, struct vm_area_struct *vma)
 
 	switch (vma->vm_pgoff) {
 	case DEXTER_APU_MMAP_REGS:
-		return dexter_apu_mmap_page(
-			priv, vma, priv->reg_res->start,
-			(priv->reg_res->end - priv->reg_res->start + 1));
+		return -EINVAL;
 
 	case DEXTER_APU_MMAP_REGS2:
-		if (!priv->reg2_virt)
-			return -EINVAL;
-
-		return dexter_apu_mmap_page(
-			priv, vma, priv->reg2_res->start,
-			(priv->reg2_res->end - priv->reg2_res->start + 1));
+		return -EINVAL;
 
 	case DEXTER_APU_MMAP_DDR:
 		return dexter_apu_mmap_apu_ddr(priv, vma);
 
 	case DEXTER_APU_MMAP_SRAM:
-		return dexter_apu_mmap_page(
-			priv, vma, priv->reg_res->start + APU_CTRL_SRAM_OFFSET,
-			APU_CTRL_SRAM_LENGTH);
+		if (!priv->sram_res)
+			return -EINVAL;
+		return dexter_apu_mmap_page(priv, vma, priv->sram_res->start,
+					    resource_size(priv->sram_res));
+
+	case DEXTER_APU_MMAP_MBOX:
+		if (!priv->mbox_res)
+			return -EINVAL;
+		return dexter_apu_mmap_page(priv, vma, priv->mbox_res->start,
+					    resource_size(priv->mbox_res));
 
 	default:
 		break;
@@ -226,7 +228,19 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 		return 0;
 
 	case DEXTER_APU_IOCTL_GET_SRAM_SIZE:
-		return put_u32(argp, APU_CTRL_SRAM_LENGTH);
+		if (!priv->sram_res)
+			return -EINVAL;
+		return put_u32(argp, resource_size(priv->sram_res));
+
+	case DEXTER_APU_IOCTL_GET_MBOX_SIZE:
+		if (!priv->mbox_res)
+			return -EINVAL;
+		return put_u32(argp, resource_size(priv->mbox_res));
+
+	case DEXTER_APU_IOCTL_GET_GPIO_SIZE:
+		if (!priv->gpio_res)
+			return -EINVAL;
+		return put_u32(argp, resource_size(priv->gpio_res));
 
 	case DEXTER_APU_IOCTL_GET_DDR_SIZE:
 		return put_u32(argp, priv->apu_ddr_size);
@@ -377,17 +391,27 @@ static int dexter_apu_probe(struct platform_device *pdev)
 	priv->minor = minor;
 	priv->pdev = pdev;
 	priv->apu_ddr_size = DEXTER_APU_DDR_SIZE_DEFAULT;
+	of_property_read_u32(pdev->dev.of_node, "ddr-size",
+			     &priv->apu_ddr_size);
 	platform_set_drvdata(pdev, priv);
 
-	priv->reg_virt =
-		devm_platform_get_and_ioremap_resource(pdev, 0, &priv->reg_res);
-	if (IS_ERR(priv->reg_virt))
-		return PTR_ERR(priv->reg_virt);
+	priv->sram_res =
+		platform_get_resource_byname(pdev, IORESOURCE_MEM, "sram");
+	priv->sram_virt = devm_ioremap_resource(&pdev->dev, priv->sram_res);
+	if (IS_ERR(priv->sram_virt))
+		priv->sram_virt = NULL;
 
-	priv->reg2_virt = devm_platform_get_and_ioremap_resource(
-		pdev, 1, &priv->reg2_res);
-	if (IS_ERR(priv->reg2_virt))
-		priv->reg2_virt = NULL;
+	priv->gpio_res =
+		platform_get_resource_byname(pdev, IORESOURCE_MEM, "gpio");
+	priv->gpio_virt = devm_ioremap_resource(&pdev->dev, priv->gpio_res);
+	if (IS_ERR(priv->gpio_virt))
+		priv->gpio_virt = NULL;
+
+	priv->mbox_res =
+		platform_get_resource_byname(pdev, IORESOURCE_MEM, "mbox");
+	priv->mbox_virt = devm_ioremap_resource(&pdev->dev, priv->mbox_res);
+	if (IS_ERR(priv->mbox_virt))
+		priv->mbox_virt = NULL;
 
 	dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 	priv->apu_ddr = dma_alloc_coherent(&pdev->dev, priv->apu_ddr_size,
@@ -409,10 +433,11 @@ static int dexter_apu_probe(struct platform_device *pdev)
 	}
 
 	dev_info(priv->dev, "Dexter APU attached for device %d.", priv->minor);
-	dev_info(priv->dev, "Phys reg: %pR", priv->reg_res);
-	dev_info(priv->dev, "Phys reg2: %pR", priv->reg2_res);
-	dev_info(priv->dev, "Phys DMA: 0x%08x - 0x%08x", priv->apu_ddr_addr,
-		 priv->apu_ddr_addr + priv->apu_ddr_size - 1);
+	dev_info(priv->dev, "SRAM: %pR", priv->sram_res);
+	dev_info(priv->dev, "GPIO: %pR", priv->gpio_res);
+	dev_info(priv->dev, "MBOX: %pR", priv->mbox_res);
+	dev_info(priv->dev, "Phys DMA: %pa [%u bytes]", &priv->apu_ddr_addr,
+		 priv->apu_ddr_size);
 
 	return 0;
 
