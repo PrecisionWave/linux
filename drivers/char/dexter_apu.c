@@ -301,76 +301,11 @@ static long dexter_apu_ioctl(struct file *filep, unsigned int cmd,
 	return -EINVAL;
 }
 
-static ssize_t dexter_apu_read(struct file *filep, char __user *to,
-			       size_t count, loff_t *ppos)
-{
-	struct dexter_apu_priv *priv = filep->private_data;
-	loff_t available = priv->apu_ddr_size;
-	loff_t pos = *ppos;
-	size_t ret;
-
-	dev_info(priv->dev, "read: count=%zu, pos=%lld", count, pos);
-
-	if (pos < 0)
-		return -EINVAL;
-	if (pos >= available || !count)
-		return 0;
-	if (count > available - pos)
-		count = available - pos;
-
-	dma_sync_single_for_cpu(priv->dev, priv->apu_ddr_addr + pos, count,
-				DMA_FROM_DEVICE);
-	ret = copy_to_user(to, priv->apu_ddr + pos, count);
-	if (ret == count)
-		return -EFAULT;
-	count -= ret;
-	*ppos = pos + count;
-
-	return count;
-}
-
-static ssize_t dexter_apu_write(struct file *filep, const char __user *from,
-				size_t count, loff_t *ppos)
-{
-	struct dexter_apu_priv *priv = filep->private_data;
-	loff_t available = priv->apu_ddr_size;
-	loff_t pos = *ppos;
-	size_t res;
-
-	dev_info(priv->dev, "write: count=%zu, pos=%lld", count, pos);
-
-	if (pos < 0)
-		return -EINVAL;
-	if (pos >= available || !count)
-		return 0;
-	if (count > available - pos)
-		count = available - pos;
-	res = copy_from_user(priv->apu_ddr + pos, from, count);
-	if (res == count)
-		return -EFAULT;
-
-	dma_sync_single_for_device(priv->dev, priv->apu_ddr_addr + pos, count,
-				   DMA_TO_DEVICE);
-
-	count -= res;
-	*ppos = pos + count;
-
-	return count;
-}
-
-static loff_t dexter_apu_llseek(struct file *filep, loff_t offset, int whence)
-{
-	struct dexter_apu_priv *priv = filep->private_data;
-	return fixed_size_llseek(filep, offset, whence, priv->apu_ddr_size);
-}
 
 static const struct file_operations fops = {
 	.owner = THIS_MODULE,
 	.open = dexter_apu_open,
 	.mmap = dexter_apu_mmap,
-	.write = dexter_apu_write,
-	.llseek = dexter_apu_llseek,
-	.read = dexter_apu_read,
 	.unlocked_ioctl = dexter_apu_ioctl,
 };
 
