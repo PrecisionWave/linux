@@ -155,7 +155,7 @@ static int zynqmp_r5_rproc_start(struct rproc *rproc)
 	bootmem = (rproc->bootaddr & 0xF0000000) == 0xF0000000 ?
 		  PM_RPU_BOOTMEM_HIVEC : PM_RPU_BOOTMEM_LOVEC;
 
-	dev_dbg(rproc->dev.parent, "RPU boot from %s.",
+	dev_info(rproc->dev.parent, "RPU boot from %s.",
 		bootmem == PM_RPU_BOOTMEM_HIVEC ? "OCM" : "TCM");
 
 	return zynqmp_pm_request_wake(z_rproc->pnode_id, 1,
