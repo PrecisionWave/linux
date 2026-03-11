@@ -538,7 +538,7 @@ static void zynqmp_r5_rproc_kick(struct rproc *rproc, int vqid)
 		skb_queue_tail(&z_rproc->tx_mc_skbs, skb);
 		ret = mbox_send_message(z_rproc->tx_chan, mb_msg);
 		if (ret < 0) {
-			dev_warn(dev, "Failed to kick remote.\n");
+			//dev_warn(dev, "Failed to kick remote.\n");
 			skb_dequeue_tail(&z_rproc->tx_mc_skbs);
 			kfree_skb(skb);
 		}
