@@ -37,7 +37,7 @@
 
 #define ADDR_VERSION			4*0
 #define ADDR_ADC_PEAK			4*1
-//#define ADDR_DEMOD_PHASE_ERR		4*2
+#define ADDR_DEMOD_COARSE_FREQ_ERR		4*2
 //#define ADDR_DEMOD_SPWR			4*3
 //#define ADDR_DEMOD_NPWR			4*4
 #define ADDR_PPS_CLKS			4*5
@@ -257,6 +257,7 @@ enum chan_num{
 	REG_ADC_BER_ALTERNATE,
 	REG_ADC_BER_CHECKER,
 	REG_DEMOD_SOURCE_CHANNEL,
+	REG_DEMOD_COARSE_FREQ_ERR,
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
 	REG_SATURATION_MUTING_OCCURRENCE,
@@ -875,6 +876,35 @@ static ssize_t vbi_dab_dsp_show(struct device *dev,
 	case REG_DEMOD_SOURCE_CHANNEL:
 		val = vbi_dab_dsp_read(st, ADDR_DEMOD_SETTINGS) & 0xF;
 		break;
+	case REG_DEMOD_COARSE_FREQ_ERR:
+		val = vbi_dab_dsp_read(st, ADDR_DEMOD_COARSE_FREQ_ERR) & 0x7;
+		switch(val){
+			case 1:
+				val=0;
+				break;
+			case 2:
+				val=1000;
+				break;
+			case 3:
+				val=2000;
+				break;
+			case 4:
+				val=3000;
+				break;
+			case 5:
+				val=-3000;
+				break;
+			case 6:
+				val=-2000;
+				break;
+			case 7:
+				val=-1000;
+				break;
+			default:
+				val=0;
+				break;
+		}
+		break;
 	case REG_WATCHDOG_ENABLE:
 		val = (vbi_dab_dsp_read(st, ADDR_WATCHDOG) >>0) & 1;
 		break;
@@ -1119,6 +1149,11 @@ static IIO_DEVICE_ATTR(demod_source_channel, S_IRUGO | S_IWUSR,
 			vbi_dab_dsp_store,
 			REG_DEMOD_SOURCE_CHANNEL);
 
+static IIO_DEVICE_ATTR(demod_coarse_freq_err, S_IRUGO,
+			vbi_dab_dsp_show,
+			vbi_dab_dsp_store,
+			REG_DEMOD_COARSE_FREQ_ERR);
+
 static IIO_DEVICE_ATTR(watchdog_enable, S_IRUGO | S_IWUSR,
 			vbi_dab_dsp_show,
 			vbi_dab_dsp_store,
@@ -1234,6 +1269,7 @@ static struct attribute *vbi_dab_dsp_attributes[] = {
 	&iio_dev_attr_adc_ber_alternate.dev_attr.attr,
 	&iio_dev_attr_adc_ber_checker.dev_attr.attr,
 	&iio_dev_attr_demod_source_channel.dev_attr.attr,
+	&iio_dev_attr_demod_coarse_freq_err.dev_attr.attr,
 	&iio_dev_attr_watchdog_enable.dev_attr.attr,
 	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
 	&iio_dev_attr_saturation_muting_occurrence.dev_attr.attr,
