@@ -25,53 +25,52 @@
 #define NB_OF_TETRA_CHANNELS		16
 
 // common DSP addresses
-#define ADDR_DSP_VERSION		(0*4)
-#define ADDR_WB_ROUTING_FILTERSEL	(1*4)
-#define ADDR_TX21_GAIN			(2*4)
-#define ADDR_RX_BURST_LENGTH		(3*4)
-#define ADDR_TX_BUFFER_MASK		(4*4)
-#define ADDR_WB_DDS_INC			(5*4)
-#define ADDR_DL_ORDER			(6*4) // 4bits per channel, 8 channels
-#define ADDR_EN_UL_TEST_ID_OFFSET	(7*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
-#define ADDR_DL_SYNC			(8*4) // sync
-#define ADDR_NB_FILTER_SEL0		(9*4)
-#define ADDR_NB_FILTER_SEL1		(10*4)
-#define ADDR_NB_IN_SEL			(11*4)
-#define ADDR_NB_OUT_SEL			(12*4)
-#define ADDR_NB_DDS_INC			(13*4)
-#define ADDR_TESTTONE_INC		(14*4)
-#define ADDR_TESTTONE_AMPL_TX1		(15*4)
-#define ADDR_TESTTONE_AMPL_TX2		(16*4)
-#define ADDR_BAND1_AGC_TARGET		(17*4)
-#define ADDR_BAND1_AGC_GAIN_LIMIT	(18*4)
-#define ADDR_BAND1_AGC_SQUELCH		(19*4)
+#define ADDR_DSP_VERSION			(0*4)
+#define ADDR_DL_ORDER				(1*4) // 4bits per channel, 8 channels
+#define ADDR_DL_SYNC				(2*4) // sync
+#define ADDR_BAND1_RSSI				(4*4)
+#define ADDR_BAND1_RSSI_MAX_MIN			(5*4)
+#define ADDR_BAND1_GAIN_MAX_MIN			(6*4) 
+#define ADDR_BAND2_RSSI				(8*4)
+#define ADDR_BAND2_RSSI_MAX_MIN			(9*4)
+#define ADDR_BAND2_GAIN_MAX_MIN			(10*4)
+#define ADDR_TX_AVG_PWR1			(12*4)
+#define ADDR_TX_PEAK_PWR1			(13*4)
+#define ADDR_TX_AVG_PWR2			(14*4)
+#define ADDR_TX_PEAK_PWR2			(15*4)
+#define ADDR_WB_ROUTING_FILTERSEL		(16*4)
+#define ADDR_RX_DELAY				(17*4)
+#define ADDR_TX_DELAY				(18*4)
+#define ADDR_TX21_GAIN				(20*4)
+#define ADDR_TESTTONE_AMPL_TX1			(21*4)
+#define ADDR_TESTTONE_AMPL_TX2			(22*4)
+#define ADDR_TX12_BUFFER_GAIN			(23*4)
+#define ADDR_RX_BURST_LENGTH			(24*4)
+#define ADDR_TX_BUFFER_MASK			(25*4)
+#define ADDR_RX_BUFFER_MASK			(26*4)
+#define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(27*4)
+#define ADDR_TX_BUFFER_MUTE_LENGTH		(28*4)
+#define ADDR_EN_UL_TEST_ID_OFFSET		(32*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
+#define ADDR_NB_FILTER_SEL0			(33*4)
+#define ADDR_NB_FILTER_SEL1			(34*4)
+#define ADDR_NB_IN_SEL				(35*4)
+#define ADDR_NB_OUT_SEL				(36*4)
+#define ADDR_BAND1_AGC_TARGET			(40*4)
+#define ADDR_BAND1_AGC_GAIN_LIMIT		(41*4)
+#define ADDR_BAND1_AGC_SQUELCH			(42*4)
+#define ADDR_BAND2_AGC_TARGET			(44*4)
+#define ADDR_BAND2_AGC_GAIN_LIMIT		(45*4)
+#define ADDR_BAND2_AGC_SQUELCH			(46*4)
+#define ADDR_RX_BURST_LENGTH2			(48*4)
+#define ADDR_RX_BURST_PERIOD2			(49*4)
+#define ADDR_WB_DDS_INC(x)			((52+(x))*4)
+#define ADDR_TESTTONE_INC(x)			((56+(x))*4)
+#define ADDR_NB_DDS_INC(x)			((64+(x))*4)
 
-#define ADDR_BAND2_AGC_TARGET		(128+0*4)
-#define ADDR_BAND2_AGC_GAIN_LIMIT	(128+1*4)
-#define ADDR_BAND2_AGC_SQUELCH		(128+2*4)
-#define ADDR_BAND1_RSSI			(128+3*4)
-#define ADDR_BAND2_RSSI			(128+4*4)
-#define ADDR_RX_BURST_LENGTH2		(128+5*4)
-#define ADDR_RX_BURST_PERIOD2		(128+6*4)
-#define ADDR_TX_AVG_PWR1		(128+7*4)
-#define ADDR_TX_PEAK_PWR1		(128+8*4)
-#define ADDR_BAND1_RSSI_MAX_MIN		(128+9*4)
-#define ADDR_BAND2_RSSI_MAX_MIN		(128+10*4)
-#define ADDR_BAND1_GAIN_MAX_MIN		(128+11*4)
-#define ADDR_BAND2_GAIN_MAX_MIN		(128+12*4)
-#define ADDR_TX12_BUFFER_GAIN		(128+13*4)
-#define ADDR_TX_AVG_PWR2		(128+14*4)
-#define ADDR_TX_PEAK_PWR2		(128+15*4)
-#define ADDR_RX_BUFFER_MASK			(128+16*4)
-#define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(128+17*4)
-#define ADDR_TX_BUFFER_MUTE_LENGTH		(128+18*4)
-#define ADDR_RX_DELAY			(128+19*4)
-#define ADDR_TX_DELAY			(128+20*4)
-
-#define MAX_BAND_FREQUENCY		20000000
-#define MIN_BAND_FREQUENCY		-20000000
-#define MAX_CH_FREQUENCY		3250000
-#define MIN_CH_FREQUENCY		-3250000
+#define MAX_BAND_FREQUENCY			20000000
+#define MIN_BAND_FREQUENCY			-20000000
+#define MAX_CH_FREQUENCY			3250000
+#define MIN_CH_FREQUENCY			-3250000
 
 
 // expands to:
@@ -371,8 +370,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 			temp64 = (u64)val << 18;
 			temp64 = div_s64(temp64,st->tetra_clk>>5);
 			st->nb_dds_inc[ch*2] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-			val = ((int)temp64 & 0x3FFFF) | ((ch*2)<<18);
-			dras_tetra_write(st, ADDR_NB_DDS_INC, val);
+			val = ((int)temp64 & 0x3FFFF);
+			dras_tetra_write(st, ADDR_NB_DDS_INC(ch*2), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_FREQUENCY)){
@@ -384,8 +383,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 			temp64 = (u64)val << 18;
 			temp64 = div_s64(temp64,st->tetra_clk>>5);
 			st->nb_dds_inc[ch*2+1] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-			val = ((int)temp64 & 0x3FFFF) | ((ch*2+1)<<18);
-			dras_tetra_write(st, ADDR_NB_DDS_INC, val);
+			val = ((int)temp64 & 0x3FFFF);
+			dras_tetra_write(st, ADDR_NB_DDS_INC(ch*2+1), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_BAND_SELECTION)){
@@ -444,8 +443,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->wb_dds_inc[0] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 0<<18;
-		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_WB_DDS_INC(0), val);
 		break;
 	case REG_BAND2_RX_FREQUENCY:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -455,8 +454,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->wb_dds_inc[2] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 2<<18;
-		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_WB_DDS_INC(2), val);
 		break;
 	case REG_BAND1_TX_FREQUENCY:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -466,8 +465,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->wb_dds_inc[1] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 1<<18;
-		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_WB_DDS_INC(1), val);
 		break;
 	case REG_BAND2_TX_FREQUENCY:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -477,8 +476,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->wb_dds_inc[3] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 3<<18;
-		dras_tetra_write(st, ADDR_WB_DDS_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_WB_DDS_INC(3), val);
 		break;
 	case REG_TX1_TESTTONE_FREQUENCY1:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -488,8 +487,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->testtone_dds_inc[0] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 0<<18;
-		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_TESTTONE_INC(0), val);
 		break;
 	case REG_TX1_TESTTONE_FREQUENCY2:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -499,8 +498,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->testtone_dds_inc[1] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 1<<18;
-		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_TESTTONE_INC(1), val);
 		break;
 	case REG_TX2_TESTTONE_FREQUENCY1:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -510,8 +509,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->testtone_dds_inc[2] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 2<<18;
-		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_TESTTONE_INC(2), val);
 		break;
 	case REG_TX2_TESTTONE_FREQUENCY2:
 		if(val<MIN_BAND_FREQUENCY || val>MAX_BAND_FREQUENCY){
@@ -521,8 +520,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp64 = (u64)val << 18;
 		temp64 = div_s64(temp64,st->tetra_clk>>2);
 		st->testtone_dds_inc[3] = (int)temp64 & 0x3FFFF; // rx dds auf geraden nummern, tx auf ungeraden
-		val = ((int)temp64 & 0x3FFFF) | 3<<18;
-		dras_tetra_write(st, ADDR_TESTTONE_INC, val);
+		val = ((int)temp64 & 0x3FFFF);
+		dras_tetra_write(st, ADDR_TESTTONE_INC(3), val);
 		break;
 	case REG_TX1_TESTTONE_AMPLITUDE1:
 		if(val<0 || val>46286){
