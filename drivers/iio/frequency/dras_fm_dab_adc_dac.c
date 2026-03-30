@@ -22,85 +22,81 @@
 #include <linux/clk.h>
 
 
-#define DRIVER_NAME			"dras-fm-dab-adc-dac"
-#define NB_OF_DAB_CHANNELS		12
+#define DRIVER_NAME				"dras-fm-dab-adc-dac"
+#define NB_OF_DAB_CHANNELS			12
 
 // common DSP addresses
-#define ADDR_DSP_VERSION		(0*4)
-#define ADDR_ADC_PEAK			(1*4)
-#define ADDR_DAC_OVF			(2*4)
-#define ADDR_PPS_CLKS			(3*4)
-#define ADDR_PPS_CNT			(4*4)
-#define ADDR_ADC_BER_TESTER		(5*4)
-#define ADDR_DAB_TESTTONE0		(6*4)
-#define ADDR_DAB_TESTTONE1		(7*4)
-#define ADDR_DAB_TESTTONE2		(8*4)
-#define ADDR_WATCHDOG			(9*4)
-#define ADDR_DAB_TESTTONE3		(10*4)
-#define ADDR_TX_DAB_AVG_POWER2		(11*4)
-#define ADDR_PPS_SETTINGS		(12*4)
-#define ADDR_HASH			(13*4)
-#define ADDR_RANDOMNUMBER		(14*4)
-#define ADDR_TX_FM_PEAK_POWER2		(15*4)
+#define ADDR_DSP_VERSION			(0*4)
+#define ADDR_ADC_PEAK				(1*4)
+#define ADDR_ADC_BER_TESTER			(2*4)
+#define ADDR_DAC_OVF				(3*4)
+#define ADDR_PPS_CLKS				(4*4)
+#define ADDR_PPS_CNT				(5*4)
+#define ADDR_RANDOMNUMBER			(6*4)
+#define ADDR_DL_ORDER_SYNC			(7*4)
+#define ADDR_DAB_TESTTONE0			(142*4)
+#define ADDR_DAB_TESTTONE1			(143*4)
+#define ADDR_DAB_TESTTONE2			(144*4)
+#define ADDR_WATCHDOG				(128*4)
+#define ADDR_DAB_TESTTONE3			(145*4)
+#define ADDR_PPS_SETTINGS			(129*4)
+#define ADDR_HASH				(130*4)
 
 // FM Band
-#define ADDR_TX_FM_AVG_POWER1		(1*16+0)*4
-#define ADDR_RX_FM_BAND_BURST_LENGTH	(1*16+1)*4
-//#define ADDR_RX_FM_BAND_BURST_PERIOD	(1*16+2)*4
-#define ADDR_TX_FM_PEAK_POWER1		(1*16+2)*4
-#define ADDR_TX_FM_BAND_GAIN		(1*16+3)*4
-#define ADDR_TX_FM_TESTTONE_DDSINC21	(1*16+4)*4
-#define ADDR_TX_BUFFER_GAIN12		(1*16+5)*4
-#define ADDR_TX_FM_TESTTONE_AMPL21	(1*16+6)*4
-#define ADDR_TX_FM_TESTTONE_AMPL43	(1*16+7)*4
-#define ADDR_TX_FM_AVG_POWER2		(1*16+8)*4
-#define ADDR_RX_DAB_AGC_SQUELCH		(1*16+9)*4
-#define ADDR_BLOCK_MOD_STARTTDELAY	(1*16+10)*4
-#define ADDR_BI0			(1*16+11)*4
-#define ADDR_BI1			(1*16+12)*4
-#define ADDR_BI2			(1*16+13)*4
-#define ADDR_BI3			(1*16+14)*4
-#define ADDR_FM_MON_DDSINC		(1*16+15)*4
+#define ADDR_TX_FM_AVG_POWER1			(8*4)
+#define ADDR_TX_FM_PEAK_POWER1			(9*4)
+#define ADDR_TX_FM_AVG_POWER2			(10*4)
+#define ADDR_TX_FM_PEAK_POWER2			(11*4)
+#define ADDR_BI0				(132*4)
+#define ADDR_BI1				(133*4)
+#define ADDR_BI2				(134*4)
+#define ADDR_BI3				(135*4)
+#define ADDR_RX_DAB_AGC_SQUELCH			(136*4)
+#define ADDR_BLOCK_MOD_STARTTDELAY		(140*4)
+#define ADDR_TX_BUFFER_GAIN12			(141*4)
+#define ADDR_RX_FM_BAND_BURST_LENGTH		(168*4)
+#define ADDR_FM_MON_DDSINC			(172*4)
+#define ADDR_TX_FM_BAND_GAIN			(173*4)
+#define ADDR_TX_FM_TESTTONE_AMPL21		(174*4)
+#define ADDR_TX_FM_TESTTONE_AMPL43		(175*4)
+#define ADDR_TX_FM_TESTTONE_DDSINC21(x)		((256+x)*4)
 
 // DAB Band
-#define ADDR_RX_DAB_CHANNEL_FREQUENCY	(2*16+0)*4
-#define ADDR_RX_DAB_BAND_BURST_LENGTH	(2*16+1)*4
-//#define ADDR_RX_DAB_BAND_BURST_PERIOD	(2*16+2)*4
-#define ADDR_TX_DAB_PEAK_POWER2		(2*16+2)*4
-#define ADDR_TX_DAB_AVG_POWER1		(2*16+3)*4
-#define ADDR_TX_DAB_DDS_BI		(2*16+4)*4
-#define ADDR_TX_DAB_PEAK_POWER1		(2*16+5)*4
-#define ADDR_DAB_MUTE			(2*16+6)*4
-#define ADDR_DL_ORDER_SYNC		(2*16+7)*4 // 5bits per channel, 24 channels
-#define ADDR_TX_DAB_GAIN		(2*16+8)*4
-#define ADDR_RX_DAB_SYNC_SETTINGS	(2*16+9)*4
-#define ADDR_RX_DAB_MONITOR_BURST_LENGTH	(2*16+10)*4
-#define ADDR_RX_DAB_MONITOR_BURST_PERIOD	(2*16+11)*4
-#define ADDR_RX_DAB_FREQ_ERR_0TO3	(2*16+12)*4
-#define ADDR_RX_DAB_FREQ_ERR_4TO7	(2*16+13)*4
-#define ADDR_RX_DAB_FREQ_ERR_8TO11	(2*16+14)*4
-#define ADDR_RX_DAB_AGC_SETTINGS	(2*16+15)*4
+#define ADDR_TX_DAB_AVG_POWER1			(12*4)
+#define ADDR_TX_DAB_PEAK_POWER1			(13*4)
+#define ADDR_TX_DAB_AVG_POWER2			(14*4)
+#define ADDR_TX_DAB_PEAK_POWER2			(15*4)
+#define ADDR_RX_DAB_FREQ_ERR_0TO3		(16*4)
+#define ADDR_RX_DAB_FREQ_ERR_4TO7		(17*4)
+#define ADDR_RX_DAB_FREQ_ERR_8TO11		(18*4)
+#define ADDR_DAB_MUTE				(23*4)
+#define ADDR_RX_DAB_SYNC_SETTINGS		(137*4)
+#define ADDR_RX_DAB_AGC_SETTINGS		(138*4)
+#define ADDR_RX_DAB_CHANNEL_FREQUENCY		(146*4)
+#define ADDR_RX_DAB_MONITOR_BURST_LENGTH	(160*4)
+#define ADDR_RX_DAB_MONITOR_BURST_PERIOD	(161*4)
+#define ADDR_TX_DAB_DDS_BI			(162*4)
+#define ADDR_RX_DAB_BAND_BURST_LENGTH		(169*4)
+#define ADDR_TX_DAB_GAIN(x)			((192+x)*4)
 
 // DAB channels
-#define ADDR_PER_DAB_CHANNEL		8
-#define ADDR_DAB_CHANNELS_START		8*16
-#define ADDR_TX_DAB_DDSINC(x)		(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+0)*4
-#define ADDR_RX_DAB_SYNC_RSSI(x)	(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+1)*4
-#define ADDR_BLOCK_MOD_FRAMES_SINCE_REQ(x)	(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+2)*4
-#define ADDR_BLOCK_DEMOD_FRAMES_SINCE_SOT(x)	(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+3)*4
-#define ADDR_BLOCK_UNDERRUN_FRAMES_SINCE_RST(x)	(ADDR_DAB_CHANNELS_START+x*ADDR_PER_DAB_CHANNEL+4)*4
+#define ADDR_RX_DAB_SYNC_RSSI(x)		((24+x)*4)
+#define ADDR_BLOCK_MOD_FRAMES_SINCE_REQ(x)	((36+x*4+0)*4)
+#define ADDR_BLOCK_DEMOD_FRAMES_SINCE_SOT(x)	((36+x*4+1)*4)
+#define ADDR_BLOCK_UNDERRUN_FRAMES_SINCE_RST(x)	((36+x*4+2)*4)
+#define ADDR_TX_DAB_DDSINC(x)			((148+x)*4)
 
-#define ADDR_TX_BUFFER_MASK 		(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+0)*4
-#define ADDR_RX_BUFFER_MASK 		(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+1)*4
-#define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK 	(ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+2)*4
-#define ADDR_TX_BUFFER_MUTE_LENGTH	 (ADDR_DAB_CHANNELS_START+NB_OF_DAB_CHANNELS*ADDR_PER_DAB_CHANNEL+3)*4
+#define ADDR_RX_BUFFER_MASK 			(164*4)
+#define ADDR_TX_BUFFER_MASK 			(165*4)
+#define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK 	(166*4)
+#define ADDR_TX_BUFFER_MUTE_LENGTH		(167*4)
 
-#define MIN_GAIN			0x0000
-#define MAX_GAIN			0xFFFF
-#define MAX_DAB_FREQUENCY		240000000
-#define MIN_DAB_FREQUENCY		174000000
-#define MAX_FM_FREQUENCY		108100000
-#define MIN_FM_FREQUENCY		87400000
+#define MIN_GAIN				0x0000
+#define MAX_GAIN				0xFFFF
+#define MAX_DAB_FREQUENCY			240000000
+#define MIN_DAB_FREQUENCY			174000000
+#define MAX_FM_FREQUENCY			108100000
+#define MIN_FM_FREQUENCY			87400000
 
 
 // expands to:
@@ -432,9 +428,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 				val = 0xFFFF;
 			st->gain_dab_tx_reg[ch] = val;
 			if(!st->rf_mute){
-				temp32 = val + ((ch+1)<<16);
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN(ch+1), val);
 			}
 			break;
 		}
@@ -450,9 +444,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 				val = 0xFFFF;
 			st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = val;
 			if(!st->rf_mute){
-				temp32 = val + ((ch+1+NB_OF_DAB_CHANNELS)<<16);
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN(ch+1+NB_OF_DAB_CHANNELS), val);
 			}
 			break;
 		}
@@ -505,11 +497,9 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			st->gain_dab_tx_reg[ch] = (st->gain_dab_tx[ch] * st->pa_dab_comp_gain_tx1) >> 8;
 			if(st->gain_dab_tx_reg[ch] > 0xFFFF)
 				st->gain_dab_tx_reg[ch] = 0xFFFF;
-			temp32 = st->gain_dab_tx_reg[ch] + ((ch+1)<<16);
 			if(!st->rf_mute)
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN(ch+1), st->gain_dab_tx_reg[ch]);
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
 		break;
 	case REG_TX2_DAB_PA_COMP_GAIN:
 		if(val<0 || val>0xFFFF){
@@ -538,11 +528,9 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = (st->gain_dab_tx[ch+NB_OF_DAB_CHANNELS] * st->pa_dab_comp_gain_tx2) >> 8;
 			if(st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] > 0xFFFF)
 				st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] = 0xFFFF;
-			temp32 = st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS] + ((ch+1+NB_OF_DAB_CHANNELS)<<16);
 			if(!st->rf_mute)
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN(ch+1+NB_OF_DAB_CHANNELS), st->gain_dab_tx_reg[ch+NB_OF_DAB_CHANNELS]);
 		}
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
 		break;
 	case REG_TX_DAB_DDS_ENABLE:
 		if(val<0 || val>1){
@@ -902,8 +890,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = div_s64(temp64,st->fs_adc);
 		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[0] = temp32;
-		temp32 |= 0<<16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21(0), temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY1:
 		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
@@ -919,8 +906,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = div_s64(temp64,st->fs_adc);
 		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[1] = temp32;
-		temp32 |= 1<<16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21(1), temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY2:
 		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
@@ -936,8 +922,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = div_s64(temp64,st->fs_adc);
 		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[2] = temp32;
-		temp32 |= 2<<16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21(2), temp32);
 		break;
 	case REG_TX_FM_TESTTONE_FREQUENCY3:
 		if(val<MIN_FM_FREQUENCY || val>MAX_FM_FREQUENCY){
@@ -953,8 +938,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = div_s64(temp64,st->fs_adc);
 		temp32 = (u32)temp64 & 0xFFFF;
 		st->fm_testtone_inc[3] = temp32;
-		temp32 |= 3<<16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21(3), temp32);
 		break;
 	case REG_RX_FM_MON_FREQUENCY:
 		if(st->is_remote){
@@ -974,8 +958,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp64 = div_s64(temp64,st->fs_adc);
 		temp32 = (int)temp64 & 0xFFFF;
 		st->fm_testtone_inc[4] = temp32;
-		temp32 |= 11<<16;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21, temp32);
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_TESTTONE_DDSINC21(11), temp32);
 		break;
 	case REG_TX_FM_TESTTONE_AMPLITUDE0:
 		if(val<MIN_GAIN || val>MAX_GAIN){
@@ -1308,17 +1291,13 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		st->rf_mute = (bool)val;
 		if(st->rf_mute){
 			for(ch=0; ch<(2*NB_OF_DAB_CHANNELS); ch++){
-				temp32 = (ch+1)<<16;
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN(ch+1), 0);
 			}
-			dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
 			dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN, 0);
 		}else{
 			for(ch=0; ch<(2*NB_OF_DAB_CHANNELS); ch++){
-				temp32 = st->gain_dab_tx_reg[ch] + ((ch+1)<<16);
-				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, temp32);
+				dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN(ch+1), st->gain_dab_tx_reg[ch]);
 			}
-			dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_GAIN, 0); // end with address 0, where no gain is stored
 			dras_fm_dab_adc_dac_write(st, ADDR_TX_FM_BAND_GAIN,
 					(st->gain_fm_tx2_reg << 16) | st->gain_fm_tx1_reg);
 		}
