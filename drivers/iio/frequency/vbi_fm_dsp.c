@@ -26,6 +26,7 @@
 #include <linux/of_address.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
+#include <linux/clk.h>
 
 
 #define DRIVER_NAME				"vbi-fm-dsp"
@@ -273,6 +274,7 @@ struct vbi_fm_dsp_state {
 	uint32_t		modulator_gain_tx2[32];
 	uint32_t		vbi_mode_tx1[32];
 	uint32_t		vbi_mode_tx2[32];
+	struct clk		*dsp_clk;
 };
 
 static void vbi_fm_dsp_write(struct vbi_fm_dsp_state *st, unsigned reg, u32 val)
@@ -1521,6 +1523,14 @@ static int vbi_fm_dsp_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_iio_device_free;
 	}
+
+	st->dsp_clk = devm_clk_get(&pdev->dev, "dsp_clk");
+	if (IS_ERR_OR_NULL(st->dsp_clk)) {
+		ret = PTR_ERR(st->dsp_clk);
+		dev_err(&pdev->dev, "Failed to get DSP clock (%d)\n", ret);
+		goto err_iio_device_free;
+	}
+
 //	printk("\nDDC-DUC at 0x%08llX mapped to 0x%p\n",
 //			(unsigned long long)res->start, st->regs);
 

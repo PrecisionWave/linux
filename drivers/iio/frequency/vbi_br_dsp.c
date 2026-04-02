@@ -27,6 +27,7 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include "br_vbi_dsp_fir_coef.h"
+#include <linux/clk.h>
 
 
 #define DRIVER_NAME			"vbi-br-dsp"
@@ -130,6 +131,7 @@ struct vbi_br_dsp_state {
 	uint32_t	rx_nyquist_zone[NB_OF_BLOCKS];
 	uint32_t	nb_of_blocks_dt;
 	uint64_t	int_to_volt_scalar;
+	struct clk	*dsp_clk;
 };
 
 static void vbi_br_dsp_write(struct vbi_br_dsp_state *st, unsigned reg, u32 val)
@@ -1004,6 +1006,12 @@ static int vbi_br_dsp_probe(struct platform_device *pdev)
 		goto err_iio_device_free;
 	}
 
+	st->dsp_clk = devm_clk_get(&pdev->dev, "dsp_clk");
+	if (IS_ERR_OR_NULL(st->dsp_clk)) {
+		ret = PTR_ERR(st->dsp_clk);
+		dev_err(&pdev->dev, "Failed to get DSP clock (%d)\n", ret);
+		goto err_iio_device_free;
+	}
 
 	if(of_property_read_u32(np, "required,fs-adc", &st->fs_adc)){
 		printk("VBI-BR-DSP: ***ERROR! \"required,fs-adc\" missing in devicetree?\n");
