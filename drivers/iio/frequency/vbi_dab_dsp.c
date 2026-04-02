@@ -880,25 +880,25 @@ static ssize_t vbi_dab_dsp_show(struct device *dev,
 		val = vbi_dab_dsp_read(st, ADDR_DEMOD_COARSE_FREQ_ERR) & 0x7;
 		switch(val){
 			case 1:
-				val=0;
-				break;
-			case 2:
-				val=1000;
-				break;
-			case 3:
-				val=2000;
-				break;
-			case 4:
 				val=3000;
 				break;
+			case 2:
+				val=2000;
+				break;
+			case 3:
+				val=1000;
+				break;
+			case 4:
+				val=0;
+				break;
 			case 5:
-				val=-3000;
+				val=-1000;
 				break;
 			case 6:
 				val=-2000;
 				break;
 			case 7:
-				val=-1000;
+				val=-3000;
 				break;
 			default:
 				val=0;
