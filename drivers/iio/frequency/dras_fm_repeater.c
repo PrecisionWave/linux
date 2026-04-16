@@ -24,17 +24,17 @@
 #define NB_OF_CHANNELS			32
 
 // global attributes
-#define ADDR_TARGET_PWR			48*4
-#define ADDR_SQUELCH			49*4
-#define ADDR_MAXGAIN			50*4
-#define ADDR_CHANNEL_EN			51*4
-#define ADDR_DSP_VERSION		52*4
-#define ADDR_MUTE			53*4
+#define ADDR_DSP_VERSION		(0*4)
+#define ADDR_MUTE			(1*4)
+#define ADDR_TARGET_PWR			(72*4)
+#define ADDR_SQUELCH			(73*4)
+#define ADDR_MAXGAIN			(74*4)
+#define ADDR_CHANNEL_EN			(75*4)
 
 // channel attributes
-#define ADDR_RSSI(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_DDSINC_RX(x)		(16+x)*4 // 16bit LSB first channel, second 16bit second channel
-#define ADDR_DDSINC_TX(x)		(32+x)*4 // 16bit LSB first channel, second 16bit second channel
+#define ADDR_RSSI(x)			((4+(x))*4)	// 16bit LSB first rssi, second 16bit second rssi
+#define ADDR_DDSINC_RX(x)		((32+(x))*4)	// 16bit LSB first channel, second 16bit second channel
+#define ADDR_DDSINC_TX(x)		((52+(x))*4)	// 16bit LSB first channel, second 16bit second channel
 
 #define MAX_FM_FREQUENCY		108100000
 #define MIN_FM_FREQUENCY		87400000
