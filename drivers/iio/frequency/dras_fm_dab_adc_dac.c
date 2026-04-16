@@ -221,6 +221,7 @@ enum chan_num{
 	REG_DAB_AGC_SQUELCH,
 	REG_DAB_EN_2X12,
 	REG_DEMOD_SOURCE_CHANNEL,
+	REG_DEMOD_COARSE_FREQ_ERR,
 	REG_MONITOR_SOURCE_CHANNEL,
 	REG_MOD_START_DELAY,
 	REG_RX_DAB_CHANNEL_FREQUENCY,
@@ -1550,7 +1551,11 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 9) & 0xF;
 		break;
 	case REG_DEMOD_SOURCE_CHANNEL:
-		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 13) & 0xF;
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_DAC_OVF) >> 13) & 0xF;
+		break;
+	case REG_DEMOD_COARSE_FREQ_ERR:
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 2) & 0x3F;
+		val = -(val-4*8)*(1000/8);
 		break;
 	case REG_DAB_EN_2X12:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 17) & 0x1;
@@ -2059,6 +2064,11 @@ static IIO_DEVICE_ATTR(dab_demod_source_channel, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_store,
 			REG_DEMOD_SOURCE_CHANNEL);
 
+static IIO_DEVICE_ATTR(dab_demod_coarse_frequency_error, S_IRUGO,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_DEMOD_COARSE_FREQ_ERR);
+
 static IIO_DEVICE_ATTR(dab_monitor_source_channel, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -2497,6 +2507,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_dab_enable_2x12.dev_attr.attr,
 	&iio_dev_attr_dab_mod_start_delay.dev_attr.attr,
 	&iio_dev_attr_dab_demod_source_channel.dev_attr.attr,
+	&iio_dev_attr_dab_demod_coarse_frequency_error.dev_attr.attr,
 	&iio_dev_attr_dab_monitor_source_channel.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_frequency.dev_attr.attr,
 	&iio_dev_attr_tx_dab_dds_enable.dev_attr.attr,
