@@ -1551,10 +1551,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 9) & 0xF;
 		break;
 	case REG_DEMOD_SOURCE_CHANNEL:
-		val = (dras_fm_dab_adc_dac_read(st, ADDR_DAC_OVF) >> 13) & 0xF;
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 13) & 0xF;
 		break;
 	case REG_DEMOD_COARSE_FREQ_ERR:
-		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 2) & 0x3F;
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_DAC_OVF) >> 2) & 0x3F;
 		val = -(val-4*8)*(1000/8);
 		break;
 	case REG_DAB_EN_2X12:
