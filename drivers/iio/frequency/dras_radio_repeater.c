@@ -26,31 +26,29 @@
 #define NB_OF_TETRA_PORTS		16
 
 // global attributes
-#define ADDR_GAIN_LIMIT			16*4
-#define ADDR_TARGET_PWR			17*4
-#define ADDR_SQUELCH			18*4
-#define ADDR_CHANNEL_EN			19*4
-#define ADDR_DSP_VERSION		20*4
-#define ADDR_OFFSET_TLAST0		21*4 // 4bits per port, port0..7
-#define ADDR_OFFSET_TLAST1		22*4 // 4bits per port, port8..15
-#define ADDR_MUTE_LEN			23*4
-//#define ADDR_BEST_SOURCE1		24*4
-//#define ADDR_BEST_SOURCE2		25*4
-#define ADDR_GAIN_LIMIT_DL		26*4
-#define ADDR_TARGET_PWR_DL		27*4
-#define ADDR_SQUELCH_DL			28*4
-#define ADDR_HASH			29*4
-#define ADDR_RANDOMNUMBER		30*4
+#define ADDR_DSP_VERSION		(0*4)
+#define ADDR_RANDOMNUMBER		(1*4)
+#define ADDR_GAIN_LIMIT			(160*4)
+#define ADDR_TARGET_PWR			(161*4)
+#define ADDR_SQUELCH			(162*4)
+#define ADDR_CHANNEL_EN			(163*4)
+#define ADDR_MUTE_LEN			(164*4)
+#define ADDR_GAIN_LIMIT_DL		(172*4)
+#define ADDR_TARGET_PWR_DL		(173*4)
+#define ADDR_SQUELCH_DL			(174*4)
+#define ADDR_OFFSET_TLAST0		(180*4)		// 4bits per port, port0..7
+#define ADDR_OFFSET_TLAST1		(181*4)		// 4bits per port, port8..15
+#define ADDR_HASH			(188*4)
 
 // channel attributes
-#define ADDR_RSSI_UL(x)			(0+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_UL_ORDER(x)		(32+x)*4 // 8 channels per port, each with 4bits, 16 ports, port x from 0..15
-#define ADDR_PORT_ID(x)			(48+x)*4 // 12bit port id, port x from 0..15
-#define ADDR_RSSI_DL(x)			(128+x)*4 // 16bit LSB first rssi, second 16bit second rssi
-#define ADDR_GAIN_UL(x)			(144+x)*4
-#define ADDR_GAIN_DL(x)			(160+x)*4
-#define ADDR_RSSI_PEAK_UL(x)		(176+x)*4
-#define ADDR_RSSI_PEAK_DL(x)		(192+x)*4
+#define ADDR_RSSI_UL(x)			((8+(x))*4)	// 16bit LSB first rssi, second 16bit second rssi
+#define ADDR_RSSI_PEAK_UL(x)		((24+(x))*4)
+#define ADDR_UL_ORDER(x)		((40+(x))*4)	// 8 channels per port, each with 4bits, 16 ports, port x from 0..15
+#define ADDR_PORT_ID(x)			((56+(x))*4)	// 12bit port id, port x from 0..15
+#define ADDR_RSSI_DL(x)			((72+(x))*4)	// 16bit LSB first rssi, second 16bit second rssi
+#define ADDR_RSSI_PEAK_DL(x)		((88+(x))*4)
+#define ADDR_GAIN_UL(x)			((104+(x))*4)
+#define ADDR_GAIN_DL(x)			((120+(x))*4)
 
 
 // expands to:
