@@ -205,6 +205,7 @@ enum chan_num{
 	REG_ADC_BER_CHECKER,
 	REG_RX_DAB_BAND_BURST_LENGTH,
 	REG_BURST_PERIOD,
+	REG_BURST_PERIOD_SEQUENCER,
 	//REG_RX_DAB_BAND_BURST_PERIOD,
 	REG_RX_DAB_MONITOR_BURST_LENGTH,
 	REG_RX_DAB_MONITOR_BURST_PERIOD,
@@ -591,6 +592,15 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
 		temp32 += (u32)val << 24;
 		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
+		break;
+	case REG_BURST_PERIOD_SEQUENCER:
+		if(val<1 || val>255){
+			//ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) & 0xFFFFFF;
+		temp32 += (u32)val << 24;
+		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_LENGTH, temp32);
 		break;
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
 		if(st->is_remote){
@@ -1566,6 +1576,9 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_BURST_PERIOD: //REG_RX_FM_BAND_BURST_PERIOD:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) >>24;
 		break;
+	case REG_BURST_PERIOD_SEQUENCER: //REG_RX_FM_BAND_BURST_PERIOD:
+		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) >>24;
+		break;
 	case REG_TX1_BUFFER_GAIN:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_GAIN12) & 0xFFFF;
 		break;
@@ -1978,6 +1991,11 @@ static IIO_DEVICE_ATTR(burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_BURST_PERIOD);
+
+static IIO_DEVICE_ATTR(burst_period_sequencer, S_IRUGO | S_IWUSR,
+			dras_fm_dab_adc_dac_show,
+			dras_fm_dab_adc_dac_store,
+			REG_BURST_PERIOD_SEQUENCER);
 /*
 static IIO_DEVICE_ATTR(rx_dab_band_burst_period, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
@@ -2491,6 +2509,7 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_rx_dab_band_burst_length.dev_attr.attr,
 	//&iio_dev_attr_rx_dab_band_burst_period.dev_attr.attr,
 	&iio_dev_attr_burst_period.dev_attr.attr,
+	&iio_dev_attr_burst_period_sequencer.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_burst_length.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_burst_period.dev_attr.attr,
 	&iio_dev_attr_rx_dab_monitor_disable_sync.dev_attr.attr,
