@@ -77,6 +77,7 @@
 #define ADDR_RX_DAB_MONITOR_BURST_PERIOD	(161*4)
 #define ADDR_TX_DAB_DDS_BI			(162*4)
 #define ADDR_RX_DAB_BAND_BURST_LENGTH		(169*4)
+#define ADDR_RX_BURST_PERIODS			(170*4)
 #define ADDR_TX_DAB_GAIN(x)			((192+x)*4)
 
 // DAB channels
@@ -589,18 +590,18 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			//ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
-		temp32 += (u32)val << 24;
-		dras_fm_dab_adc_dac_write(st, ADDR_RX_FM_BAND_BURST_LENGTH, temp32);
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) & 0xFFFFFF00;
+		temp32 += (u32)val << 0;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_BURST_PERIODS, temp32);
 		break;
 	case REG_BURST_PERIOD_SEQUENCER:
 		if(val<1 || val>255){
 			//ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) & 0xFFFFFF;
-		temp32 += (u32)val << 24;
-		dras_fm_dab_adc_dac_write(st, ADDR_TX_BUFFER_MUTE_LENGTH, temp32);
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) & 0xFFFF00FF;
+		temp32 += (u32)val << 8;
+		dras_fm_dab_adc_dac_write(st, ADDR_RX_BURST_PERIODS, temp32);
 		break;
 	case REG_RX_DAB_MONITOR_BURST_LENGTH:
 		if(st->is_remote){
@@ -1574,10 +1575,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
 		break;
 	case REG_BURST_PERIOD: //REG_RX_FM_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) >>24;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) >>0;
 		break;
 	case REG_BURST_PERIOD_SEQUENCER: //REG_RX_FM_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_MUTE_LENGTH) >>24;
+		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) >>8;
 		break;
 	case REG_TX1_BUFFER_GAIN:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_GAIN12) & 0xFFFF;
