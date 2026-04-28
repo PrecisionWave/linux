@@ -1575,10 +1575,10 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_FM_BAND_BURST_LENGTH) & 0xFFFFFF;
 		break;
 	case REG_BURST_PERIOD: //REG_RX_FM_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) >>0;
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) >>0) & 0xFF;
 		break;
 	case REG_BURST_PERIOD_SEQUENCER: //REG_RX_FM_BAND_BURST_PERIOD:
-		val = dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) >>8;
+		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_BURST_PERIODS) >>8) & 0xFF;
 		break;
 	case REG_TX1_BUFFER_GAIN:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_TX_BUFFER_GAIN12) & 0xFFFF;
