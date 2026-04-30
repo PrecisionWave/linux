@@ -50,11 +50,13 @@
 #define ADDR_RX_BUFFER_MASK			(26*4)
 #define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(27*4)
 #define ADDR_TX_BUFFER_MUTE_LENGTH		(28*4)
+#define ADDR_BURST_PERIODS			(29*4)
 #define ADDR_EN_UL_TEST_ID_OFFSET		(32*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
 #define ADDR_NB_FILTER_SEL0			(33*4)
 #define ADDR_NB_FILTER_SEL1			(34*4)
 #define ADDR_NB_IN_SEL				(35*4)
 #define ADDR_NB_OUT_SEL				(36*4)
+#define ADDR_CPRI_CH_PRIO			(37*4)
 #define ADDR_BAND1_AGC_TARGET			(40*4)
 #define ADDR_BAND1_AGC_GAIN_LIMIT		(41*4)
 #define ADDR_BAND1_AGC_SQUELCH			(42*4)
@@ -176,6 +178,7 @@ enum chan_num{
 	REG_ALL_CH(REG_RX_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_TX_FREQUENCY),	// being expanded for all channels
 	REG_ALL_CH(REG_RX_BAND_SELECTION),	// being expanded for all channels
+	REG_ALL_CH(REG_DL_PRIORITY),	// being expanded for all channels
 	REG_ALL_CH(REG_TX_BAND_SELECTION),	// being expanded for all channels
 	REG_ALL_CH(REG_FILTER_SELECTION),	// being expanded for all channels
 	REG_TX1_GAIN,
@@ -242,6 +245,7 @@ enum chan_num{
 	REG_TX2_PEAK_PWR,
 	REG_RX_BURST_LENGTH1,
 	REG_RX_BURST_PERIOD1,
+	REG_RX_BURST_PERIOD_SEQUENCER1,
 	REG_RX_DMA1_SOURCE_BAND1_RX1_BAND2_RX2,
 	REG_RX_BURST_LENGTH2,
 	REG_RX_BURST_PERIOD2,
@@ -396,6 +400,17 @@ static ssize_t dras_tetra_store(struct device *dev,
 			temp32 = dras_tetra_read(st, ADDR_NB_IN_SEL) & ~(3<<(2*ch));
 			temp32 += ((uint32_t)val)<<(2*ch);
 			dras_tetra_write(st, ADDR_NB_IN_SEL, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_PRIORITY)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			temp32 = dras_tetra_read(st, ADDR_CPRI_CH_PRIO) & ~(1<<ch);
+			temp32 += ((uint32_t)val)<<(ch);
+			dras_tetra_write(st, ADDR_CPRI_CH_PRIO, temp32);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_BAND_SELECTION)){
@@ -915,9 +930,18 @@ static ssize_t dras_tetra_store(struct device *dev,
 			//ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & ~(0xff<<16);
-		temp32 += ((uint32_t)val)<<16;
-		dras_tetra_write(st, ADDR_RX_BURST_LENGTH, temp32);
+		temp32 = dras_tetra_read(st, ADDR_BURST_PERIODS) & ~(0xff<<0);
+		temp32 += ((uint32_t)val)<<0;
+		dras_tetra_write(st, ADDR_BURST_PERIODS, temp32);
+		break;
+	case REG_RX_BURST_PERIOD_SEQUENCER1:
+		if(val>0xFF){
+			//ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_BURST_PERIODS) & ~(0xff<<8);
+		temp32 += ((uint32_t)val)<<8;
+		dras_tetra_write(st, ADDR_BURST_PERIODS, temp32);
 		break;
 	case REG_RX_BURST_LENGTH2:
 		dras_tetra_write(st, ADDR_RX_BURST_LENGTH2, (u32)val);
@@ -1035,6 +1059,11 @@ static ssize_t dras_tetra_show(struct device *dev,
 		else if((u32)this_attr->address == REG_CH(ch, REG_RX_BAND_SELECTION)){
 			match = 1;
 			val = ((dras_tetra_read(st, ADDR_NB_IN_SEL) >> (2*ch)) & 3);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_DL_PRIORITY)){
+			match = 1;
+			val = ((dras_tetra_read(st, ADDR_CPRI_CH_PRIO) >> ch) & 1);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_TX_BAND_SELECTION)){
@@ -1298,7 +1327,10 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH) & 0xFFFF;
 		break;
 	case REG_RX_BURST_PERIOD1:
-		val = ((uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH)>>16) & 0xFF;
+		val = ((uint32_t)dras_tetra_read(st, ADDR_BURST_PERIODS)>>0) & 0xFF;
+		break;
+	case REG_RX_BURST_PERIOD_SEQUENCER1:
+		val = ((uint32_t)dras_tetra_read(st, ADDR_BURST_PERIODS)>>8) & 0xFF;
 		break;
 	case REG_RX_BURST_LENGTH2:
 		val = (uint32_t)dras_tetra_read(st, ADDR_RX_BURST_LENGTH2);
@@ -1365,6 +1397,11 @@ IIO_DEVICE_ATTR_ALL_CH(rx_band_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_RX_BAND_SELECTION);
+
+IIO_DEVICE_ATTR_ALL_CH(downlink_mu_priority, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_DL_PRIORITY);
 
 IIO_DEVICE_ATTR_ALL_CH(tx_band_selection, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
@@ -1696,6 +1733,11 @@ static IIO_DEVICE_ATTR(rx_burst_period1, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_RX_BURST_PERIOD1);
 
+static IIO_DEVICE_ATTR(rx_burst_period_sequencer1, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_RX_BURST_PERIOD_SEQUENCER1);
+
 static IIO_DEVICE_ATTR(rx_dma1_source_band1_rx1_band2_rx2, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1756,6 +1798,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_frequency),
 	IIO_ATTR_ALL_CH(tx_frequency),
 	IIO_ATTR_ALL_CH(rx_band_selection),
+	IIO_ATTR_ALL_CH(downlink_mu_priority),
 	IIO_ATTR_ALL_CH(tx_band_selection),
 	IIO_ATTR_ALL_CH(filter_selection),
 	&iio_dev_attr_tx1_gain.dev_attr.attr,
@@ -1822,6 +1865,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx2_peak_power.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length1.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period1.dev_attr.attr,
+	&iio_dev_attr_rx_burst_period_sequencer1.dev_attr.attr,
 	&iio_dev_attr_rx_burst_length2.dev_attr.attr,
 	&iio_dev_attr_rx_burst_period2.dev_attr.attr,
 	&iio_dev_attr_rx_dma1_source_band1_rx1_band2_rx2.dev_attr.attr,
