@@ -51,7 +51,7 @@
 #define ADDR_TX_BUFFER_MUTE_CHANNEL_MASK	(27*4)
 #define ADDR_TX_BUFFER_MUTE_LENGTH		(28*4)
 #define ADDR_BURST_PERIODS			(29*4)
-#define ADDR_EN_UL_TEST_ID_OFFSET		(32*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
+//#define ADDR_EN_UL_TEST_ID_OFFSET		(32*4) // EN_ULTEST, 4bit offset tlast, 12bit ID
 #define ADDR_NB_FILTER_SEL0			(33*4)
 #define ADDR_NB_FILTER_SEL1			(34*4)
 #define ADDR_NB_IN_SEL				(35*4)
@@ -250,11 +250,11 @@ enum chan_num{
 	REG_RX_BURST_LENGTH2,
 	REG_RX_BURST_PERIOD2,
 	REG_RX_DMA2_SOURCE_BAND1_RX1_BAND2_RX2,
-	REG_EN_UL_TEST,
-	REG_UL_ID,
-	REG_DL_ORDER,
-	REG_DL_OFFSET_TLAST,
-	REG_DL_SYNC,
+	//REG_EN_UL_TEST,
+	//REG_UL_ID,
+	//REG_DL_ORDER,
+	//REG_DL_OFFSET_TLAST,
+	//REG_DL_SYNC,
 	REG_DSP_VERSION,
 	REG_RF_MUTE
 };
@@ -980,6 +980,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 				(st->gain_tx2_reg << 16) | st->gain_tx1_reg);
 		}
 		break;
+/*
 	case REG_EN_UL_TEST:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -1009,6 +1010,7 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<12;
 		dras_tetra_write(st, ADDR_EN_UL_TEST_ID_OFFSET, temp32);
 		break;
+*/
 	default:
 		ret = -ENODEV;
 		break;
@@ -1350,6 +1352,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_RF_MUTE:
 		val = st->rf_mute;
 		break;
+/*
 	case REG_EN_UL_TEST:
 		val = (dras_tetra_read(st, ADDR_EN_UL_TEST_ID_OFFSET)>>16) & 1;
 		break;
@@ -1371,6 +1374,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_DL_SYNC:
 		val = dras_tetra_read(st, ADDR_DL_SYNC) & 1;
 		break;
+*/
 	default:
 		ret = -ENODEV;
 		break;
@@ -1767,7 +1771,7 @@ static IIO_DEVICE_ATTR(rf_mute, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_RF_MUTE);
-
+/*
 static IIO_DEVICE_ATTR(enable_uplink_test, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1792,7 +1796,7 @@ static IIO_DEVICE_ATTR(downlink_sync, S_IRUGO,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_DL_SYNC);
-
+*/
 
 static struct attribute *dras_tetra_attributes[] = {
 	IIO_ATTR_ALL_CH(rx_frequency),
@@ -1872,11 +1876,11 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_rx_dma2_source_band1_rx1_band2_rx2.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_rf_mute.dev_attr.attr,
-	&iio_dev_attr_enable_uplink_test.dev_attr.attr,
-	&iio_dev_attr_uplink_id.dev_attr.attr,
-	&iio_dev_attr_downlink_order.dev_attr.attr,
-	&iio_dev_attr_downlink_offset_tlast.dev_attr.attr,
-	&iio_dev_attr_downlink_sync.dev_attr.attr,
+	//&iio_dev_attr_enable_uplink_test.dev_attr.attr,
+	//&iio_dev_attr_uplink_id.dev_attr.attr,
+	//&iio_dev_attr_downlink_order.dev_attr.attr,
+	//&iio_dev_attr_downlink_offset_tlast.dev_attr.attr,
+	//&iio_dev_attr_downlink_sync.dev_attr.attr,
 	NULL,
 };
 
