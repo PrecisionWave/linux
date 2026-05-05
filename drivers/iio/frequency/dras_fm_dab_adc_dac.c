@@ -283,10 +283,10 @@ enum chan_num{
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
 	REG_SATURATION_MUTING_OCCURRENCE,
-	REG_EN_DL_TEST,
-	REG_DL_ORDER,
-	REG_DL_CPRI_CONTINOUS,
-	REG_DL_SYNC,
+	//REG_EN_DL_TEST,
+	//REG_DL_ORDER,
+	//REG_DL_CPRI_CONTINOUS,
+	//REG_DL_SYNC,
 	REG_PPS_CLK_ERROR,
 	REG_PPS_CLK_ERROR_NS,
 	REG_PPS_CLK_ERROR_HZ,
@@ -1264,6 +1264,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 4;
 		dras_fm_dab_adc_dac_write(st, ADDR_WATCHDOG, temp32);
 		break;
+/*
 	case REG_EN_DL_TEST:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -1273,6 +1274,7 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 		temp32 += (u32)val << 5;
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
+*/
 	case REG_PPS_CLK_ERROR_NS:
 		st->pps_clk_error_ns = (u32)val;
 		break;
@@ -1862,6 +1864,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_IS_MU:
 		val = 1 - st->is_remote;
 		break;
+/*
 	case REG_EN_DL_TEST:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI)>>5) & 1;
 		break;
@@ -1875,6 +1878,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 	case REG_DL_SYNC:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_DL_ORDER_SYNC)>>25) & 1;
 		break;
+*/
 	case REG_HASH:
 		val = dras_fm_dab_adc_dac_read(st, ADDR_HASH);
 		break;
@@ -2454,7 +2458,7 @@ static IIO_DEVICE_ATTR(is_mu, S_IRUGO,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_IS_MU);
-
+/*
 static IIO_DEVICE_ATTR(enable_downlink_test, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -2474,7 +2478,7 @@ static IIO_DEVICE_ATTR(downlink_sync, S_IRUGO,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
 			REG_DL_SYNC);
-
+*/
 static IIO_DEVICE_ATTR(hash, S_IRUGO | S_IWUSR,
 			dras_fm_dab_adc_dac_show,
 			dras_fm_dab_adc_dac_store,
@@ -2601,10 +2605,10 @@ static struct attribute *dras_fm_dab_adc_dac_attributes[] = {
 	&iio_dev_attr_breakin_mask2.dev_attr.attr,
 	&iio_dev_attr_breakin_mask3.dev_attr.attr,
 	&iio_dev_attr_is_mu.dev_attr.attr,
-	&iio_dev_attr_enable_downlink_test.dev_attr.attr,
-	&iio_dev_attr_downlink_order.dev_attr.attr,
-	&iio_dev_attr_downlink_cpri_continous.dev_attr.attr,
-	&iio_dev_attr_downlink_sync.dev_attr.attr,
+	//&iio_dev_attr_enable_downlink_test.dev_attr.attr,
+	//&iio_dev_attr_downlink_order.dev_attr.attr,
+	//&iio_dev_attr_downlink_cpri_continous.dev_attr.attr,
+	//&iio_dev_attr_downlink_sync.dev_attr.attr,
 	&iio_dev_attr_hash.dev_attr.attr,
 	&iio_dev_attr_randomnumber.dev_attr.attr,
 	&iio_dev_attr_clk_ce.dev_attr.attr,

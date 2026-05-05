@@ -28,6 +28,7 @@
 // global attributes
 #define ADDR_DSP_VERSION		(0*4)
 #define ADDR_RANDOMNUMBER		(1*4)
+#define ADDR_UL_SFP_SYNC		(2*4)
 #define ADDR_GAIN_LIMIT			(160*4)
 #define ADDR_TARGET_PWR			(161*4)
 #define ADDR_SQUELCH			(162*4)
@@ -230,10 +231,10 @@ enum chan_num{
 	REG_ALL_CH(REG_DL_SQUELCH),	// being expanded for all channels
 	REG_ALL_CH(REG_DL_GAIN_LIMIT),	// being expanded for all channels
 	REG_ALL_CH(REG_DL_MUTE),	// being expanded for all channels
-	REG_ALL_PORT(REG_OFFSET_TLAST),	// being expanded for all channels
-	REG_ALL_PORT(REG_ENABLE_DL_TEST),	// being expanded for all channels
-	REG_ALL_PORT(REG_UL_ORDER),	// being expanded for all channels
-	REG_ALL_PORT(REG_PORT_ID),	// being expanded for all channels
+	//REG_ALL_PORT(REG_OFFSET_TLAST),	// being expanded for all channels
+	//REG_ALL_PORT(REG_ENABLE_DL_TEST),	// being expanded for all channels
+	//REG_ALL_PORT(REG_UL_ORDER),	// being expanded for all channels
+	//REG_ALL_PORT(REG_PORT_ID),	// being expanded for all channels
 	REG_ALL_PORT(REG_UL_SYNC),	// being expanded for all channels
 	REG_DSP_VERSION,
 	REG_RANDOMNUMBER,
@@ -425,7 +426,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			break;
 		}
 	}
-
+/*
 	for(port=0; port<NB_OF_TETRA_PORTS; port++){
 		if((u32)this_attr->address == REG_PORT(port, REG_OFFSET_TLAST)){
 			match = 1;
@@ -460,7 +461,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			break;
 		}
 	}
-
+*/
 	if(match){
 		mutex_unlock(&indio_dev->mlock);
 		return ret ? ret : len;
@@ -629,7 +630,14 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	}
 
 	for(port=0; port<NB_OF_TETRA_PORTS; port++){
-		if((u32)this_attr->address == REG_PORT(port, REG_OFFSET_TLAST)){
+		if((u32)this_attr->address == REG_PORT(port, REG_UL_SYNC)){
+			match = 1;
+			val = (dras_radio_repeater_read(st, ADDR_UL_SFP_SYNC)>>port) & 0x1;
+			//val = (dras_radio_repeater_read(st, ADDR_PORT_ID(port))>>12) & 0x1;
+			break;
+		}
+/*
+		else if((u32)this_attr->address == REG_PORT(port, REG_OFFSET_TLAST)){
 			match = 1;
 			if(port<8){
 				shift = port*4;
@@ -661,11 +669,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 			val = dras_radio_repeater_read(st, ADDR_PORT_ID(port)) & 0xFFF;
 			break;
 		}
-		else if((u32)this_attr->address == REG_PORT(port, REG_UL_SYNC)){
-			match = 1;
-			val = (dras_radio_repeater_read(st, ADDR_PORT_ID(port))>>12) & 0x1;
-			break;
-		}
+*/
 	}
 
 	if(match){
@@ -810,7 +814,7 @@ IIO_DEVICE_ATTR_ALL_CH(downlink_unmute, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_DL_MUTE);
-
+/*
 IIO_DEVICE_ATTR_ALL_PORT(offset_tlast, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -830,7 +834,7 @@ IIO_DEVICE_ATTR_ALL_PORT(id, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_PORT_ID);
-
+*/
 IIO_DEVICE_ATTR_ALL_PORT(uplink_sync, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -880,10 +884,10 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	IIO_ATTR_ALL_CH(enable_frequency_translation),
 	IIO_ATTR_ALL_CH(uplink_best_source_max),
 	IIO_ATTR_ALL_CH(uplink_best_source_min),
-	IIO_ATTR_ALL_PORT(offset_tlast),
-	IIO_ATTR_ALL_PORT(enable_downlink_test),
-	IIO_ATTR_ALL_PORT(uplink_order),
-	IIO_ATTR_ALL_PORT(id),
+	//IIO_ATTR_ALL_PORT(offset_tlast),
+	//IIO_ATTR_ALL_PORT(enable_downlink_test),
+	//IIO_ATTR_ALL_PORT(uplink_order),
+	//IIO_ATTR_ALL_PORT(id),
 	IIO_ATTR_ALL_PORT(uplink_sync),
 	&iio_dev_attr_hash.dev_attr.attr,
 	&iio_dev_attr_randomnumber.dev_attr.attr,
