@@ -252,8 +252,8 @@ struct lmk04805_platform_data {
 //	bool						PLL2_CP_TRI;
 //	bool						PLL1_CP_POL;
 	uint8_t						PLL1_CP_GAIN;
-//	uint8_t						CLKin1_PreR_DIV;
-//	uint8_t						CLKin0_PreR_DIV;
+	uint8_t						CLKin1_PreR_DIV;
+	uint8_t						CLKin0_PreR_DIV;
 	uint16_t					PLL1_R;
 //	bool						PLL1_CP_TRI;
 	uint16_t					PLL2_R;
@@ -1386,6 +1386,8 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	lmk04805_inject_register_value(&st->pdata->reg_map[25], 22, 10, pdata->DAC_CLK_DIV);
 
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
+	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3 << 20)) | ((pdata->CLKin0_PreR_DIV & 0x3) << 20);
+	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3 << 22)) | ((pdata->CLKin1_PreR_DIV & 0x3) << 22);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3 << 26)) | ((pdata->PLL1_CP_GAIN & 0x3) << 26);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3FFF << 6)) | ((pdata->PLL1_R & 0x3FFF) << 6);
 	st->pdata->reg_map[28] = (st->pdata->reg_map[28] & ~(0x3FFF << 6)) | ((pdata->PLL1_N & 0x3FFF) << 6);
@@ -1508,6 +1510,32 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 		if(attr < 0){ pdata->PLL1_CP_GAIN = 0; printk("lmk04805: lmk,pll1-cp-gain=0\n"); }
 		else if(attr > 3){ pdata->PLL1_CP_GAIN = 3; printk("lmk04805: lmk,pll1-cp-gain=3\n"); }
 		else{ pdata->PLL1_CP_GAIN = attr; }
+	}
+
+	/* setting: CLKin0_PreR_div */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,clkin0-prer-div", &attr);
+	if(ret < 0){
+		pdata->CLKin0_PreR_DIV = 0;  // 0 = divide-by-1
+		printk("lmk04805: lmk,clkin0-prer-div=0\n");
+	}
+	else{
+		if(attr < 0){ pdata->CLKin0_PreR_DIV = 0; printk("lmk04805: lmk,clkin0-prer-div=0\n"); }
+		else if(attr > 3){ pdata->CLKin0_PreR_DIV = 3; printk("lmk04805: lmk,clkin0-prer-div=3\n"); }
+		else{ pdata->CLKin0_PreR_DIV = attr; }
+	}
+
+	/* setting: CLKin1_PreR_div */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,clkin1-prer-div", &attr);
+	if(ret < 0){
+		pdata->CLKin1_PreR_DIV = 0;  // 0 = divide-by-1
+		printk("lmk04805: lmk,clkin1-prer-div=0\n");
+	}
+	else{
+		if(attr < 0){ pdata->CLKin1_PreR_DIV = 0; printk("lmk04805: lmk,clkin1-prer-div=0\n"); }
+		else if(attr > 3){ pdata->CLKin1_PreR_DIV = 3; printk("lmk04805: lmk,clkin1-prer-div=3\n"); }
+		else{ pdata->CLKin1_PreR_DIV = attr; }
 	}
 
 	/* setting: PLL1_R */
