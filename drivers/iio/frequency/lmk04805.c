@@ -977,7 +977,7 @@ static ssize_t lmk04805_store(struct device *dev,
 			break;
 		lmk04805_inject_register_value(&reg, 9, 3, val);
 		st->pdata->reg_map[reg_num] = reg;
-		ret = lmk04805_sync_all_registers(indio_dev);
+		ret = lmk04805_write(indio_dev, reg_num, reg);
 		break;
 	default:
 		ret = -ENODEV;
