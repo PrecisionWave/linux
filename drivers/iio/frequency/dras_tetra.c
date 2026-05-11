@@ -963,8 +963,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<15);
-		temp32 += ((uint32_t)val)<<15;
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(3<<16);
+		temp32 += ((uint32_t)val)<<16;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_RF_MUTE:
