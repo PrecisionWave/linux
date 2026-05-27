@@ -1344,7 +1344,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 14) & 3;
 		break;
 	case REG_RX_DMA2_SOURCE_BAND1_RX1_BAND2_RX2:
-		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 15) & 3;
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 16) & 3;
 		break;
 	case REG_DSP_VERSION:
 		val = dras_tetra_read(st, ADDR_DSP_VERSION);
