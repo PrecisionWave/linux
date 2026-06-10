@@ -1851,7 +1851,7 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx2_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_gain.dev_attr.attr,
-	//&iio_dev_attr_tx_buffer_enable.dev_attr.attr,
+	&iio_dev_attr_tx_buffer_band_enable.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_mute_channel_mask.dev_attr.attr,
