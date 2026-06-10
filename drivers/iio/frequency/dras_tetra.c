@@ -229,7 +229,7 @@ enum chan_num{
 	REG_TX1_TESTTONE_AMPLITUDE2,
 	REG_TX2_TESTTONE_AMPLITUDE1,
 	REG_TX2_TESTTONE_AMPLITUDE2,
-	//REG_TX_BUFFER_ENABLE,
+	REG_TX_BUFFER_ENABLE,
 	REG_EN_DTF_SEQUENCER,
 	REG_TX_BUFFER_MASK,
 	REG_RX_BUFFER_MASK,
@@ -704,17 +704,15 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<13;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
-/*
 	case REG_TX_BUFFER_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<18);
-		temp32 += ((uint32_t)val)<<18;
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<19);
+		temp32 += ((uint32_t)val)<<19;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
-*/
 	case REG_TX_BUFFER_MASK:
 		dras_tetra_write(st, ADDR_TX_BUFFER_MASK, (u32)uval);
 		break;
@@ -1210,11 +1208,9 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_BAND2_WIDEBAND_MODE:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 13) & 1;
 		break;
-/*
 	case REG_TX_BUFFER_ENABLE:
-		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 18) & 1;
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 19) & 1;
 		break;
-*/
 	case REG_TX_BUFFER_MASK:
 		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MASK);
 		ret = sprintf(buf, "%08x\n", temp32);
@@ -1666,12 +1662,12 @@ static IIO_DEVICE_ATTR(tx2_buffer_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_TX2_BUFFER_GAIN);
-/*
-static IIO_DEVICE_ATTR(tx_buffer_enable, S_IRUGO | S_IWUSR,
+
+static IIO_DEVICE_ATTR(tx_buffer_band_enable, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
 			REG_TX_BUFFER_ENABLE);
-*/
+
 static IIO_DEVICE_ATTR(tx_buffer_mask, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
