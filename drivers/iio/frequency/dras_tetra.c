@@ -709,8 +709,8 @@ static ssize_t dras_tetra_store(struct device *dev,
 			ret = -EINVAL;
 			break;
 		}
-		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<19);
-		temp32 += ((uint32_t)val)<<19;
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<18);
+		temp32 += ((uint32_t)val)<<18;
 		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
 		break;
 	case REG_TX_BUFFER_MASK:
@@ -1209,7 +1209,7 @@ static ssize_t dras_tetra_show(struct device *dev,
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 13) & 1;
 		break;
 	case REG_TX_BUFFER_ENABLE:
-		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 19) & 1;
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 18) & 1;
 		break;
 	case REG_TX_BUFFER_MASK:
 		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MASK);
