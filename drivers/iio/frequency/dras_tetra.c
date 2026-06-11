@@ -41,6 +41,7 @@
 #define ADDR_WB_ROUTING_FILTERSEL		(16*4)
 #define ADDR_RX_DELAY				(17*4)
 #define ADDR_TX_DELAY				(18*4)
+#define ADDR_TX12_STREAMING_GAIN		(19*4)
 #define ADDR_TX21_GAIN				(20*4)
 #define ADDR_TESTTONE_AMPL_TX1			(21*4)
 #define ADDR_TESTTONE_AMPL_TX2			(22*4)
@@ -239,6 +240,8 @@ enum chan_num{
 	REG_TX2_BUFFER_MUTES_CHANNELS,
 	REG_TX1_BUFFER_GAIN,
 	REG_TX2_BUFFER_GAIN,
+	REG_TX1_STREAMING_GAIN,
+	REG_TX2_STREAMING_GAIN,
 	REG_TX1_AVG_PWR,
 	REG_TX2_AVG_PWR,
 	REG_TX1_PEAK_PWR,
@@ -611,6 +614,24 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) & 0xFFFF;
 		temp32 += ((uint32_t)val)<<16;
 		dras_tetra_write(st, ADDR_TX12_BUFFER_GAIN, temp32);
+		break;
+	case REG_TX1_STREAMING_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX12_STREAMING_GAIN) & 0xFFFF0000;
+		temp32 += (uint32_t)val;
+		dras_tetra_write(st, ADDR_TX12_STREAMING_GAIN, temp32);
+		break;
+	case REG_TX2_STREAMING_GAIN:
+		if(val<0 || val>0xFFFF){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_TX12_STREAMING_GAIN) & 0xFFFF;
+		temp32 += ((uint32_t)val)<<16;
+		dras_tetra_write(st, ADDR_TX12_STREAMING_GAIN, temp32);
 		break;
 	case REG_BAND1_FILTER_SELECTION:
 		if(val<1 || val>4){
@@ -1164,6 +1185,12 @@ static ssize_t dras_tetra_show(struct device *dev,
 	case REG_TX2_BUFFER_GAIN:
 		val = dras_tetra_read(st, ADDR_TX12_BUFFER_GAIN) >> 16;
 		break;
+	case REG_TX1_STREAMING_GAIN:
+		val = dras_tetra_read(st, ADDR_TX12_STREAMING_GAIN) & 0xFFFF;
+		break;
+	case REG_TX2_STREAMING_GAIN:
+		val = dras_tetra_read(st, ADDR_TX12_STREAMING_GAIN) >> 16;
+		break;
 	case REG_TX1_AVG_PWR:
 		val = dras_tetra_read(st, ADDR_TX_AVG_PWR1) & 0x7FFFFFFF;
 		break;
@@ -1663,6 +1690,16 @@ static IIO_DEVICE_ATTR(tx2_buffer_gain, S_IRUGO | S_IWUSR,
 			dras_tetra_store,
 			REG_TX2_BUFFER_GAIN);
 
+static IIO_DEVICE_ATTR(tx1_streaming_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX1_STREAMING_GAIN);
+
+static IIO_DEVICE_ATTR(tx2_streaming_gain, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_TX2_STREAMING_GAIN);
+
 static IIO_DEVICE_ATTR(tx_buffer_band_enable, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1851,6 +1888,8 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_tx2_testtone_amplitude2.dev_attr.attr,
 	&iio_dev_attr_tx1_buffer_gain.dev_attr.attr,
 	&iio_dev_attr_tx2_buffer_gain.dev_attr.attr,
+	&iio_dev_attr_tx1_streaming_gain.dev_attr.attr,
+	&iio_dev_attr_tx2_streaming_gain.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_band_enable.dev_attr.attr,
 	&iio_dev_attr_tx_buffer_mask.dev_attr.attr,
 	&iio_dev_attr_rx_buffer_mask.dev_attr.attr,
