@@ -47,6 +47,8 @@
 #define ADDR_DEMOD_SETTINGS		4*11
 #define ADDR_PPS_SETTINGS		4*12
 #define ADDR_WATCHDOG			4*13
+#define ADDR_FRAME_PERIOD		4*14
+#define ADDR_FRAME_LENGTH		4*15
 
 #define ADDR_BLOCK_SETTINGS(x)		(ADDR_START_BLOCK+x*ADDR_PER_BLOCK+4*0)
 #define ADDR_BLOCK_DEMOD_GAIN(x)	(ADDR_START_BLOCK+x*ADDR_PER_BLOCK+4*1)
@@ -259,6 +261,8 @@ enum chan_num{
 	REG_ADC_BER_CHECKER,
 	REG_DEMOD_SOURCE_CHANNEL,
 	REG_DEMOD_COARSE_FREQ_ERR,
+	REG_IQBUF_FRAME_PERIOD,
+	REG_IQBUF_FRAME_LENGTH,
 	REG_WATCHDOG_ENABLE,
 	REG_WATCHDOG_TRIGGER,
 	REG_SATURATION_MUTING_OCCURRENCE,
@@ -612,6 +616,12 @@ static ssize_t vbi_dab_dsp_store(struct device *dev,
 		}
 		vbi_dab_dsp_write(st, ADDR_DEMOD_SETTINGS, (u32)val);
 		break;
+	case REG_IQBUF_FRAME_PERIOD:
+		vbi_dab_dsp_write(st, ADDR_FRAME_PERIOD, (u32)val);
+		break;
+	case REG_IQBUF_FRAME_LENGTH:
+		vbi_dab_dsp_write(st, ADDR_FRAME_LENGTH, (u32)val);
+		break;
 	case REG_WATCHDOG_ENABLE:
 		if(val<0 || val>1){
 			ret = -EINVAL;
@@ -878,34 +888,15 @@ static ssize_t vbi_dab_dsp_show(struct device *dev,
 	case REG_DEMOD_SOURCE_CHANNEL:
 		val = vbi_dab_dsp_read(st, ADDR_DEMOD_SETTINGS) & 0xF;
 		break;
+	case REG_IQBUF_FRAME_PERIOD:
+		val = vbi_dab_dsp_read(st, ADDR_FRAME_PERIOD);
+		break;
+	case REG_IQBUF_FRAME_LENGTH:
+		val = vbi_dab_dsp_read(st, ADDR_FRAME_LENGTH);
+		break;
 	case REG_DEMOD_COARSE_FREQ_ERR:
-		val = vbi_dab_dsp_read(st, ADDR_DEMOD_COARSE_FREQ_ERR) & 0x7;
-		switch(val){
-			case 1:
-				val=3000;
-				break;
-			case 2:
-				val=2000;
-				break;
-			case 3:
-				val=1000;
-				break;
-			case 4:
-				val=0;
-				break;
-			case 5:
-				val=-1000;
-				break;
-			case 6:
-				val=-2000;
-				break;
-			case 7:
-				val=-3000;
-				break;
-			default:
-				val=0;
-				break;
-		}
+		val = vbi_dab_dsp_read(st, ADDR_DEMOD_COARSE_FREQ_ERR) & 0x3F;
+		val = -(val-4*8)*(1000/8);
 		break;
 	case REG_WATCHDOG_ENABLE:
 		val = (vbi_dab_dsp_read(st, ADDR_WATCHDOG) >>0) & 1;
@@ -1151,6 +1142,16 @@ static IIO_DEVICE_ATTR(demod_source_channel, S_IRUGO | S_IWUSR,
 			vbi_dab_dsp_store,
 			REG_DEMOD_SOURCE_CHANNEL);
 
+static IIO_DEVICE_ATTR(iq_buffer_frame_period, S_IRUGO | S_IWUSR,
+			vbi_dab_dsp_show,
+			vbi_dab_dsp_store,
+			REG_IQBUF_FRAME_PERIOD);
+
+static IIO_DEVICE_ATTR(iq_buffer_frame_length, S_IRUGO | S_IWUSR,
+			vbi_dab_dsp_show,
+			vbi_dab_dsp_store,
+			REG_IQBUF_FRAME_LENGTH);
+
 static IIO_DEVICE_ATTR(demod_coarse_freq_err, S_IRUGO,
 			vbi_dab_dsp_show,
 			vbi_dab_dsp_store,
@@ -1271,6 +1272,8 @@ static struct attribute *vbi_dab_dsp_attributes[] = {
 	&iio_dev_attr_adc_ber_alternate.dev_attr.attr,
 	&iio_dev_attr_adc_ber_checker.dev_attr.attr,
 	&iio_dev_attr_demod_source_channel.dev_attr.attr,
+	&iio_dev_attr_iq_buffer_frame_period.dev_attr.attr,
+	&iio_dev_attr_iq_buffer_frame_length.dev_attr.attr,
 	&iio_dev_attr_demod_coarse_freq_err.dev_attr.attr,
 	&iio_dev_attr_watchdog_enable.dev_attr.attr,
 	&iio_dev_attr_watchdog_trigger.dev_attr.attr,
