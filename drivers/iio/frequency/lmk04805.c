@@ -218,12 +218,12 @@ struct lmk04805_platform_data {
 //	uint8_t						Status_CLKin0_TYPE;
 //	bool						DISABLE_DLD1_DET;
 //	uint8_t						Status_CLKin0_MUX;
-//	uint8_t						CLKin_SELECT_MODE;
+	uint8_t						CLKin_SELECT_MODE;
 //	bool						CLKin_Sel_INV;
 //
 //	/* CLKin Control */
-//	bool						EN_CLKin1;
-//	bool						EN_CLKin0;
+	bool						EN_CLKin1;
+	bool						EN_CLKin0;
 //	uint8_t						LOS_TIMEOUT;
 //	bool						EN_LOS;
 //	uint8_t						Status_CLKin1_TYPE;
@@ -1414,6 +1414,10 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 
 	lmk04805_inject_register_value(&st->pdata->reg_map[11], 27, 5, pdata->VCO_MODE);
 
+	lmk04805_inject_register_value(&st->pdata->reg_map[13], 5, 1, pdata->EN_CLKin0);
+	lmk04805_inject_register_value(&st->pdata->reg_map[13], 6, 1, pdata->EN_CLKin1);
+	lmk04805_inject_register_value(&st->pdata->reg_map[13], 9, 3, pdata->CLKin_SELECT_MODE);
+
 	st->pdata->reg_map[26] = (st->pdata->reg_map[26] & ~(0x1 << 29)) | ((pdata->EN_PLL2_REF_2X & 0x1) << 29);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3 << 26)) | ((pdata->PLL1_CP_GAIN & 0x3) << 26);
 	st->pdata->reg_map[27] = (st->pdata->reg_map[27] & ~(0x3FFF << 6)) | ((pdata->PLL1_R & 0x3FFF) << 6);
@@ -1678,6 +1682,21 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 	}
 	else{
 		pdata->OSCout1_LVPECL_AMP = attr;
+	}
+
+	/* CLKin Enables */
+	pdata->EN_CLKin0 = of_property_read_bool(np, "lmk,en-clkin0");
+	pdata->EN_CLKin1 = of_property_read_bool(np, "lmk,en-clkin1");
+
+	/* setting: CLKin_SELECT_MODE */
+	attr = 0;
+	ret = of_property_read_u32(np, "lmk,clkin-select-mode", &attr);
+	if(ret < 0){
+		printk("lmk04805: warning - lmk,clkin-select-mode=0\n");
+		pdata->CLKin_SELECT_MODE = 0;
+	}
+	else{
+		pdata->CLKin_SELECT_MODE = attr;
 	}
 
 	/* Output Channel Configuration */
