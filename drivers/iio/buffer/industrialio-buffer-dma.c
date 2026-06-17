@@ -91,7 +91,7 @@
  * callback is called from within the custom callback.
  */
 
-static unsigned int iio_dma_buffer_max_block_size = SZ_16M;
+static unsigned int iio_dma_buffer_max_block_size = SZ_256M;
 module_param_named(max_block_size, iio_dma_buffer_max_block_size, uint, 0644);
 
 static void iio_buffer_block_release(struct kref *kref)
