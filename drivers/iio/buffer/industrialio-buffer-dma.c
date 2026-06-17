@@ -96,7 +96,7 @@
  */
 
 #ifdef CONFIG_IIO_DMA_BUF_MMAP_LEGACY
-static unsigned int iio_dma_buffer_max_block_size = SZ_16M;
+static unsigned int iio_dma_buffer_max_block_size = SZ_256M;
 module_param_named(max_block_size, iio_dma_buffer_max_block_size, uint, 0644);
 #endif
 
