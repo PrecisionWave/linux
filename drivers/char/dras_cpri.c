@@ -91,29 +91,29 @@ static int dras_cpri_mmap_page(struct dras_cpri_priv *priv,
 static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 {
 	struct dras_cpri_priv *priv = filep->private_data;
-	resource_size_t res_start = 0;
+	struct resource* res = NULL;
 
 	// dev_info(priv->dev, "mmap for vma->vm_pgoff %lx\n", vma->vm_pgoff);
 
 	switch (vma->vm_pgoff) {
 	case DRAS_CPRI_MMAP_PORTID_REG:
-		res_start = priv->portid_reg.res->start;
+		res = priv->portid_reg.res;
 		break;
 
 	case DRAS_CPRI_MMAP_RECCLK_REG:
-		res_start = priv->portid_reg.res->start;
+		res = priv->recclk_reg.res;
 		break;
 
 	case DRAS_CPRI_MMAP_FREQCNTR_REG:
-		res_start = priv->portid_reg.res->start;
+		res = priv->freqcntr_reg.res;
 		break;
 
 	case DRAS_CPRI_MMAP_CLKMON_REG + 0:
-		res_start = priv->clkmon_regs[0].res->start;
+		res = priv->clkmon_regs[0].res;
 		break;
 
 	case DRAS_CPRI_MMAP_CLKMON_REG + 1:
-		res_start = priv->clkmon_regs[1].res->start;
+		res = priv->clkmon_regs[1].res;
 		break;
 
 	default:
@@ -123,7 +123,7 @@ static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 				    DRAS_CPRI_MMAP_XLNX_PORT_REG_START;
 			if (index >= priv->port_count)
 				return -EINVAL;
-			res_start = priv->xlnx_regs[index].res->start;
+			res = priv->xlnx_regs[index].res;
 			break;
 		}
 
@@ -133,15 +133,17 @@ static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 				    DRAS_CPRI_MMAP_PCW_PORT_REG_START;
 			if (index >= priv->port_count)
 				return -EINVAL;
-			res_start = priv->pcw_regs[index].res->start;
+			res = priv->pcw_regs[index].res;
 			break;
 		}
 
 		return -EINVAL;
 	}
 
-	if (res_start > 0)
-		return dras_cpri_mmap_page(priv, vma, res_start);
+	if (!res)
+		return -EINVAL;
+	if (res->start > 0)
+		return dras_cpri_mmap_page(priv, vma, res->start);
 	return -EINVAL;
 }
 
