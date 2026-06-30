@@ -187,19 +187,29 @@ static int dras_cpri_map_optional_reg(struct platform_device *pdev,
 {
 	struct device_node *np;
 	np = of_get_child_by_name(pdev->dev.of_node, child_name);
-	if (np) {
-		cpri_reg->res = devm_kzalloc(&pdev->dev, sizeof(*cpri_reg->res),
-					     GFP_KERNEL);
-		if (IS_ERR(cpri_reg->res))
-			return PTR_ERR(cpri_reg->res);
-
-		// resource is optional
-		if (of_address_to_resource(np, index, cpri_reg->res))
-			return 0;
-
-		cpri_reg->iomem =
-			devm_ioremap_resource(&pdev->dev, cpri_reg->res);
+	if (!np) {
+		dev_info(&pdev->dev, "Optional resource %s not found in dt!\n",
+			 child_name);
+		return -EINVAL;
 	}
+
+	cpri_reg->res = devm_kzalloc(&pdev->dev, sizeof(*cpri_reg->res),
+					GFP_KERNEL);
+	if (IS_ERR(cpri_reg->res)) {
+		dev_err(&pdev->dev, "Failed to allocate memory!\n");
+		return PTR_ERR(cpri_reg->res);
+	}
+
+	// resource is optional
+	if (of_address_to_resource(np, index, cpri_reg->res)) {
+		dev_info(&pdev->dev, "Failed to get address for %s!\n",
+			 child_name);
+		return -EINVAL;
+	}
+
+	cpri_reg->iomem =
+		devm_ioremap_resource(&pdev->dev, cpri_reg->res);
+
 	return 0;
 }
 
