@@ -34,6 +34,10 @@
 #define ADDR_SQUELCH			(162*4)
 #define ADDR_CHANNEL_EN			(163*4)
 #define ADDR_MUTE_LEN			(164*4)
+#define ADDR_LLF_BANDSEL		(165*4)
+#define ADDR_NB_FILTER_SEL0		(166*4)
+#define ADDR_NB_FILTER_SEL1		(167*4)
+#define ADDR_BAND12_LLF_MODE		(168*4)
 #define ADDR_GAIN_LIMIT_DL		(172*4)
 #define ADDR_TARGET_PWR_DL		(173*4)
 #define ADDR_SQUELCH_DL			(174*4)
@@ -230,12 +234,17 @@ enum chan_num{
 	REG_ALL_CH(REG_DL_TARGET_POWER),	// being expanded for all channels
 	REG_ALL_CH(REG_DL_SQUELCH),	// being expanded for all channels
 	REG_ALL_CH(REG_DL_GAIN_LIMIT),	// being expanded for all channels
-	REG_ALL_CH(REG_DL_MUTE),	// being expanded for all channels
+	REG_ALL_CH(REG_DL_MUTE),	// being expanded for all channels 
+	REG_ALL_CH(REG_FILTER_SELECTION),	// being expanded for all channels 
+	REG_ALL_CH(REG_LLF_ENABLE),	// being expanded for all channels 
+	REG_ALL_CH(REG_LLF_BAND_SEL),	// being expanded for all channels 
 	//REG_ALL_PORT(REG_OFFSET_TLAST),	// being expanded for all channels
 	//REG_ALL_PORT(REG_ENABLE_DL_TEST),	// being expanded for all channels
 	//REG_ALL_PORT(REG_UL_ORDER),	// being expanded for all channels
 	//REG_ALL_PORT(REG_PORT_ID),	// being expanded for all channels
 	REG_ALL_PORT(REG_UL_SYNC),	// being expanded for all channels
+	REG_BAND1_LLF_ENABLE,
+	REG_BAND2_LLF_ENABLE,
 	REG_DSP_VERSION,
 	REG_RANDOMNUMBER,
 	REG_HASH,
@@ -425,6 +434,46 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 			dras_radio_repeater_write(st, ADDR_GAIN_LIMIT_DL, temp32);
 			break;
 		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
+			match = 1;
+			if(val<1 || val>8){
+				ret = -EINVAL;
+				break;
+			}
+			val--;
+			if(ch<8){
+				temp32 = dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL0) & ~(7<<(4*ch));
+				temp32 += ((uint32_t)val)<<(4*ch);
+				dras_radio_repeater_write(st, ADDR_NB_FILTER_SEL0, temp32);
+			}else{
+				temp32 = dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL1) & ~(7<<(4*ch-32));
+				temp32 += ((uint32_t)val)<<(4*ch-32);
+				dras_radio_repeater_write(st, ADDR_NB_FILTER_SEL1, temp32);
+			}
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_LLF_ENABLE)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			temp32 = dras_radio_repeater_read(st, ADDR_LLF_BANDSEL) & ~(1<<ch);
+			temp32 += ((uint32_t)val)<<ch;
+			dras_radio_repeater_write(st, ADDR_LLF_BANDSEL, temp32);
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_LLF_BAND_SEL)){
+			match = 1;
+			if(val<0 || val>1){
+				ret = -EINVAL;
+				break;
+			}
+			temp32 = dras_radio_repeater_read(st, ADDR_LLF_BANDSEL) & ~(1<<(ch+16));
+			temp32 += ((uint32_t)val)<<(ch+16);
+			dras_radio_repeater_write(st, ADDR_LLF_BANDSEL, temp32);
+			break;
+		}
 	}
 /*
 	for(port=0; port<NB_OF_TETRA_PORTS; port++){
@@ -477,6 +526,24 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		temp32 = dras_radio_repeater_read(st, ADDR_MUTE_LEN) & ~(1<<15);
 		temp32 += ((uint32_t)val)<<15;
 		dras_radio_repeater_write(st, ADDR_MUTE_LEN, temp32);
+		break;
+	case REG_BAND1_LLF_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<0);
+		temp32 += ((uint32_t)val)<<0;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
+	case REG_BAND2_LLF_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<1);
+		temp32 += ((uint32_t)val)<<1;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
 		break;
 	case REG_HASH:
 		dras_radio_repeater_write(st, ADDR_HASH, (u32)val);
@@ -627,6 +694,25 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 			val = (dras_radio_repeater_read(st, ADDR_RSSI_UL(ch))>>20) & 0xF;
 			break;
 		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
+			match = 1;
+			if(ch<8){
+				val = 1+(((dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL0) >> (4*ch)) & 7));
+			}else{
+				val = 1+(((dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL1) >> (4*ch-32)) & 7));
+			}
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_LLF_ENABLE)){
+			match = 1;
+			val = (dras_radio_repeater_read(st, ADDR_LLF_BANDSEL) >> ch) & 1;
+			break;
+		}
+		else if((u32)this_attr->address == REG_CH(ch, REG_LLF_BAND_SEL)){
+			match = 1;
+			val = (dras_radio_repeater_read(st, ADDR_LLF_BANDSEL) >> (ch+16)) & 1;
+			break;
+		}
 	}
 
 	for(port=0; port<NB_OF_TETRA_PORTS; port++){
@@ -683,6 +769,12 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	switch ((u32)this_attr->address) {
 	case REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE:
 		val = (dras_radio_repeater_read(st, ADDR_MUTE_LEN)>>15) & 0x1;
+		break;
+	case REG_BAND1_LLF_ENABLE:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>0) & 0x1;
+		break;
+	case REG_BAND2_LLF_ENABLE:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>1) & 0x1;
 		break;
 	case REG_HASH:
 		val = dras_radio_repeater_read(st, ADDR_HASH);
@@ -790,6 +882,16 @@ IIO_DEVICE_ATTR_ALL_CH(channel_enable, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_store,
 			REG_CHANNEL_ENABLE);
 
+IIO_DEVICE_ATTR_ALL_CH(low_latency_filter_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_LLF_ENABLE);
+
+IIO_DEVICE_ATTR_ALL_CH(low_latency_filter_band_selection, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_LLF_BAND_SEL);
+
 IIO_DEVICE_ATTR_ALL_CH(enable_frequency_translation, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -814,6 +916,11 @@ IIO_DEVICE_ATTR_ALL_CH(downlink_unmute, S_IRUGO,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_DL_MUTE);
+
+IIO_DEVICE_ATTR_ALL_CH(filter_selection, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_FILTER_SELECTION);
 /*
 IIO_DEVICE_ATTR_ALL_PORT(offset_tlast, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
@@ -844,6 +951,16 @@ static IIO_DEVICE_ATTR(wideband_mu_rxtx4_for_coverage, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
 			REG_WIDEBAND_MU_RXTX4_FOR_COVERAGE);
+
+static IIO_DEVICE_ATTR(band1_low_latency_filter_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND1_LLF_ENABLE);
+
+static IIO_DEVICE_ATTR(band2_low_latency_filter_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND2_LLF_ENABLE);
 
 static IIO_DEVICE_ATTR(hash, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
@@ -884,6 +1001,9 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	IIO_ATTR_ALL_CH(enable_frequency_translation),
 	IIO_ATTR_ALL_CH(uplink_best_source_max),
 	IIO_ATTR_ALL_CH(uplink_best_source_min),
+	IIO_ATTR_ALL_CH(filter_selection),
+	IIO_ATTR_ALL_CH(low_latency_filter_enable),
+	IIO_ATTR_ALL_CH(low_latency_filter_band_selection),
 	//IIO_ATTR_ALL_PORT(offset_tlast),
 	//IIO_ATTR_ALL_PORT(enable_downlink_test),
 	//IIO_ATTR_ALL_PORT(uplink_order),
@@ -893,6 +1013,8 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	&iio_dev_attr_randomnumber.dev_attr.attr,
 	&iio_dev_attr_dsp_version.dev_attr.attr,
 	&iio_dev_attr_wideband_mu_rxtx4_for_coverage.dev_attr.attr,
+	&iio_dev_attr_band1_low_latency_filter_enable.dev_attr.attr,
+	&iio_dev_attr_band2_low_latency_filter_enable.dev_attr.attr,
 	NULL,
 };
 
