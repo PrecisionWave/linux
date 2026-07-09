@@ -222,6 +222,8 @@ enum chan_num{
 	REG_BAND2_TX_DELAY,
 	REG_BAND1_RX_DELAY,
 	REG_BAND2_RX_DELAY,
+	REG_BAND1_LLF_ENABLE,
+	REG_BAND2_LLF_ENABLE,
 	REG_TX1_TESTTONE_FREQUENCY1,
 	REG_TX1_TESTTONE_FREQUENCY2,
 	REG_TX2_TESTTONE_FREQUENCY1,
@@ -935,6 +937,24 @@ static ssize_t dras_tetra_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<10;
 		dras_tetra_write(st, ADDR_RX_DELAY, temp32);
 		break;
+	case REG_BAND1_LLF_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<19);
+		temp32 += ((uint32_t)val)<<19;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
+	case REG_BAND2_LLF_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) & ~(1<<20);
+		temp32 += ((uint32_t)val)<<20;
+		dras_tetra_write(st, ADDR_WB_ROUTING_FILTERSEL, temp32);
+		break;
 	case REG_RX_BURST_LENGTH1:
 		if(val>0xFFFF){
 			//ret = -EINVAL;
@@ -1237,6 +1257,12 @@ static ssize_t dras_tetra_show(struct device *dev,
 		break;
 	case REG_TX_BUFFER_ENABLE:
 		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 18) & 1;
+		break;
+	case REG_BAND1_LLF_ENABLE: 
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 19) & 1;
+		break;
+	case REG_BAND2_LLF_ENABLE: 
+		val = (dras_tetra_read(st, ADDR_WB_ROUTING_FILTERSEL) >> 20) & 1;
 		break;
 	case REG_TX_BUFFER_MASK:
 		temp32 = dras_tetra_read(st, ADDR_TX_BUFFER_MASK);
@@ -1640,6 +1666,16 @@ static IIO_DEVICE_ATTR(band2_unmute, S_IRUGO,
 			dras_tetra_store,
 			REG_BAND2_UNMUTE);
 
+static IIO_DEVICE_ATTR(band1_low_latency_filter_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND1_LLF_ENABLE);
+
+static IIO_DEVICE_ATTR(band2_low_latency_filter_enable, S_IRUGO | S_IWUSR,
+			dras_tetra_show,
+			dras_tetra_store,
+			REG_BAND2_LLF_ENABLE);
+
 static IIO_DEVICE_ATTR(tx1_testtone_frequency1, S_IRUGO | S_IWUSR,
 			dras_tetra_show,
 			dras_tetra_store,
@@ -1874,6 +1910,8 @@ static struct attribute *dras_tetra_attributes[] = {
 	&iio_dev_attr_band2_rssi_min.dev_attr.attr,
 	&iio_dev_attr_band1_unmute.dev_attr.attr,
 	&iio_dev_attr_band2_unmute.dev_attr.attr,
+	&iio_dev_attr_band1_low_latency_filter_enable.dev_attr.attr,
+	&iio_dev_attr_band2_low_latency_filter_enable.dev_attr.attr,
 	&iio_dev_attr_band1_tx_delay.dev_attr.attr,
 	&iio_dev_attr_band2_tx_delay.dev_attr.attr,
 	&iio_dev_attr_band1_rx_delay.dev_attr.attr,
