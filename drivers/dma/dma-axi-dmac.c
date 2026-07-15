@@ -449,6 +449,8 @@ static int axi_dmac_terminate_all(struct dma_chan *c)
 	spin_lock_irqsave(&chan->vchan.lock, flags);
 	axi_dmac_write(dmac, AXI_DMAC_REG_CTRL, 0);
 	chan->next_desc = NULL;
+	/* A latched completion IRQ can re-set vc->cyclic to a freed descriptor; clear it first. */
+	chan->vchan.cyclic = NULL;
 	vchan_get_all_descriptors(&chan->vchan, &head);
 	list_splice_tail_init(&chan->active_descs, &head);
 	spin_unlock_irqrestore(&chan->vchan.lock, flags);
