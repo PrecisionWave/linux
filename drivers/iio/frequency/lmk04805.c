@@ -407,6 +407,7 @@ struct lmk04805_state {
 	uint8_t		clk_output_format[LMK04805_NUM_CHAN];
 	unsigned long	oscin_freq;
 	unsigned long	vco_freq;
+	unsigned long	pfd2_freq;
 	unsigned long	vco_out_freq;
 
 	struct gpio_desc*	status_ld;
@@ -572,15 +573,18 @@ static void recalc_vco_freq(struct iio_dev *indio_dev)
 	struct lmk04805_platform_data *pdata = st->pdata;
 
 	st->oscin_freq = pdata->vcxo_freq;
-	st->vco_freq = (pdata->vcxo_freq * (pdata->EN_PLL2_REF_2X ? 2 : 1)
-			/ pdata->PLL2_R) * (pdata->VCO_MUX ? pdata->VCO_DIV : 1)
+	st->pfd2_freq = st->oscin_freq * (pdata->EN_PLL2_REF_2X ? 2 : 1)
+			/ pdata->PLL2_R;
+	st->vco_freq = st->pfd2_freq * (pdata->VCO_MUX ? pdata->VCO_DIV : 1)
 			* pdata->PLL2_P * pdata->PLL2_N;
 
 	st->vco_out_freq = st->vco_freq / (pdata->VCO_MUX ? pdata->VCO_DIV : 1);
 	// st->vco_out_freq /= pdata->channels[7].clock_divider;
 	// st->vco_out_freq *= pdata->channels[7].clock_divider;
 
-	if (st->vco_freq > 100000000)
+	// Set PLL2_FAST_PDF according to PLL2 PD frequency: This bit should
+	// be enabled when using high speed PLL2 phase detectors.  > 100 MHz.
+	if (st->pfd2_freq > 100000000UL)
 		lmk04805_inject_register_value(&st->pdata->reg_map[29], 23, 1, 1);
 	else
 		lmk04805_inject_register_value(&st->pdata->reg_map[29], 23, 1, 0);
