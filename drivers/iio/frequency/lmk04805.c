@@ -555,16 +555,54 @@ int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
 
 	for(i=-1; i<32; i++){
 		if(i == 17)
-			i=24;
-		else if(i == -1)
+			i = 24;
+
+		if(i == -1)
 			ret = lmk04805_spi_write(indio_dev, 0x80160140); // perform RESET
 		else
 			ret = lmk04805_spi_write(indio_dev, st->pdata->reg_map[i]);
+
 		if(ret)
 			return ret;
 	}
 
 	return 0;
+}
+
+int lmk04805_init_workaround(struct iio_dev *indio_dev){
+	struct lmk04805_state *st = iio_priv(indio_dev);
+	int ret = 0;
+	int i;
+	uint32_t saved_regs[6];
+
+	dev_info(&indio_dev->dev, "lmk04805_init_workaround");
+
+	/* Save R0-R5 configuration and set output PowerDown bit */
+	for(i=0; i<6; i++) {
+		saved_regs[i] = st->pdata->reg_map[i];
+		lmk04805_inject_register_value(&st->pdata->reg_map[i], 31, 1, 1);
+	}
+
+	ret = lmk04805_sync_all_registers(indio_dev);
+	if(ret)
+		return ret;
+	msleep(500);
+
+	/* HACK: Some devices need two complete register writes to work */
+	ret = lmk04805_sync_all_registers(indio_dev);
+	if(ret)
+		return ret;
+	msleep(500);
+
+	/* Restore R0-R5 configuration */
+	for(i=0; i<6; i++) {
+		st->pdata->reg_map[i] = saved_regs[i];
+		ret = lmk04805_spi_write(indio_dev, st->pdata->reg_map[i]);
+		if(ret)
+			return ret;
+	}
+
+	return ret;
 }
 
 static void recalc_vco_freq(struct iio_dev *indio_dev)
@@ -1437,12 +1475,8 @@ static int lmk04805_setup(struct iio_dev *indio_dev)
 	}
 
 	/* write all registers to the chip */
-	lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x01);  // set POWERDOWN
-	lmk04805_sync_all_registers(indio_dev);
-	msleep(1000);	// give the lmk04805 some time to setup the clocks
-	lmk04805_inject_register_value(&st->pdata->reg_map[1], 17, 1, 0x00);  // reset POWERDOWN
-	lmk04805_spi_write(indio_dev, st->pdata->reg_map[1]);
-	msleep(300);	// give the lmk04805 some time to setup the clocks
+	lmk04805_init_workaround(indio_dev);
+	msleep(500);	// give the lmk04805 some time to setup the clocks
 
 	st->clk_data.clks = st->clks;
 	st->clk_data.clk_num = LMK04805_NUM_CHAN;
