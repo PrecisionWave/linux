@@ -465,10 +465,11 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_LLF_BAND_SEL)){
 			match = 1;
-			if(val<0 || val>1){
+			if(val<1 || val>2){
 				ret = -EINVAL;
 				break;
 			}
+			val--;
 			temp32 = dras_radio_repeater_read(st, ADDR_LLF_BANDSEL) & ~(1<<(ch+16));
 			temp32 += ((uint32_t)val)<<(ch+16);
 			dras_radio_repeater_write(st, ADDR_LLF_BANDSEL, temp32);
@@ -711,6 +712,7 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_CH(ch, REG_LLF_BAND_SEL)){
 			match = 1;
 			val = (dras_radio_repeater_read(st, ADDR_LLF_BANDSEL) >> (ch+16)) & 1;
+			val++;
 			break;
 		}
 	}
