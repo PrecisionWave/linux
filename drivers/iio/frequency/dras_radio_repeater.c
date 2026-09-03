@@ -245,6 +245,10 @@ enum chan_num{
 	REG_ALL_PORT(REG_UL_SYNC),	// being expanded for all channels
 	REG_BAND1_LLF_ENABLE,
 	REG_BAND2_LLF_ENABLE,
+	REG_BAND1_DL_IQSTREAM_ENABLE,
+	REG_BAND2_DL_IQSTREAM_ENABLE,
+	REG_BAND1_UL_IQSTREAM_ENABLE,
+	REG_BAND2_UL_IQSTREAM_ENABLE,
 	REG_DSP_VERSION,
 	REG_RANDOMNUMBER,
 	REG_HASH,
@@ -546,6 +550,42 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<1;
 		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
 		break;
+	case REG_BAND1_DL_IQSTREAM_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<2);
+		temp32 += ((uint32_t)val)<<2;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
+	case REG_BAND2_DL_IQSTREAM_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<3);
+		temp32 += ((uint32_t)val)<<3;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
+	case REG_BAND1_UL_IQSTREAM_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<4);
+		temp32 += ((uint32_t)val)<<4;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
+	case REG_BAND2_UL_IQSTREAM_ENABLE: 
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<5);
+		temp32 += ((uint32_t)val)<<5;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
 	case REG_HASH:
 		dras_radio_repeater_write(st, ADDR_HASH, (u32)val);
 		break;
@@ -778,6 +818,18 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	case REG_BAND2_LLF_ENABLE:
 		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>1) & 0x1;
 		break;
+	case REG_BAND1_DL_IQSTREAM_ENABLE:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>2) & 0x1;
+		break;
+	case REG_BAND2_DL_IQSTREAM_ENABLE:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>3) & 0x1;
+		break;
+	case REG_BAND1_UL_IQSTREAM_ENABLE:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>4) & 0x1;
+		break;
+	case REG_BAND2_UL_IQSTREAM_ENABLE:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>5) & 0x1;
+		break;
 	case REG_HASH:
 		val = dras_radio_repeater_read(st, ADDR_HASH);
 		break;
@@ -964,6 +1016,26 @@ static IIO_DEVICE_ATTR(band2_low_latency_filter_enable, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_store,
 			REG_BAND2_LLF_ENABLE);
 
+static IIO_DEVICE_ATTR(band1_downlink_iq_stream_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND1_DL_IQSTREAM_ENABLE);
+
+static IIO_DEVICE_ATTR(band2_downlink_iq_stream_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND2_DL_IQSTREAM_ENABLE);
+
+static IIO_DEVICE_ATTR(band1_uplink_iq_stream_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND1_UL_IQSTREAM_ENABLE);
+
+static IIO_DEVICE_ATTR(band2_uplink_iq_stream_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND2_UL_IQSTREAM_ENABLE);
+
 static IIO_DEVICE_ATTR(hash, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -1017,6 +1089,10 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	&iio_dev_attr_wideband_mu_rxtx4_for_coverage.dev_attr.attr,
 	&iio_dev_attr_band1_low_latency_filter_enable.dev_attr.attr,
 	&iio_dev_attr_band2_low_latency_filter_enable.dev_attr.attr,
+	&iio_dev_attr_band1_downlink_iq_stream_enable.dev_attr.attr,
+	&iio_dev_attr_band2_downlink_iq_stream_enable.dev_attr.attr,
+	&iio_dev_attr_band1_uplink_iq_stream_enable.dev_attr.attr,
+	&iio_dev_attr_band2_uplink_iq_stream_enable.dev_attr.attr,
 	NULL,
 };
 
