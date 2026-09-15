@@ -249,6 +249,8 @@ enum chan_num{
 	REG_BAND2_DL_IQSTREAM_ENABLE,
 	REG_BAND1_UL_IQSTREAM_ENABLE,
 	REG_BAND2_UL_IQSTREAM_ENABLE,
+	REG_BAND1_EN_FREQXLATION,
+	REG_BAND2_EN_FREQXLATION,
 	REG_DSP_VERSION,
 	REG_RANDOMNUMBER,
 	REG_HASH,
@@ -333,8 +335,6 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 	int ret;
 	u32 temp32;
 	u32 ch;
-	int shift;
-	u32 port;
 	int match;
 
 	/* convert to long
@@ -586,6 +586,24 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		temp32 += ((uint32_t)val)<<5;
 		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
 		break;
+	case REG_BAND1_EN_FREQXLATION:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<6);
+		temp32 += ((uint32_t)val)<<6;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
+	case REG_BAND2_EN_FREQXLATION:
+		if(val<0 || val>1){
+			ret = -EINVAL;
+			break;
+		}
+		temp32 = dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE) & ~(1<<7);
+		temp32 += ((uint32_t)val)<<7;
+		dras_radio_repeater_write(st, ADDR_BAND12_LLF_MODE, temp32);
+		break;
 	case REG_HASH:
 		dras_radio_repeater_write(st, ADDR_HASH, (u32)val);
 		break;
@@ -606,12 +624,9 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	struct dras_radio_repeater_state *st = iio_priv(indio_dev);
 	int val = 0;
-	int shift;
 	int ret = 0;
 	u32 ch;
 	u32 port;
-	u32 temp32;
-	//int power10 = 1;
 	int match;
 
 	/* channel registers */
@@ -830,6 +845,12 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 	case REG_BAND2_UL_IQSTREAM_ENABLE:
 		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>5) & 0x1;
 		break;
+	case REG_BAND1_EN_FREQXLATION:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>6) & 0x1;
+		break;
+	case REG_BAND2_EN_FREQXLATION:
+		val = (dras_radio_repeater_read(st, ADDR_BAND12_LLF_MODE)>>7) & 0x1;
+		break;
 	case REG_HASH:
 		val = dras_radio_repeater_read(st, ADDR_HASH);
 		break;
@@ -1036,6 +1057,16 @@ static IIO_DEVICE_ATTR(band2_uplink_iq_stream_enable, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_store,
 			REG_BAND2_UL_IQSTREAM_ENABLE);
 
+static IIO_DEVICE_ATTR(band1_frequency_translation_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND1_EN_FREQXLATION);
+
+static IIO_DEVICE_ATTR(band2_frequency_translation_enable, S_IRUGO | S_IWUSR,
+			dras_radio_repeater_show,
+			dras_radio_repeater_store,
+			REG_BAND2_EN_FREQXLATION);
+
 static IIO_DEVICE_ATTR(hash, S_IRUGO | S_IWUSR,
 			dras_radio_repeater_show,
 			dras_radio_repeater_store,
@@ -1093,6 +1124,8 @@ static struct attribute *dras_radio_repeater_attributes[] = {
 	&iio_dev_attr_band2_downlink_iq_stream_enable.dev_attr.attr,
 	&iio_dev_attr_band1_uplink_iq_stream_enable.dev_attr.attr,
 	&iio_dev_attr_band2_uplink_iq_stream_enable.dev_attr.attr,
+	&iio_dev_attr_band1_frequency_translation_enable.dev_attr.attr,
+	&iio_dev_attr_band2_frequency_translation_enable.dev_attr.attr,
 	NULL,
 };
 
