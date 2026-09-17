@@ -440,17 +440,17 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
 			match = 1;
-			if(val<1 || val>8){
+			if(val<1 || val>16){
 				ret = -EINVAL;
 				break;
 			}
 			val--;
 			if(ch<8){
-				temp32 = dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL0) & ~(7<<(4*ch));
+				temp32 = dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL0) & ~(15<<(4*ch));
 				temp32 += ((uint32_t)val)<<(4*ch);
 				dras_radio_repeater_write(st, ADDR_NB_FILTER_SEL0, temp32);
 			}else{
-				temp32 = dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL1) & ~(7<<(4*ch-32));
+				temp32 = dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL1) & ~(15<<(4*ch-32));
 				temp32 += ((uint32_t)val)<<(4*ch-32);
 				dras_radio_repeater_write(st, ADDR_NB_FILTER_SEL1, temp32);
 			}
@@ -753,9 +753,9 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
 			match = 1;
 			if(ch<8){
-				val = 1+(((dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL0) >> (4*ch)) & 7));
+				val = 1+(((dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL0) >> (4*ch)) & 15));
 			}else{
-				val = 1+(((dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL1) >> (4*ch-32)) & 7));
+				val = 1+(((dras_radio_repeater_read(st, ADDR_NB_FILTER_SEL1) >> (4*ch-32)) & 15));
 			}
 			break;
 		}
