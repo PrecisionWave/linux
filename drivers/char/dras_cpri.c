@@ -57,20 +57,20 @@ struct dras_cpri_priv {
 
 static int dras_cpri_mmap_page(struct dras_cpri_priv *priv,
 			       struct vm_area_struct *vma,
-			       resource_size_t res_start)
+			       struct resource* res)
 {
 	size_t len;
 	unsigned long vm_pgoff;
 
 	len = vma->vm_end - vma->vm_start;
-	if (len > PAGE_SIZE)
+	if (len > (res->end - res->start))
 		return -EINVAL;
 
 	vm_pgoff = vma->vm_pgoff;
 	vma->vm_pgoff = 0;
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
-	if (remap_pfn_range(vma, vma->vm_start, res_start >> PAGE_SHIFT,
+	if (remap_pfn_range(vma, vma->vm_start, res->start >> PAGE_SHIFT,
 			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
 		vma->vm_pgoff = vm_pgoff;
 		return -EAGAIN;
@@ -143,7 +143,7 @@ static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 	if (!res)
 		return -EINVAL;
 	if (res->start > 0)
-		return dras_cpri_mmap_page(priv, vma, res->start);
+		return dras_cpri_mmap_page(priv, vma, res);
 	return -EINVAL;
 }
 
