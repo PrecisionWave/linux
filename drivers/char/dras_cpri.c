@@ -47,6 +47,7 @@ struct dras_cpri_priv {
 	struct cdev cdev;
 	struct dras_cpri_reg *xlnx_regs;
 	struct dras_cpri_reg *pcw_regs;
+	struct dras_cpri_reg *drp_regs;
 	struct dras_cpri_reg portid_reg;
 	struct dras_cpri_reg recclk_reg;
 	struct dras_cpri_reg freqcntr_reg;
@@ -56,21 +57,20 @@ struct dras_cpri_priv {
 };
 
 static int dras_cpri_mmap_page(struct dras_cpri_priv *priv,
-			       struct vm_area_struct *vma,
-			       resource_size_t res_start)
+			       struct vm_area_struct *vma, struct resource *res)
 {
 	size_t len;
 	unsigned long vm_pgoff;
 
 	len = vma->vm_end - vma->vm_start;
-	if (len > PAGE_SIZE)
+	if (len > ((res->end - res->start) + 1))
 		return -EINVAL;
 
 	vm_pgoff = vma->vm_pgoff;
 	vma->vm_pgoff = 0;
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
-	if (remap_pfn_range(vma, vma->vm_start, res_start >> PAGE_SHIFT,
+	if (remap_pfn_range(vma, vma->vm_start, res->start >> PAGE_SHIFT,
 			    vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
 		vma->vm_pgoff = vm_pgoff;
 		return -EAGAIN;
@@ -88,10 +88,14 @@ static int dras_cpri_mmap_page(struct dras_cpri_priv *priv,
 #define DRAS_CPRI_MMAP_PCW_PORT_REG_END                                        \
 	(DRAS_CPRI_MMAP_PCW_PORT_REG_START + dras_cpri_port_count_max)
 
+#define DRAS_CPRI_MMAP_DRP_PORT_REG_START (DRAS_CPRI_MMAP_DRP_PORT_REG)
+#define DRAS_CPRI_MMAP_DRP_PORT_REG_END                                        \
+	(DRAS_CPRI_MMAP_DRP_PORT_REG_START + dras_cpri_port_count_max)
+
 static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 {
 	struct dras_cpri_priv *priv = filep->private_data;
-	struct resource* res = NULL;
+	struct resource *res = NULL;
 
 	// dev_info(priv->dev, "mmap for vma->vm_pgoff %lx\n", vma->vm_pgoff);
 
@@ -137,13 +141,23 @@ static int dras_cpri_mmap(struct file *filep, struct vm_area_struct *vma)
 			break;
 		}
 
+		if ((vma->vm_pgoff >= DRAS_CPRI_MMAP_DRP_PORT_REG_START) &&
+		    (vma->vm_pgoff < DRAS_CPRI_MMAP_DRP_PORT_REG_END)) {
+			int index = vma->vm_pgoff -
+				    DRAS_CPRI_MMAP_DRP_PORT_REG_START;
+			if (index >= priv->port_count)
+				return -EINVAL;
+			res = priv->drp_regs[index].res;
+			break;
+		}
+
 		return -EINVAL;
 	}
 
 	if (!res)
 		return -EINVAL;
 	if (res->start > 0)
-		return dras_cpri_mmap_page(priv, vma, res->start);
+		return dras_cpri_mmap_page(priv, vma, res);
 	return -EINVAL;
 }
 
@@ -195,8 +209,8 @@ static int dras_cpri_map_optional_reg(struct platform_device *pdev,
 		return -EINVAL;
 	}
 
-	cpri_reg->res = devm_kzalloc(&pdev->dev, sizeof(*cpri_reg->res),
-					GFP_KERNEL);
+	cpri_reg->res =
+		devm_kzalloc(&pdev->dev, sizeof(*cpri_reg->res), GFP_KERNEL);
 	if (IS_ERR(cpri_reg->res)) {
 		dev_err(&pdev->dev, "Failed to allocate memory!\n");
 		return PTR_ERR(cpri_reg->res);
@@ -209,8 +223,7 @@ static int dras_cpri_map_optional_reg(struct platform_device *pdev,
 		return -EINVAL;
 	}
 
-	cpri_reg->iomem =
-		devm_ioremap_resource(&pdev->dev, cpri_reg->res);
+	cpri_reg->iomem = devm_ioremap_resource(&pdev->dev, cpri_reg->res);
 
 	return 0;
 }
@@ -248,6 +261,13 @@ static int dras_cpri_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->pcw_regs))
 		return PTR_ERR(priv->pcw_regs);
 
+	priv->drp_regs = devm_kzalloc(&pdev->dev,
+				      array_size(dras_cpri_port_count_max,
+						 sizeof(struct dras_cpri_reg)),
+				      GFP_KERNEL);
+	if (IS_ERR(priv->drp_regs))
+		return PTR_ERR(priv->drp_regs);
+
 	priv->portid_reg.iomem = devm_platform_get_and_ioremap_resource(
 		pdev, 0, &priv->portid_reg.res);
 	if (IS_ERR(priv->portid_reg.iomem))
@@ -283,6 +303,9 @@ static int dras_cpri_probe(struct platform_device *pdev)
 			return PTR_ERR(priv->pcw_regs[index].iomem);
 		}
 
+		dras_cpri_map_optional_reg(pdev, "drp", index,
+					   &priv->drp_regs[index]);
+
 		priv->port_count++;
 	}
 
@@ -312,21 +335,27 @@ static int dras_cpri_probe(struct platform_device *pdev)
 	dev_info(priv->dev, "DRAS CPRI attached for device %d with %d ports",
 		 priv->minor, priv->port_count);
 
-	dev_info(priv->dev, "CPRI PORTID register @ %pR\n", priv->portid_reg.res);
+	dev_info(priv->dev, "CPRI PORTID register @ %pR\n",
+		 priv->portid_reg.res);
 
 	for (index = 0; index < priv->port_count; index++) {
-		dev_info(priv->dev, "CPRI port %d @ %pR %pR\n", index,
-			 priv->xlnx_regs[index].res, priv->pcw_regs[index].res);
+		dev_info(priv->dev, "CPRI port %d @ %pR %pR %pR\n", index,
+			 priv->xlnx_regs[index].res, priv->pcw_regs[index].res,
+			 priv->drp_regs[index].res);
 	}
 
-	if(priv->recclk_reg.iomem)
-		dev_info(priv->dev, "CPRI RECCLK control @ %pR\n", priv->recclk_reg.res);
-	if(priv->freqcntr_reg.iomem)
-		dev_info(priv->dev, "CPRI Frequency counter @ %pR\n", priv->freqcntr_reg.res);
-	if(priv->clkmon_regs[0].iomem)
-		dev_info(priv->dev, "CPRI clkmon csr 0 @ %pR\n", priv->clkmon_regs[0].res);
-	if(priv->clkmon_regs[1].iomem)
-		dev_info(priv->dev, "CPRI clkmon csr 1 @ %pR\n", priv->clkmon_regs[1].res);
+	if (priv->recclk_reg.iomem)
+		dev_info(priv->dev, "CPRI RECCLK control @ %pR\n",
+			 priv->recclk_reg.res);
+	if (priv->freqcntr_reg.iomem)
+		dev_info(priv->dev, "CPRI Frequency counter @ %pR\n",
+			 priv->freqcntr_reg.res);
+	if (priv->clkmon_regs[0].iomem)
+		dev_info(priv->dev, "CPRI clkmon csr 0 @ %pR\n",
+			 priv->clkmon_regs[0].res);
+	if (priv->clkmon_regs[1].iomem)
+		dev_info(priv->dev, "CPRI clkmon csr 1 @ %pR\n",
+			 priv->clkmon_regs[1].res);
 
 	return 0;
 
