@@ -29,21 +29,15 @@
 #define ADDR_DSP_VERSION		(0*4)
 #define ADDR_RANDOMNUMBER		(1*4)
 #define ADDR_UL_SFP_SYNC		(2*4)
-#define ADDR_GAIN_LIMIT			(160*4)
-#define ADDR_TARGET_PWR			(161*4)
-#define ADDR_SQUELCH			(162*4)
 #define ADDR_CHANNEL_EN			(163*4)
 #define ADDR_MUTE_LEN			(164*4)
 #define ADDR_LLF_BANDSEL		(165*4)
 #define ADDR_NB_FILTER_SEL0		(166*4)
 #define ADDR_NB_FILTER_SEL1		(167*4)
-#define ADDR_BAND12_LLF_MODE		(168*4)
-#define ADDR_GAIN_LIMIT_DL		(172*4)
-#define ADDR_TARGET_PWR_DL		(173*4)
-#define ADDR_SQUELCH_DL			(174*4)
-#define ADDR_OFFSET_TLAST0		(180*4)		// 4bits per port, port0..7
-#define ADDR_OFFSET_TLAST1		(181*4)		// 4bits per port, port8..15
-#define ADDR_HASH			(188*4)
+#define ADDR_BAND12_LLF_MODE		(161*4)
+//#define ADDR_OFFSET_TLAST0		(180*4)		// 4bits per port, port0..7
+//#define ADDR_OFFSET_TLAST1		(181*4)		// 4bits per port, port8..15
+#define ADDR_HASH			(160*4)
 
 // channel attributes
 #define ADDR_RSSI_UL(x)			((8+(x))*4)	// 16bit LSB first rssi, second 16bit second rssi
@@ -53,7 +47,13 @@
 #define ADDR_RSSI_DL(x)			((72+(x))*4)	// 16bit LSB first rssi, second 16bit second rssi
 #define ADDR_RSSI_PEAK_DL(x)		((88+(x))*4)
 #define ADDR_GAIN_UL(x)			((104+(x))*4)
-#define ADDR_GAIN_DL(x)			((120+(x))*4)
+#define ADDR_GAIN_DL(x)			((40+(x))*4)
+#define ADDR_GAIN_LIMIT(x)		((128+(x))*4)
+#define ADDR_TARGET_PWR(x)		((144+(x))*4)
+#define ADDR_SQUELCH(x)			((168+(x))*4)
+#define ADDR_GAIN_LIMIT_DL(x)		((184+(x))*4)
+#define ADDR_TARGET_PWR_DL(x)		((200+(x))*4)
+#define ADDR_SQUELCH_DL(x)		((216+(x))*4)
 
 
 // expands to:
@@ -266,12 +266,6 @@ struct dras_radio_repeater_state {
 	struct clk		*adrv_clk;
 	struct notifier_block	adrv_clk_rate_change_nb;
 	uint32_t		adrv_clk_rate;
-	u32			ul_target[NB_OF_TETRA_CHANNELS];
-	u32			ul_squelch[NB_OF_TETRA_CHANNELS];
-	u32			ul_gain_limit[NB_OF_TETRA_CHANNELS];
-	u32			dl_target[NB_OF_TETRA_CHANNELS];
-	u32			dl_squelch[NB_OF_TETRA_CHANNELS];
-	u32			dl_gain_limit[NB_OF_TETRA_CHANNELS];
 };
 
 static void dras_radio_repeater_write(struct dras_radio_repeater_state *st, unsigned reg, u32 val)
@@ -378,9 +372,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->ul_target[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<9);
-			dras_radio_repeater_write(st, ADDR_TARGET_PWR, temp32);
+			dras_radio_repeater_write(st, ADDR_TARGET_PWR(ch), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_SQUELCH)){
@@ -389,9 +381,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->ul_squelch[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<15);
-			dras_radio_repeater_write(st, ADDR_SQUELCH, temp32);
+			dras_radio_repeater_write(st, ADDR_SQUELCH(ch), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_GAIN_LIMIT)){
@@ -400,9 +390,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->ul_gain_limit[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<23);
-			dras_radio_repeater_write(st, ADDR_GAIN_LIMIT, temp32);
+			dras_radio_repeater_write(st, ADDR_GAIN_LIMIT(ch), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_TARGET_POWER)){
@@ -411,9 +399,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->dl_target[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<9);
-			dras_radio_repeater_write(st, ADDR_TARGET_PWR_DL, temp32);
+			dras_radio_repeater_write(st, ADDR_TARGET_PWR_DL(ch), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_SQUELCH)){
@@ -422,9 +408,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->dl_squelch[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<15);
-			dras_radio_repeater_write(st, ADDR_SQUELCH_DL, temp32);
+			dras_radio_repeater_write(st, ADDR_SQUELCH_DL(ch), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_GAIN_LIMIT)){
@@ -433,9 +417,7 @@ static ssize_t dras_radio_repeater_store(struct device *dev,
 				ret = -EINVAL;
 				break;
 			}
-			st->dl_gain_limit[ch] = (u32)val;
-			temp32 = (u32)val | (ch<<23);
-			dras_radio_repeater_write(st, ADDR_GAIN_LIMIT_DL, temp32);
+			dras_radio_repeater_write(st, ADDR_GAIN_LIMIT_DL(ch), val);
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_FILTER_SELECTION)){
@@ -693,32 +675,32 @@ static ssize_t dras_radio_repeater_show(struct device *dev,
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_TARGET_POWER)){
 			match = 1;
-			val = st->ul_target[ch];
+			val = dras_radio_repeater_read(st, ADDR_TARGET_PWR(ch)) & 0x1FF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_SQUELCH)){
 			match = 1;
-			val = st->ul_squelch[ch];
+			val = dras_radio_repeater_read(st, ADDR_SQUELCH(ch)) & 0x7FFF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_UL_GAIN_LIMIT)){
 			match = 1;
-			val = st->ul_gain_limit[ch];
+			val = dras_radio_repeater_read(st, ADDR_GAIN_LIMIT(ch)) & 0x7FFFFF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_TARGET_POWER)){
 			match = 1;
-			val = st->dl_target[ch];
+			val = dras_radio_repeater_read(st, ADDR_TARGET_PWR_DL(ch)) & 0x1FF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_SQUELCH)){
 			match = 1;
-			val = st->dl_squelch[ch];
+			val = dras_radio_repeater_read(st, ADDR_SQUELCH_DL(ch)) & 0x7FFF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_DL_GAIN_LIMIT)){
 			match = 1;
-			val = st->dl_gain_limit[ch];
+			val = dras_radio_repeater_read(st, ADDR_GAIN_LIMIT_DL(ch)) & 0x7FFFFF;
 			break;
 		}
 		else if((u32)this_attr->address == REG_CH(ch, REG_CHANNEL_ENABLE)){
