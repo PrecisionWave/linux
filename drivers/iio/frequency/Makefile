@@ -53,6 +53,7 @@ obj-$(CONFIG_PCW_SDR_DSP) += pcw_sdr_dsp.o
 obj-$(CONFIG_FMCW_DDC) += fmcw_ddc.o
 obj-$(CONFIG_PCW_WBRX) += pcw_wbrx.o
 obj-$(CONFIG_LMX2594) += lmx2594.o
+obj-$(CONFIG_LMX2582) += lmx2582.o
 obj-$(CONFIG_HMC703) += hmc703.o
 obj-$(CONFIG_LMK04832) += lmk04832.o
 obj-$(CONFIG_PCW_FMCW_DSP) += pcw_fmcw_dsp.o

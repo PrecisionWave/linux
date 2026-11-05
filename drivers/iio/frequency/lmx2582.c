@@ -1424,7 +1424,7 @@ static const struct iio_chan_spec_ext_info lmx2582_ext_info[] = {
 	_LMX2582_EXT_INFO("powerdown", LMX2582_CH_ATTR_PWRDOWN, IIO_SEPARATE),
 	_LMX2582_EXT_INFO("name", LMX2582_CH_ATTR_CHANNEL_NAME, IIO_SEPARATE),
 	IIO_ENUM("out_mux", IIO_SEPARATE, &lmx2582_out_mux_available),
-	IIO_ENUM_AVAILABLE("out_mux", &lmx2582_out_mux_available),
+	IIO_ENUM_AVAILABLE("out_mux", IIO_SEPARATE, &lmx2582_out_mux_available),
 	{ },
 };
 
@@ -2487,6 +2487,7 @@ static const struct spi_device_id lmx2582_id[] = {
 static struct spi_driver lmx2582_driver = {
 	.driver = {
 		.name	= "lmx2582",
+		.owner	= THIS_MODULE,
 	},
 	.probe		= lmx2582_probe,
 	.id_table	= lmx2582_id,
