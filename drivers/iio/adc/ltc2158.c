@@ -684,13 +684,11 @@ out:
 	return ret;
 }
 
-static int ltc2158_remove(struct spi_device *spi)
+static void ltc2158_remove(struct spi_device *spi)
 {
 	struct axiadc_converter *conv = spi_get_drvdata(spi);
 
 	clk_disable_unprepare(conv->clk);
-
-	return 0;
 }
 
 static const struct spi_device_id ltc2158_id[] = {

@@ -336,7 +336,7 @@ static const struct iio_info ad9957_tx_info = {
 static int hw_submit_block(struct iio_dma_buffer_queue *queue,
 	struct iio_dma_buffer_block *block)
 {
-	return iio_dmaengine_buffer_submit_block(queue, block, DMA_TO_DEVICE);
+	return iio_dmaengine_buffer_submit_block(queue, block);
 }
 
 static const struct iio_dma_buffer_ops dma_buffer_ops = {
@@ -444,7 +444,6 @@ static int ad9957_probe(struct spi_device *spi)
 		indio_dev_tx[i]->modes = INDIO_DIRECT_MODE | INDIO_BUFFER_HARDWARE;
 		indio_dev_tx[i]->channels = ad9957_channels;
 		indio_dev_tx[i]->num_channels = ARRAY_SIZE(ad9957_channels);
-		indio_dev_tx[i]->direction = IIO_DEVICE_DIRECTION_OUT;
 		indio_dev_tx[i]->info = &ad9957_tx_info;
 
 		buffer[i] = devm_iio_dmaengine_buffer_alloc(indio_dev_tx[i]->dev.parent, dma_ch,
@@ -499,14 +498,12 @@ error_disable_buf:
 	return ret;
 }
 
-static int ad9957_remove(struct spi_device *spi)
+static void ad9957_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 	struct ad9957_state *st = iio_priv(indio_dev);
 
 	clk_disable_unprepare(st->ref_clk);
-
-	return 0;
 }
 
 static const struct spi_device_id ad9957_id[] = {

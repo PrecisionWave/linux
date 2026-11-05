@@ -207,7 +207,7 @@ error_disable_reg:
 	return ret;
 }
 
-static int pe4312_remove(struct spi_device *spi)
+static void pe4312_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 	struct pe4312_state *st = iio_priv(indio_dev);
@@ -217,8 +217,6 @@ static int pe4312_remove(struct spi_device *spi)
 
 	if (!IS_ERR(reg))
 		regulator_disable(reg);
-
-	return 0;
 }
 
 static const struct spi_device_id pe4312_id[] = {

@@ -1087,7 +1087,7 @@ static int axiadc_probe(struct platform_device *pdev)
 			dev_name(axiadc_spidev->dev_spi));
 
 	if (is_dummy) {
-		indio_dev = iio_device_alloc(sizeof(*st));
+		indio_dev = devm_iio_device_alloc(&pdev->dev, sizeof(*st));
 	} else {
 		ret = devm_add_action_or_reset(&pdev->dev, axiadc_release_converter, axiadc_spidev);
 		if (ret)
