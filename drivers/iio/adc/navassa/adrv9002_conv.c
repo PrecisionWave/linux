@@ -26,6 +26,8 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 
+#define DEBUG
+
 #include "adrv9002.h"
 #include "adi_adrv9001_rxSettings_types.h"
 #include "adi_adrv9001_ssi_types.h"
