@@ -314,11 +314,10 @@ static int gen_shiftreg_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int gen_shiftreg_remove(struct spi_device *spi)
+static void gen_shiftreg_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 	iio_device_unregister(indio_dev);
-	return 0;
 }
 
 static const struct spi_device_id gen_shiftreg_id[] = {

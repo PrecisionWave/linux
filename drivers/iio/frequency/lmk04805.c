@@ -1912,7 +1912,7 @@ error_disable_reg:
 	return ret;
 }
 
-static int lmk04805_remove(struct spi_device *spi)
+static void lmk04805_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 	struct lmk04805_state *st = iio_priv(indio_dev);
@@ -1921,8 +1921,6 @@ static int lmk04805_remove(struct spi_device *spi)
 
 	if (!IS_ERR(st->reg))
 		regulator_disable(st->reg);
-
-	return 0;
 }
 
 static void lmk04805_shutdown(struct spi_device *spi)
