@@ -896,7 +896,7 @@ static int adrv9002_set_ext_lo(const struct adrv9002_chan *c, u64 freq)
 		return -EINVAL;
 	}
 
-	return clk_set_rate_scaled(c->ext_lo->clk, freq, &c->ext_lo->scale);
+	return clk_set_rate_scaled(c->ext_lo->clk, lo_freq, &c->ext_lo->scale);
 }
 
 static int adrv9002_phy_lo_set(struct adrv9002_rf_phy *phy, struct adrv9002_chan *c,
