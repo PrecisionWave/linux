@@ -3162,7 +3162,7 @@ int32_t adi_adrv9025_DfrmIrqSourceReset(adi_adrv9025_Device_t*     device,
 {
     adrv9025_BfJrxLinkChanAddr_e                        baseAddr     = ADRV9025_BF_JRX_LINK0;
     adi_adrv9025_DeframerIrq_Mask_Vector_t              irqMask_Save = {0, 0};
-    const static adi_adrv9025_DeframerIrq_Mask_Vector_t irqMask_Clr  = {0xFFFF, 0xFFFF};
+    static const adi_adrv9025_DeframerIrq_Mask_Vector_t irqMask_Clr  = {0xFFFF, 0xFFFF};
 
     /* Check device pointer is not null */
     ADI_NULL_DEVICE_PTR_RETURN(device);

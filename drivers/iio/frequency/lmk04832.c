@@ -182,7 +182,7 @@ const uint32_t lmk04832_reg_addr[LMK04832_NUM_REG] = {
 	// 0x555
 };
 
-int lmk04832_reg_lut(unsigned int reg){
+static int lmk04832_reg_lut(unsigned int reg){
 	switch(reg){
 		case 0x000: return 0;
 		case 0x002: return 1;
@@ -409,7 +409,7 @@ enum attributes{
 	ATTR_SYNC_ALL_REGISTERS
 };
 
-void lmk04832_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
+static void lmk04832_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
 	int mask = (((1 << nbits) - 1) << offset);
 	/* mask register bits */
 	*reg &= ~mask;
@@ -417,20 +417,20 @@ void lmk04832_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
 	*reg |= (value << offset) & mask;
 }
 
-void lmk04832_extract_register_value(u32 reg, u32 offset, u32 nbits, u32 *value){
+static void lmk04832_extract_register_value(u32 reg, u32 offset, u32 nbits, u32 *value){
 	int mask = ((1 << nbits) - 1);
 	*value = (reg >> offset) & mask;
 }
 
-uint32_t lmk04832_get_clk_format(uint32_t reg, int ch){
+static uint32_t lmk04832_get_clk_format(uint32_t reg, int ch){
 	return (reg >> (4*(ch%2))) & 0x0000000F;
 }
 
-void lmk04832_set_clk_format(int ch, uint8_t format, uint32_t* reg){
+static void lmk04832_set_clk_format(int ch, uint8_t format, uint32_t* reg){
 	*reg = (*reg & ~(0x0000000F << (4*(ch%2)))) | ((format&0x0000000F) << (4*(ch%2)));
 }
 
-int lmk04832_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
+static int lmk04832_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 {
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
@@ -465,7 +465,7 @@ int lmk04832_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 	return 0;
 }
 
-int lmk04832_spi_write(struct iio_dev *indio_dev, u32 val)
+static int lmk04832_spi_write(struct iio_dev *indio_dev, u32 val)
 {
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
@@ -495,7 +495,7 @@ int lmk04832_spi_write(struct iio_dev *indio_dev, u32 val)
 	return 0;
 }
 
-int lmk04832_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
+static int lmk04832_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 {
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int i;
@@ -511,7 +511,7 @@ int lmk04832_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 
 /* update the value of one register
  */
-int lmk04832_write(struct iio_dev *indio_dev, u32 addr, u32 val)
+static int lmk04832_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 {
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
@@ -540,7 +540,7 @@ int lmk04832_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 /* update the value of one register, but write all
  * registers in accending order to the SPI bus
  */
-int lmk04832_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
+static int lmk04832_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
 {
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
@@ -591,7 +591,7 @@ int lmk04832_write_all(struct iio_dev *indio_dev, u32 addr, u32 val)
 /* this is used to initialize the chip
  * in the setup function (kernel boot)
  */
-int lmk04832_sync_all_registers(struct iio_dev *indio_dev){
+static int lmk04832_sync_all_registers(struct iio_dev *indio_dev){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret = 0;
 	int i;
@@ -622,7 +622,7 @@ int lmk04832_sync_all_registers(struct iio_dev *indio_dev){
 // 	st->reg_map[i] = LMK04832_VALUE(val);  // update local register map
 // }
 
-int lmk04832_sync_pll2(struct iio_dev *indio_dev){
+static int lmk04832_sync_pll2(struct iio_dev *indio_dev){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int i, ret;
 	/* write PLL2_N_DIVIDER registers to Sync PLL2 */
@@ -638,7 +638,7 @@ int lmk04832_sync_pll2(struct iio_dev *indio_dev){
 	return 0;
 }
 
-int lmk04832_update_vco(struct iio_dev *indio_dev, u32 ref_freq){
+static int lmk04832_update_vco(struct iio_dev *indio_dev, u32 ref_freq){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
 	u32 reg, val, fvco;
@@ -699,7 +699,7 @@ static ssize_t lmk04832_show(struct device *dev,
 	u8 match;
 
 	/* channel registers */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(ch=0; ch<LMK04832_NUM_CHAN; ch++){
 		if((u32)this_attr->address == CLK_ATTR(ch, ATTR_CLK_PD)){
@@ -775,7 +775,7 @@ static ssize_t lmk04832_show(struct device *dev,
 		// }
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		if(ret==0)
 			ret = sprintf(buf, "%d\n", val);
 		return ret;
@@ -871,7 +871,7 @@ static ssize_t lmk04832_show(struct device *dev,
 		ret = -ENODEV;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0)
 			ret = sprintf(buf, "%u\n", val);
@@ -879,11 +879,11 @@ static ssize_t lmk04832_show(struct device *dev,
 	return ret;
 }
 
-int lmk04832_update_reference_frequency(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_reference_frequency(struct iio_dev *indio_dev, u32 val){
 	return lmk04832_update_vco(indio_dev, val);
 }
 
-int lmk04832_update_reference_ext_intn(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_reference_ext_intn(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	u32 reg_num;
@@ -907,7 +907,7 @@ int lmk04832_update_reference_ext_intn(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_vco_ext_intn(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_vco_ext_intn(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	u32 reg_num;
@@ -949,7 +949,7 @@ int lmk04832_update_vco_ext_intn(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_pll1_r_divider(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_pll1_r_divider(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	int ret;
@@ -974,7 +974,7 @@ int lmk04832_update_pll1_r_divider(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_pll1_n_divider(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_pll1_n_divider(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	int ret;
@@ -991,7 +991,7 @@ int lmk04832_update_pll1_n_divider(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_pll2_r_divider(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_pll2_r_divider(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	int ret;
@@ -1008,7 +1008,7 @@ int lmk04832_update_pll2_r_divider(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_pll2_n_divider(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_pll2_n_divider(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	int ret;
@@ -1029,7 +1029,7 @@ int lmk04832_update_pll2_n_divider(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_pll2_n_prescaler(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_pll2_n_prescaler(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	u32 reg_num;
@@ -1050,7 +1050,7 @@ int lmk04832_update_pll2_n_prescaler(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_pll2_osc_doubler_en(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_pll2_osc_doubler_en(struct iio_dev *indio_dev, u32 val){
 	struct lmk04832_state *st = iio_priv(indio_dev);
 	u32 reg;
 	u32 reg_num;
@@ -1068,7 +1068,7 @@ int lmk04832_update_pll2_osc_doubler_en(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_oscout_sel(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_oscout_sel(struct iio_dev *indio_dev, u32 val){
 	u32 reg;
 	u32 reg_num;
 	int ret;
@@ -1099,7 +1099,7 @@ int lmk04832_update_oscout_sel(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_sdrclk_sel_lmx_lmkn(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_sdrclk_sel_lmx_lmkn(struct iio_dev *indio_dev, u32 val){
 	u32 reg;
 	u32 reg_num;
 	int ret;
@@ -1116,7 +1116,7 @@ int lmk04832_update_sdrclk_sel_lmx_lmkn(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_lo2_lowspur_en(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_lo2_lowspur_en(struct iio_dev *indio_dev, u32 val){
 	u32 reg;
 	u32 reg_num;
 	int ret;
@@ -1133,7 +1133,7 @@ int lmk04832_update_lo2_lowspur_en(struct iio_dev *indio_dev, u32 val){
 	return ret;
 }
 
-int lmk04832_update_vcxo_sel_100n_125(struct iio_dev *indio_dev, u32 val){
+static int lmk04832_update_vcxo_sel_100n_125(struct iio_dev *indio_dev, u32 val){
 	u32 reg;
 	u32 reg_num;
 	int ret;
@@ -1169,7 +1169,7 @@ static ssize_t lmk04832_store(struct device *dev,
 		return ret;
 
 	/* channel registers */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(ch=0; ch<LMK04832_NUM_CHAN; ch++){
 		if((u32)this_attr->address == CLK_ATTR(ch, ATTR_CLK_PD)){
@@ -1252,7 +1252,7 @@ static ssize_t lmk04832_store(struct device *dev,
 		}
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret ? ret : len;
 	}
 
@@ -1411,7 +1411,7 @@ static ssize_t lmk04832_store(struct device *dev,
 		ret = -ENODEV;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -1422,9 +1422,10 @@ static int lmk04832_read_raw(struct iio_dev *indio_dev,
 			   int *val2,
 			   long m)
 {
+	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch(m){
 	case IIO_CHAN_INFO_RAW:
 		break;
@@ -1434,7 +1435,7 @@ static int lmk04832_read_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 };
@@ -1445,9 +1446,10 @@ static int lmk04832_write_raw(struct iio_dev *indio_dev,
 			    int val2,
 			    long mask)
 {
+	struct lmk04832_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		break;
@@ -1459,7 +1461,7 @@ static int lmk04832_write_raw(struct iio_dev *indio_dev,
 	}
 
 end:
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return ret;
 }
 
@@ -1471,7 +1473,7 @@ static int lmk04832_reg_access(struct iio_dev *indio_dev,
 	int ret;
 	uint32_t reg;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	if (readval == NULL) {
 		ret = lmk04832_write(indio_dev, reg_num, LMK04832_VALUE(writeval));
 		if(ret)
@@ -1486,7 +1488,7 @@ static int lmk04832_reg_access(struct iio_dev *indio_dev,
 	}
 
 out_unlock:
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return ret;
 }
 
@@ -1892,6 +1894,8 @@ static int lmk04832_probe(struct spi_device *spi)
 	if(!indio_dev)
 		return -ENOMEM;
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
+
 	spi_set_drvdata(spi, indio_dev);
 	st->spi = spi;
 

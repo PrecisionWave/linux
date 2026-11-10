@@ -446,17 +446,11 @@ static int ad9957_probe(struct spi_device *spi)
 		indio_dev_tx[i]->num_channels = ARRAY_SIZE(ad9957_channels);
 		indio_dev_tx[i]->info = &ad9957_tx_info;
 
-		buffer[i] = devm_iio_dmaengine_buffer_alloc(indio_dev_tx[i]->dev.parent, dma_ch,
-							&dma_buffer_ops, indio_dev_tx[i]);
-		if (IS_ERR(buffer[i])) {
-			dev_err(&spi->dev, "devm_iio_dmaengine_buffer_alloc failed");
-			ret = PTR_ERR(buffer[i]);
+		ret = devm_iio_dmaengine_buffer_setup_with_ops(indio_dev_tx[i]->dev.parent, indio_dev_tx[i], dma_ch, IIO_BUFFER_DIRECTION_OUT, &dma_buffer_ops, st);
+		if (ret < 0) {
+			dev_err(&spi->dev, "devm_iio_dmaengine_buffer_setup_with_ops failed");
 			goto error_disable_buf;
 		}
-
-		iio_device_attach_buffer(indio_dev_tx[i], buffer[i]);
-
-		iio_device_set_drvdata(indio_dev_tx[i], st);
 
 		devm_iio_device_register(&spi->dev, indio_dev_tx[i]);
 	}

@@ -222,6 +222,7 @@ int32_t adrv9025_CalsInit(adi_adrv9025_Device_t*   device,
     return recoveryAction;
 }
 
+static
 int32_t adrv9025_DdcMultDivGet(adi_adrv9025_Device_t* device,
                                adi_adrv9025_RxDdc_e   rxDdcMode,
                                uint8_t*               ddcMultiply,
@@ -1045,6 +1046,7 @@ int32_t adrv9025_JsonFindClosedCurlBrace(adi_adrv9025_Device_t* device,
     return ADI_COMMON_ACT_NO_ACTION;
 }
 
+static
 int32_t adrv9025_JsonPeekNextKeyword(adi_adrv9025_Device_t* device,
                                      FILE*                  fp,
                                      char*                  fullStr,

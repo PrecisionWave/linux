@@ -20,7 +20,7 @@
 #include <linux/iio/sysfs.h>
 
 
-unsigned char reverse(unsigned char b) {
+static unsigned char reverse(unsigned char b) {
    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
@@ -28,6 +28,7 @@ unsigned char reverse(unsigned char b) {
 }
 
 struct pe43711_state {
+	struct mutex		lock;
 	struct spi_device	*spi;
 	struct regulator	*reg;
 	struct gpio_desc	*reset_gpio;
@@ -63,7 +64,7 @@ static int pe43711_read_raw(struct iio_dev *indio_dev,
 	struct pe43711_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (m) {
 	case IIO_CHAN_INFO_HARDWAREGAIN:
@@ -77,7 +78,7 @@ static int pe43711_read_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 };
@@ -97,7 +98,7 @@ static int pe43711_write_raw(struct iio_dev *indio_dev,
 	if(val2!=0 && val2!=250000 && val2!=500000 && val2!=750000)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_HARDWAREGAIN:
@@ -111,7 +112,7 @@ static int pe43711_write_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -151,6 +152,7 @@ static int pe43711_probe(struct spi_device *spi)
 		return -ENOMEM;
 
 	st = iio_priv(indio_dev);										// link pointer to private data
+	mutex_init(&st->lock);
 
 	st->reg = devm_regulator_get(&spi->dev, "vcc");					// add regulator
 	if (!IS_ERR(st->reg)) {

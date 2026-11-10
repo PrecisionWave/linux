@@ -1213,6 +1213,7 @@ int32_t adrv9025_TxAttenPinCtrlCfgSet(adi_adrv9025_Device_t*       device,
     return recoveryAction;
 }
 
+static
 int32_t adrv9025_TxAttenUpdateGpioPinCtrlCfgSetRangeCheck(adi_adrv9025_Device_t*    device,
                                                           adi_adrv9025_GpioPinSel_e gpioSelection)
 {

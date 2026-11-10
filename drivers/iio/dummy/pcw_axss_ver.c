@@ -22,6 +22,7 @@ enum attributes{
 };
 
 struct axss_ver_state {
+	struct mutex		lock;
 	void __iomem		*base;
 	resource_size_t		length;
 	struct resource		*res;
@@ -49,7 +50,7 @@ static int axss_ver_reg_access(struct iio_dev *indio_dev, u32 reg, u32 writeval,
 	if((reg & 0x3) != 0)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	if (!readval) {
 		axss_ver_write(st, reg, writeval);
@@ -59,7 +60,7 @@ static int axss_ver_reg_access(struct iio_dev *indio_dev, u32 reg, u32 writeval,
 		ret = 0;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return ret;
 }
 
@@ -80,7 +81,7 @@ static ssize_t axss_ver_show(struct device *dev,
 	struct axss_ver_state *st = iio_priv(indio_dev);
 	int ret = -ENODEV;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (this_attr->address) {
 	case BITSTREAM_TIMESTAMP: {
@@ -114,7 +115,7 @@ static ssize_t axss_ver_show(struct device *dev,
 		break;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return ret;
 }
 
@@ -156,6 +157,7 @@ static int axss_ver_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 
 	st->res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	st->base = devm_ioremap_resource(&pdev->dev, st->res);

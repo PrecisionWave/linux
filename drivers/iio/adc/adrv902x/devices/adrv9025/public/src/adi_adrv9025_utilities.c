@@ -1287,6 +1287,7 @@ int32_t adi_adrv9025_TxAttenTableLoad(adi_adrv9025_Device_t* device,
     return device->common.error.newAction;
 }
 
+static
 int32_t adi_adrv9025_PreMcsInit(adi_adrv9025_Device_t* device,
                                 adi_adrv9025_Init_t*   init,
                                 const char*            armImagePath,

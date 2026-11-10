@@ -17,6 +17,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/err.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <asm/div64.h>
 
 #include <linux/iio/iio.h>

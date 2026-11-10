@@ -296,6 +296,7 @@ static int32_t adrv9025_MasterBiasSet(adi_adrv9025_Device_t* device)
 /*
 Set pad configurations for SYSREF, REFCLK and SYNCB pins
 */
+static
 int32_t adrv9025_PadConfigsSet(adi_adrv9025_Device_t* device,
                                adi_adrv9025_Init_t*   init)
 {

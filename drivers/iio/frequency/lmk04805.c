@@ -354,7 +354,7 @@ enum attributes{
 	ATTR_CLKIN0_LOS
 };
 
-int rename_iio_attribute(struct attribute *attr, char *name){
+static int rename_iio_attribute(struct attribute *attr, char *name){
 	// indio_dev->channel_attr_list
 	if(!attr)
 		return -1;
@@ -366,7 +366,8 @@ int rename_iio_attribute(struct attribute *attr, char *name){
 	return 0;
 }
 
-void lmk04805_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
+static void lmk04805_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value)
+{
 	int mask = (((1 << nbits) - 1) << offset);
 	/* mask register bits */
 	*reg &= ~mask;
@@ -374,16 +375,19 @@ void lmk04805_inject_register_value(u32 *reg, u32 offset, u32 nbits, u32 value){
 	*reg |= (value << offset) & mask;
 }
 
-void lmk04805_extract_register_value(u32 reg, u32 offset, u32 nbits, u32 *value){
+static void lmk04805_extract_register_value(u32 reg, u32 offset, u32 nbits, u32 *value)
+{
 	int mask = ((1 << nbits) - 1);
 	*value = (reg >> offset) & mask;
 }
 
-uint32_t lmk04805_get_clk_format(uint32_t reg, int ch){
+static uint32_t lmk04805_get_clk_format(uint32_t reg, int ch)
+{
 	return (reg >> (16+4*(ch%4))) & 0x0000000F;
 }
 
-void lmk04805_set_clk_format(int ch, uint8_t format, uint32_t* reg){
+static void lmk04805_set_clk_format(int ch, uint8_t format, uint32_t* reg)
+{
 	*reg = (*reg & ~(0x0000000F << (16+4*(ch%4)))) | ((format&0x0000000F) << (16+4*(ch%4)));
 }
 
@@ -396,6 +400,7 @@ struct lmk04805_outputs {
 };
 
 struct lmk04805_state {
+	struct mutex			lock;
 	struct spi_device*		spi;
 	struct regulator*		reg;
 	struct lmk04805_platform_data*	pdata;
@@ -417,7 +422,7 @@ struct lmk04805_state {
 	uint32_t spi_buffer ____cacheline_aligned;
 };
 
-int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
+static int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
@@ -467,7 +472,7 @@ int lmk04805_spi_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 	return 0;
 }
 
-int lmk04805_spi_write(struct iio_dev *indio_dev, u32 val)
+static int lmk04805_spi_write(struct iio_dev *indio_dev, u32 val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
@@ -495,7 +500,7 @@ int lmk04805_spi_write(struct iio_dev *indio_dev, u32 val)
 	return 0;
 }
 
-int lmk04805_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
+static int lmk04805_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 
@@ -509,7 +514,7 @@ int lmk04805_read(struct iio_dev *indio_dev, u32 addr, u32 *val)
 	return 0;
 };
 
-int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
+static int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 {
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
@@ -546,7 +551,8 @@ int lmk04805_write(struct iio_dev *indio_dev, u32 addr, u32 val)
 	return 0;
 }
 
-int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
+static int lmk04805_sync_all_registers(struct iio_dev *indio_dev)
+{
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret = 0;
 	int i;
@@ -569,7 +575,8 @@ int lmk04805_sync_all_registers(struct iio_dev *indio_dev){
 	return 0;
 }
 
-int lmk04805_init_workaround(struct iio_dev *indio_dev){
+static int lmk04805_init_workaround(struct iio_dev *indio_dev)
+{
 	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret = 0;
 	int i;
@@ -643,7 +650,7 @@ static ssize_t lmk04805_show(struct device *dev,
 	u8 match;
 
 	/* channel registers */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(ch=0; ch<LMK04805_NUM_CHAN; ch++){
 		if((u32)this_attr->address == CLK_ATTR(ch, ATTR_CLK_PD)){
@@ -672,7 +679,7 @@ static ssize_t lmk04805_show(struct device *dev,
 		}
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		if(ret==0)
 			ret = sprintf(buf, "%d\n", val);
 		return ret;
@@ -801,7 +808,7 @@ static ssize_t lmk04805_show(struct device *dev,
 		ret = -ENODEV;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0)
 		ret = sprintf(buf, "%d\n", val);
@@ -840,7 +847,7 @@ static ssize_t lmk04805_store(struct device *dev,
 		return ret;
 
 	/* channel registers */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(ch=0; ch<LMK04805_NUM_CHAN; ch++){
 		if((u32)this_attr->address == CLK_ATTR(ch, ATTR_CLK_PD)){
@@ -888,7 +895,7 @@ static ssize_t lmk04805_store(struct device *dev,
 		}
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret ? ret : len;
 	}
 
@@ -1025,7 +1032,7 @@ static ssize_t lmk04805_store(struct device *dev,
 		ret = -ENODEV;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	lmk04805_force_recalc_rate(st);
 
@@ -1042,7 +1049,7 @@ static int lmk04805_read_raw(struct iio_dev *indio_dev,
 	int ret;
 	uint32_t reg, reg2;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch(m){
 	case IIO_CHAN_INFO_RAW:
 		if(chan->channel == 1){
@@ -1078,7 +1085,7 @@ static int lmk04805_read_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 };
@@ -1093,7 +1100,7 @@ static int lmk04805_write_raw(struct iio_dev *indio_dev,
 	uint32_t reg = 0;
 	int ret, tmp, reg_num;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		reg_num = LMK04805_GET_CLK_FORMAT_REG(chan->channel);
@@ -1134,7 +1141,7 @@ static int lmk04805_write_raw(struct iio_dev *indio_dev,
 	ret = lmk04805_sync_all_registers(indio_dev);
 
 end:
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	lmk04805_force_recalc_rate(st);
 
@@ -1145,10 +1152,11 @@ static int lmk04805_reg_access(struct iio_dev *indio_dev,
 			      unsigned reg_num, unsigned writeval,
 			      unsigned *readval)
 {
+	struct lmk04805_state *st = iio_priv(indio_dev);
 	int ret;
 	uint32_t reg;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	if (readval == NULL) {
 		ret = lmk04805_write(indio_dev, reg_num, writeval);
 	} else {
@@ -1160,7 +1168,7 @@ static int lmk04805_reg_access(struct iio_dev *indio_dev,
 	}
 
 out_unlock:
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	lmk04805_force_recalc_rate(iio_priv(indio_dev));
 	return ret;
@@ -1821,7 +1829,7 @@ static int lmk04805_parse_dt(struct device *dev, struct lmk04805_state *st){
 
 		ret = of_property_read_string(chan_np, "lmk,extended-name", &str);
 		if(ret < 0){pr_warn("lmk04805: CH[%d] - extended-name of clock channel not found! Please check devicetree ..\n", pdata->channels[cnt].channel_num);}
-		if(ret >= 0){strlcpy(pdata->channels[cnt].extended_name, str, sizeof(pdata->channels[cnt].extended_name));}
+		if(ret >= 0){strncpy(pdata->channels[cnt].extended_name, str, sizeof(pdata->channels[cnt].extended_name));}
 		cnt++;
 	}
 
@@ -1856,6 +1864,7 @@ static int lmk04805_probe(struct spi_device *spi)
 	if(!indio_dev)
 		return -ENOMEM;
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 	spi_set_drvdata(spi, indio_dev);
 	st->spi = spi;
 

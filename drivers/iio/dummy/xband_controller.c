@@ -14,6 +14,8 @@
  #include <linux/iio/sysfs.h>
  #include <linux/of_device.h>
  #include <linux/of_platform.h>
+#include <linux/platform_device.h>
+#include <linux/of.h>
 
 
 #define DRIVER_NAME		"xband_controller"
@@ -45,6 +47,7 @@ enum attributes{
 };
 
 struct xband_controller_state{
+	struct mutex lock;
 	struct spi_device *spi;
 
 	u32 mode_FMCWn_transceiver;
@@ -94,7 +97,7 @@ static ssize_t xband_controller_store(struct device *dev,
 	if(ret)
 		return ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address){
 	case XB_ATTR_MODE_FMCWN_TRANSCEIVER:
 		st->mode_FMCWn_transceiver = val;
@@ -168,7 +171,7 @@ static ssize_t xband_controller_store(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -184,7 +187,7 @@ static ssize_t xband_controller_show(struct device *dev,
 	u64 val64 = 0;
 	int ret = 0;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address){
 	case XB_ATTR_MODE_FMCWN_TRANSCEIVER:
 		val = st->mode_FMCWn_transceiver;
@@ -258,7 +261,7 @@ static ssize_t xband_controller_show(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0){
 		if((u32)this_attr->address == XB_ATTR_LO2_FREQUENCY_HZ ||
@@ -452,6 +455,7 @@ static int xband_controller_probe(struct platform_device *pdev)
 	}
 
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 
 	indio_dev->name = np->name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
@@ -471,12 +475,11 @@ error_free_device:
 	return ret;
 }
 
-static int xband_controller_remove(struct platform_device *pdev)
+static void xband_controller_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(indio_dev);
 	iio_device_free(indio_dev);
-	return 0;
 }
 
 static struct platform_driver xband_controller_driver = {

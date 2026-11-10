@@ -21,6 +21,7 @@
 
 
 struct pe4312_state {
+	struct	mutex lock; /* protect sensor state */
 	struct spi_device	*spi;
 	struct regulator	*reg;
 	struct gpio_desc	*reset_gpio;
@@ -56,7 +57,7 @@ static int pe4312_read_raw(struct iio_dev *indio_dev,
 	struct pe4312_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (m) {
 	case IIO_CHAN_INFO_HARDWAREGAIN:
@@ -75,7 +76,7 @@ static int pe4312_read_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 };
@@ -95,7 +96,7 @@ static int pe4312_write_raw(struct iio_dev *indio_dev,
 	if(val2!=0 && val2!=500000)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_HARDWAREGAIN:
@@ -111,7 +112,7 @@ static int pe4312_write_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -158,6 +159,8 @@ static int pe4312_probe(struct spi_device *spi)
 		if (ret)
 			return ret;
 	}
+
+	mutex_init(&st->lock);
 
 	spi_set_drvdata(spi, indio_dev);								// do the following:   spi->dev->driver_data = indio_dev
 	st->spi = spi;

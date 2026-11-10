@@ -223,16 +223,17 @@ static int dras_fm_repeater_write_raw(struct iio_dev *indio_dev,
 			       int val2,
 			       long mask)
 {
+	struct dras_fm_repeater_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -243,16 +244,17 @@ static int dras_fm_repeater_read_raw(struct iio_dev *indio_dev,
 			   int *val2,
 			   long mask)
 {
+	struct dras_fm_repeater_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -283,7 +285,7 @@ static ssize_t dras_fm_repeater_store(struct device *dev,
 		return ret;
 
 	/* channel registers */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(ch=0; ch<NB_OF_CHANNELS; ch++){
 		if((u32)this_attr->address == REG_CH(ch, REG_CHANNEL_ENABLE)){
@@ -343,7 +345,7 @@ static ssize_t dras_fm_repeater_store(struct device *dev,
 		}
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret ? ret : len;
 	}
 
@@ -381,7 +383,7 @@ static ssize_t dras_fm_repeater_store(struct device *dev,
 		ret = -ENODEV;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -402,7 +404,7 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 	int match;
 
 	/* channel registers */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(ch=0; ch<NB_OF_CHANNELS; ch++){
 		if((u32)this_attr->address == REG_CH(ch, REG_CHANNEL_ENABLE)){
@@ -467,7 +469,7 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 		}
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		if(ret==0)
 			ret = sprintf(buf, "%d\n", val);
 		return ret;
@@ -491,7 +493,7 @@ static ssize_t dras_fm_repeater_show(struct device *dev,
 		ret = -ENODEV;
 		break;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0)
 		ret = sprintf(buf, "%d\n", val);
@@ -654,12 +656,11 @@ err_iio_device_free:
 	return ret;
 }
 
-static int dras_fm_repeater_remove(struct platform_device *pdev)
+static void dras_fm_repeater_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(indio_dev);
 	iio_device_free(indio_dev);
-	return 0;
 }
 
 static struct platform_driver dras_fm_repeater_driver = {

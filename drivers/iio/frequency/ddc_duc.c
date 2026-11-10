@@ -208,12 +208,12 @@ static int ddc_duc_write_raw(struct iio_dev *indio_dev,
 			       int val2,
 			       long mask)
 {
-//	struct ddc_duc_state *st = iio_priv(indio_dev);
+	struct ddc_duc_state *st = iio_priv(indio_dev);
 	int ret;
 //	u64 temp64;
 //	u32 freq;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 //	case IIO_CHAN_INFO_FREQUENCY:
@@ -251,7 +251,7 @@ static int ddc_duc_write_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -262,12 +262,12 @@ static int ddc_duc_read_raw(struct iio_dev *indio_dev,
 			   int *val2,
 			   long mask)
 {
-//	struct ddc_duc_state *st = iio_priv(indio_dev);
+	struct ddc_duc_state *st = iio_priv(indio_dev);
 	int ret;
 //	u32 temp;
 //	u64 temp64;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 //	case IIO_CHAN_INFO_FREQUENCY:
@@ -300,7 +300,7 @@ static int ddc_duc_read_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -326,7 +326,7 @@ static ssize_t ddc_duc_store(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address) {
 	case CH_IO_SEL0:
 		if(val<MIN_IO_SEL || val>MAX_IO_SEL){
@@ -660,7 +660,7 @@ static ssize_t ddc_duc_store(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -677,7 +677,7 @@ static ssize_t ddc_duc_show(struct device *dev,
 	u64 temp64;
 	u32 freq;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address) {
 	case CH_IO_SEL0:
 		val = ddc_duc_read(st, ADDR_IO_SEL0);
@@ -913,7 +913,7 @@ static ssize_t ddc_duc_show(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0)
 		ret = sprintf(buf, "%d\n", val);
@@ -1387,12 +1387,11 @@ err_iio_device_free:
 	return ret;
 }
 
-static int ddc_duc_remove(struct platform_device *pdev)
+static void ddc_duc_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(indio_dev);
 	iio_device_free(indio_dev);
-	return 0;
 }
 
 static struct platform_driver ddc_duc_driver = {

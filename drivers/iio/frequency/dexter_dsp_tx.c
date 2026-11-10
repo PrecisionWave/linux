@@ -114,16 +114,17 @@ static int dexter_dsp_tx_write_raw(struct iio_dev *indio_dev,
 			       int val2,
 			       long mask)
 {
+	struct dexter_dsp_tx_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -134,16 +135,17 @@ static int dexter_dsp_tx_read_raw(struct iio_dev *indio_dev,
 			   int *val2,
 			   long mask)
 {
+	struct dexter_dsp_tx_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -181,7 +183,7 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 			return ret;
 	}
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((uint32_t)this_attr->address) {
 
 	case REG_FREQUENCY0:
@@ -330,7 +332,7 @@ static ssize_t dexter_dsp_tx_store(struct device *dev,
 		ret = -ENODEV;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -351,7 +353,7 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 	uint64_t tempu64 = 0;
 	uint64_t tempu64_old = 0;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch ((uint32_t)this_attr->address) {
 
@@ -489,7 +491,7 @@ static ssize_t dexter_dsp_tx_show(struct device *dev,
 		ret = -ENODEV;
 
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0){
 		if((uint32_t)this_attr->address == REG_PPS_CLKS || (uint32_t)this_attr->address == REG_STREAM0_START_CLKS || (uint32_t)this_attr->address == REG_STREAM1_START_CLKS || (uint32_t)this_attr->address == REG_FIFO_NOT_EMPTY0_CLKS || (uint32_t)this_attr->address == REG_FIFO_NOT_EMPTY1_CLKS || (uint32_t)this_attr->address == REG_CLKS)
@@ -801,12 +803,11 @@ err_iio_device_free:
 	return ret;
 }
 
-static int dexter_dsp_tx_remove(struct platform_device *pdev)
+static void dexter_dsp_tx_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(indio_dev);
 	iio_device_free(indio_dev);
-	return 0;
 }
 
 static struct platform_driver dexter_dsp_tx_driver = {

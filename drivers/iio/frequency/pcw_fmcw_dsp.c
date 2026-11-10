@@ -195,16 +195,17 @@ static int pcw_fmcw_dsp_write_raw(struct iio_dev *indio_dev,
 			       int val2,
 			       long mask)
 {
+	struct pcw_fmcw_dsp_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -215,16 +216,17 @@ static int pcw_fmcw_dsp_read_raw(struct iio_dev *indio_dev,
 			   int *val2,
 			   long mask)
 {
+	struct pcw_fmcw_dsp_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -264,7 +266,7 @@ static ssize_t pcw_fmcw_dsp_store(struct device *dev,
 
 	block_nb = st->ch_nb;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address) {
 	// case CH_SEL:
 	// 	if(val<1 || val>st->nb_of_blocks){
@@ -930,7 +932,7 @@ case CH_RX_FFT_LENGTH:
 		ret = -ENODEV;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -950,7 +952,7 @@ static ssize_t pcw_fmcw_dsp_show(struct device *dev,
 	u32 block_nb;
 	u64 temp64;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	block_nb = st->ch_nb;
 
@@ -1194,7 +1196,7 @@ case CH_RX_FFT_LENGTH:
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0){
 		if((u32)this_attr->address == CH_INT_TO_VOLT_SCALAR)
@@ -1719,12 +1721,11 @@ err_iio_device_free:
 	return ret;
 }
 
-static int pcw_fmcw_dsp_remove(struct platform_device *pdev)
+static void pcw_fmcw_dsp_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(indio_dev);
 	iio_device_free(indio_dev);
-	return 0;
 }
 
 static struct platform_driver pcw_fmcw_dsp_driver = {

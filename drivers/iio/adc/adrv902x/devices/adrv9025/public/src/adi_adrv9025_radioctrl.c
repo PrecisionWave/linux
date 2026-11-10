@@ -356,6 +356,7 @@ int32_t adi_adrv9025_StreamImageWrite(adi_adrv9025_Device_t* device,
     return device->common.error.newAction;
 }
 
+static
 int32_t adi_adrv9025_ArmGpioPinsSetRangeCheck(adi_adrv9025_Device_t*     device,
                                               adi_adrv9025_ArmGpioCfg_t* armGpio)
 {

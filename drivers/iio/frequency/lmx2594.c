@@ -49,6 +49,7 @@ enum attributes{
 };
 
 struct lmx2594_state{
+	struct mutex lock;
 	struct spi_device *spi;
 	const char* unique_id;
 
@@ -92,7 +93,7 @@ static int lmx2594_reg_access(struct iio_dev *indio_dev,
 	struct lmx2594_state *st = iio_priv(indio_dev);
 
 	int ret;
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	if (readval == NULL) { // write access
 		st->spi_wr_buffer = cpu_to_be32( ((0 << 23) | ((reg & 0x7f) << 16) | (writeval & 0xffff)) <<8);
 		ret = lmx2594_spi_transfer(indio_dev);
@@ -103,7 +104,7 @@ static int lmx2594_reg_access(struct iio_dev *indio_dev,
 		st->reg = (be32_to_cpu(st->spi_rd_buffer) >> 8) & 0xffff;
 		*readval = st->reg;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -147,7 +148,7 @@ static ssize_t lmx2594_store(struct device *dev,
 	if(ret)
 		return ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address){
 	case REGISTER:
 		st->reg = (u32)val;
@@ -187,7 +188,7 @@ static ssize_t lmx2594_store(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -204,7 +205,7 @@ static ssize_t lmx2594_show(struct device *dev,
 	u64 fraction = 0;
 	int ret = 0;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address){
 	case REGISTER:
 		val = st->reg;
@@ -214,7 +215,7 @@ static ssize_t lmx2594_show(struct device *dev,
 			ret = sprintf(buf, "%s\n", st->device_name);
 		else
 			ret = sprintf(buf, "\n");
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret;
 	case OUTPUT1_FREQUENCY_HZ:
 		val64 = st->output1_frequency_hz;
@@ -243,7 +244,7 @@ static ssize_t lmx2594_show(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0){
 		if((u32)this_attr->address == OUTPUT1_FREQUENCY_HZ ||
@@ -384,6 +385,7 @@ static int lmx2594_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, indio_dev);
 
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 	st->spi = spi;
 	indio_dev->dev.parent = &spi->dev;
 

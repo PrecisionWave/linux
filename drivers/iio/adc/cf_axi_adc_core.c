@@ -1105,7 +1105,6 @@ static int axiadc_probe(struct platform_device *pdev)
 		return PTR_ERR(st->jdev);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	st->regs_size = resource_size(mem);
 	if (is_dummy)
 		st->regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	else

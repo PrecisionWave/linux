@@ -1494,9 +1494,9 @@ static int lmx2582_write_raw(struct iio_dev *indio_dev,
 	}
 
 	if (ret == 0) {
-		mutex_lock(&indio_dev->mlock);
+		mutex_lock(&st->lock);
 		ret = lmx2582_setup(st, 0);
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 	}
 	
 	return ret;
@@ -1769,9 +1769,9 @@ static ssize_t lmx2582_store(struct device *dev,
 	}
 
 	if (ret == 0) {
-		mutex_lock(&indio_dev->mlock);
+		mutex_lock(&st->lock);
 		ret = lmx2582_setup(st, 0);
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		lmx2582_force_recalc_rate(st);
 	}
 
@@ -2433,6 +2433,8 @@ static int lmx2582_probe(struct spi_device *spi)
 
 	st = iio_priv(indio_dev);
 
+	mutex_init(&st->lock);
+
 	st->clkin = devm_clk_get(&spi->dev, "clkin");
 	if (IS_ERR(st->clkin))
 		return -EPROBE_DEFER;
@@ -2450,7 +2452,6 @@ static int lmx2582_probe(struct spi_device *spi)
 	st->indio_dev = indio_dev;
 	st->spi = spi;
 	init_waitqueue_head(&st->wq_setup_done);
-	mutex_init(&st->lock);
 	INIT_WORK(&st->workq, lmx2582_workq_handler);
 
 	if (spi->dev.of_node)

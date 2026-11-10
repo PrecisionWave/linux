@@ -2345,8 +2345,8 @@ adi_ad9081_adc_ddc_fine_chip_xfer_status_get(adi_ad9081_device_t *device,
 	return API_CMS_ERROR_OK;
 }
 
-int32_t adi_ad9081_adc_ddc_fine_psw_set(adi_ad9081_device_t *device,
-					uint8_t fddcs, uint64_t psw)
+static int32_t adi_ad9081_adc_ddc_fine_psw_set(adi_ad9081_device_t *device,
+					       uint8_t fddcs, uint64_t psw)
 {
 	int32_t err;
 	uint8_t i, fddc;
@@ -2418,7 +2418,7 @@ int32_t adi_ad9081_adc_core_setup(adi_ad9081_device_t *device,
 	return API_CMS_ERROR_OK;
 }
 
-int32_t
+static int32_t
 adi_ad9081_adc_path_or_bypass_config(adi_ad9081_device_t *device, uint8_t cddcs,
 				     uint8_t fddcs, int64_t cddc_shift[4],
 				     int64_t fddc_shift[8], uint8_t cddc_dcm[4],

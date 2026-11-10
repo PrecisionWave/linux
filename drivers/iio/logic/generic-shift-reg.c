@@ -31,6 +31,7 @@
 #define DEFAULT_NUM_BITS	NBITS_MAX
 
 struct gen_shiftreg_state{
+	struct mutex lock;
 	struct spi_device *spi;
 
 	const char* device_name;
@@ -135,7 +136,7 @@ static ssize_t gen_shiftreg_store(struct device *dev,
 		return ret;
 
 	/* bit attributes */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(i=0; i<NBITS_MAX; i++){
 		if((u32)this_attr->address == BIT_ATTR(i, STATE)){
@@ -149,7 +150,7 @@ static ssize_t gen_shiftreg_store(struct device *dev,
 		}
 	}
 	if(match){
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret ? ret : len;
 	}
 
@@ -158,7 +159,7 @@ static ssize_t gen_shiftreg_store(struct device *dev,
 	default:
 		ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -176,7 +177,7 @@ static ssize_t gen_shiftreg_show(struct device *dev,
 	u8 match;
 
 	/* bit attributes */
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	match = 0;
 	for(i=0; i<NBITS_MAX; i++){
 		if((u32)this_attr->address == BIT_ATTR(i, STATE)){
@@ -188,7 +189,7 @@ static ssize_t gen_shiftreg_show(struct device *dev,
 	if(match){
 		if(ret==0)
 			ret = sprintf(buf, "%d\n", val);
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret;
 	}
 
@@ -199,7 +200,7 @@ static ssize_t gen_shiftreg_show(struct device *dev,
 	}
 	if(ret==0)
 		ret = sprintf(buf, "%d\n", val);
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -264,6 +265,7 @@ static int gen_shiftreg_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, indio_dev);
 
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 	st->spi = spi;
 	indio_dev->dev.parent = &spi->dev;
 
