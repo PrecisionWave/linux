@@ -6,6 +6,8 @@
  * Copyright 2025 PrecisionWave AG
  */
 
+#define DEBUG
+
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/sysfs.h>
@@ -558,6 +560,7 @@ struct lmx2582_config {
 
 	/* R40/41 */
 	u32 PLL_DEN;
+	u32 pll_den_fixed;
 
 	/* R42/43 */
 	u32 MASH_SEED;
@@ -663,6 +666,8 @@ static const struct lmx2582_config lmx2582_default_values = {
 	.PFD_DLY = 2,
 	/* R40/41 */
 	.PLL_DEN = 1000,
+	.pll_den_fixed = 0,
+
 	/* R42/43 */
 	.MASH_SEED = 0,
 	/* R44/45 */
@@ -1995,11 +2000,16 @@ static int find_pll_n_divider(struct lmx2582_state* st,
 			freq, n, fvco, entry->total_divider, error);
 
 		/* optimize fraction */
-		scale_ull(error, fpd_n_pre, &error_ul, &fpd_n_pre_ul);
+		if (st->conf->pll_den_fixed == 0) {
+			scale_ull(error, fpd_n_pre, &error_ul, &fpd_n_pre_ul);
 
-		rational_best_approximation(error_ul, fpd_n_pre_ul,
-					    U32_MAX, U32_MAX,
-					    &num, &den);
+			rational_best_approximation(error_ul, fpd_n_pre_ul,
+						    U32_MAX, U32_MAX,
+						    &num, &den);
+		} else {
+			den = st->conf->pll_den_fixed;
+			num = div64_u64(error * (u64)den, fpd_n_pre);
+		}
 
 		dev_dbg(&st->spi->dev,
 			"find_pll_n_divider: num: %lu, den: %lu\n",
@@ -2349,6 +2359,8 @@ static struct lmx2582_config *lmx2582_parse_dt(struct lmx2582_state *st)
 	lmx2582_property_u32(st, "lmx,pll-n-pre", &conf->PLL_N_PRE, 0, 1);
 	lmx2582_property_u32(st, "lmx,pll-n", &conf->PLL_N, 0, 4095);
 	lmx2582_property_u32(st, "lmx,pll-den", &conf->PLL_DEN, 1, U32_MAX);
+	lmx2582_property_u32(st, "lmx,pll-den-fixed", &conf->pll_den_fixed, 0,
+			     U32_MAX);
 	lmx2582_property_u32(st, "lmx,pll-num", &conf->PLL_NUM, 0, U32_MAX);
 
 	lmx2582_property_u32(st, "lmx,mash-order", &conf->MASH_ORDER, 0, 4);
