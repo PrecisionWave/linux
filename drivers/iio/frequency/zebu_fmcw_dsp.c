@@ -184,16 +184,17 @@ static int zebu_fmcw_dsp_write_raw(struct iio_dev *indio_dev,
 			       int val2,
 			       long mask)
 {
+	struct zebu_fmcw_dsp_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -204,16 +205,17 @@ static int zebu_fmcw_dsp_read_raw(struct iio_dev *indio_dev,
 			   int *val2,
 			   long mask)
 {
+	struct zebu_fmcw_dsp_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (mask) {
 	default:
 		ret = -EINVAL;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -242,7 +244,7 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((uint32_t)this_attr->address) {
 
 	case CH_TX_CHIRP_UP_RAMP_END:
@@ -547,7 +549,7 @@ static ssize_t zebu_fmcw_dsp_store(struct device *dev,
 		ret = -ENODEV;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -568,7 +570,7 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 	int64_t temp64;
 	uint64_t tempu64;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch ((uint32_t)this_attr->address) {
 
@@ -841,7 +843,7 @@ static ssize_t zebu_fmcw_dsp_show(struct device *dev,
 		ret = -ENODEV;
 
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	if(ret==0){
 		if((uint32_t)this_attr->address == CH_PPS_CLKS || (uint32_t)this_attr->address == CH_MARKER_A_CLKS || (uint32_t)this_attr->address == CH_MARKER_B_CLKS)
@@ -1331,12 +1333,11 @@ err_iio_device_free:
 	return ret;
 }
 
-static int zebu_fmcw_dsp_remove(struct platform_device *pdev)
+static void zebu_fmcw_dsp_remove(struct platform_device *pdev)
 {
 	struct iio_dev *indio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(indio_dev);
 	iio_device_free(indio_dev);
-	return 0;
 }
 
 static struct platform_driver zebu_fmcw_dsp_driver = {

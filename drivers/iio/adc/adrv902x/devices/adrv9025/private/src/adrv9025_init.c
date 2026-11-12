@@ -93,6 +93,7 @@ int32_t adrv9025_LdoEnable(adi_adrv9025_Device_t* device,
     return (device->common.error.newAction);
 }
 
+static
 uint32_t adrv9025_ClockDiv(uint32_t clock,
                            uint32_t clock_max)
 {

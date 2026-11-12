@@ -82,7 +82,9 @@ enum attributes{
 	ALL_BIT_ATTR(STATE)	// being expanded for all channels
 };
 
-int gen_shiftreg_rename_iio_attribute(struct attribute *attr, const char *name){
+static
+int gen_shiftreg_rename_iio_attribute(struct attribute *attr, const char *name)
+{
 	// indio_dev->channel_attr_list
 	if(!attr)
 		return -1;

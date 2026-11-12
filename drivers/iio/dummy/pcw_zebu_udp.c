@@ -52,6 +52,7 @@ struct csr {
 };
 
 struct zebu_udp_state {
+	struct mutex lock;
 	struct csr pktgen_csr;
 	struct csr strgen_csr;
 };
@@ -101,7 +102,7 @@ static int pktgen_reg_access(struct iio_dev *indio_dev, u32 reg, u32 writeval,
 	if ((reg & 0x3) != 0)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	if (!readval) {
 		pktgen_csr_write(st, reg, writeval);
@@ -109,7 +110,7 @@ static int pktgen_reg_access(struct iio_dev *indio_dev, u32 reg, u32 writeval,
 		*readval = pktgen_csr_read(st, reg);
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return 0;
 }
 
@@ -125,7 +126,7 @@ static int strgen_reg_access(struct iio_dev *indio_dev, u32 reg, u32 writeval,
 	if ((reg & 0x3) != 0)
 		return -EINVAL;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	if (!readval) {
 		strgen_csr_write(st, reg, writeval);
@@ -133,7 +134,7 @@ static int strgen_reg_access(struct iio_dev *indio_dev, u32 reg, u32 writeval,
 		*readval = strgen_csr_read(st, reg);
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return 0;
 }
 
@@ -158,7 +159,7 @@ static ssize_t zebu_udp_store(struct device *dev, struct device_attribute *attr,
 	long val;
 	int ret = 0;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address) {
 	// Stream generator
 	case UDP_DST_PORT_BASE:
@@ -266,7 +267,7 @@ static ssize_t zebu_udp_store(struct device *dev, struct device_attribute *attr,
 		ret = -ENODEV;
 	}
 error_unlock:
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -281,7 +282,7 @@ static ssize_t zebu_udp_show(struct device *dev, struct device_attribute *attr,
 	u32 val32;
 	unsigned uv[6];
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 
 	switch (this_attr->address) {
 	// Stream generator
@@ -356,7 +357,7 @@ static ssize_t zebu_udp_show(struct device *dev, struct device_attribute *attr,
 		break;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	return ret;
 }
 
@@ -428,6 +429,7 @@ static int zebu_udp_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 
 	st->strgen_csr.res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	st->strgen_csr.base =

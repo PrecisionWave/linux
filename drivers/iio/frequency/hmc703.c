@@ -70,6 +70,7 @@ enum attributes{
 
 // HMC703-Definition
 struct hmc703_state{
+	struct mutex lock;
 	struct spi_device *spi;
 	const char* unique_id;
 	//uint32_t spi_rd_buffer;
@@ -102,7 +103,7 @@ static ssize_t hmc703_store(struct device *dev,
 		return ret;
 	}
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address){
 		case DEVICE_NAME:
 			if(st->device_name)
@@ -145,7 +146,7 @@ static ssize_t hmc703_store(struct device *dev,
 			ret = -ENODEV;
 	}
 
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return ret ? ret : len;
 }
@@ -165,14 +166,14 @@ static ssize_t hmc703_show(struct device *dev,
 	int ret = 0;
 	int match = 0;
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	switch ((u32)this_attr->address){
 		case DEVICE_NAME:
 			if(st->device_name)
 				ret = sprintf(buf, "%s\n", st->device_name);
 			else
 				ret = sprintf(buf, "\n");
-			mutex_unlock(&indio_dev->mlock);
+			mutex_unlock(&st->lock);
 			match = 1;
 			return ret;
 
@@ -194,7 +195,7 @@ static ssize_t hmc703_show(struct device *dev,
 		default:
 			ret = -ENODEV;
 	}
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 	if(match){
 		if(ret==0){
 			ret = sprintf(buf, "%d\n", val);
@@ -312,6 +313,7 @@ static int hmc703_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, indio_dev);
 
 	st = iio_priv(indio_dev);
+	mutex_init(&st->lock);
 	st->spi = spi;
 	indio_dev->dev.parent = &spi->dev;
 

@@ -30,6 +30,8 @@
   ((uint32_t)((((uint64_t)(x)) << ((resFb) + (yFb) - (xFb))) / (y)))
 
 #endif
+
+static
 int32_t adi_ad9083_rx_cic_dec_rate_set(adi_ad9083_device_t *device,
                                        adi_ad9083_cic_dec_rate_e dec_rate) {
   int32_t err;
@@ -41,6 +43,7 @@ int32_t adi_ad9083_rx_cic_dec_rate_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_cic_acc_clear_set(adi_ad9083_device_t *device,
                                         uint8_t enable) {
   int32_t err;
@@ -52,6 +55,7 @@ int32_t adi_ad9083_rx_cic_acc_clear_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_bypass_cic_set(adi_ad9083_device_t *device,
                                      uint8_t enable) {
   int32_t err;
@@ -63,6 +67,7 @@ int32_t adi_ad9083_rx_bypass_cic_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_j_dec_rate_set(adi_ad9083_device_t *device,
                                      adi_ad9083_j_dec_rate_e dec_j) {
   int32_t err;
@@ -116,6 +121,7 @@ int32_t adi_ad9083_rx_j_dec_rate_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_g_value_set(adi_ad9083_device_t *device, uint8_t dec_g) {
   int32_t err;
   AD9083_NULL_POINTER_RETURN(device);
@@ -126,6 +132,7 @@ int32_t adi_ad9083_rx_g_value_set(adi_ad9083_device_t *device, uint8_t dec_g) {
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_h_value_set(adi_ad9083_device_t *device, uint8_t dec_h) {
   int32_t err;
   AD9083_NULL_POINTER_RETURN(device);
@@ -213,6 +220,7 @@ int32_t adi_ad9083_rx_nco_ftw_set(adi_ad9083_device_t *device, uint8_t index,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_nco_phase_offset_set(adi_ad9083_device_t *device,
                                            uint8_t index,
                                            uint8_t phase_offset) {
@@ -239,6 +247,7 @@ int32_t adi_ad9083_rx_nco_phase_offset_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_nco_adither_enable_set(adi_ad9083_device_t *device,
                                              uint8_t index, uint8_t enable) {
   int32_t err;
@@ -264,6 +273,7 @@ int32_t adi_ad9083_rx_nco_adither_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_nco_6db_gain_enable_set(adi_ad9083_device_t *device,
                                               uint8_t enable) {
   int32_t err;
@@ -275,6 +285,7 @@ int32_t adi_ad9083_rx_nco_6db_gain_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_bypass_mixer_set(adi_ad9083_device_t *device,
                                        uint8_t enable) {
   int32_t err;
@@ -286,6 +297,7 @@ int32_t adi_ad9083_rx_bypass_mixer_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_burst_mode_set(adi_ad9083_device_t *device, uint8_t sel) {
   int32_t err;
   AD9083_NULL_POINTER_RETURN(device);
@@ -307,6 +319,7 @@ int32_t adi_ad9083_rx_datapath_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_num_tones_set(adi_ad9083_device_t *device,
                                     uint8_t num_tones) {
   int32_t err;
@@ -318,6 +331,7 @@ int32_t adi_ad9083_rx_num_tones_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_zero_stuff_enable_set(adi_ad9083_device_t *device,
                                             uint8_t enable) {
   int32_t err;
@@ -329,6 +343,7 @@ int32_t adi_ad9083_rx_zero_stuff_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_clk_sample_order_sel(adi_ad9083_device_t *device,
                                            uint8_t sel) {
   int32_t err;
@@ -340,6 +355,7 @@ int32_t adi_ad9083_rx_clk_sample_order_sel(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_clk_sample_polarity_set(adi_ad9083_device_t *device,
                                               uint8_t pol) {
   int32_t err;
@@ -436,6 +452,7 @@ int32_t adi_ad9083_rx_test_mode_usr_pattern_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_test_mode_sel_set(adi_ad9083_device_t *device,
                                         uint8_t tmode_sel[12]) {
   int32_t i;
@@ -468,6 +485,7 @@ int32_t adi_ad9083_rx_test_mode_sel_all_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_res_set(adi_ad9083_device_t *device,
                                       uint8_t res) {
   int32_t err;
@@ -480,6 +498,7 @@ int32_t adi_ad9083_rx_dformat_res_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_fbw_dither_enable_set(adi_ad9083_device_t *device,
                                                     uint8_t enable) {
   int32_t err;
@@ -492,6 +511,7 @@ int32_t adi_ad9083_rx_dformat_fbw_dither_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_ddc_dither_enable_set(adi_ad9083_device_t *device,
                                                     uint8_t enable) {
   int32_t err;
@@ -504,6 +524,7 @@ int32_t adi_ad9083_rx_dformat_ddc_dither_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_cic_sel_set(adi_ad9083_device_t *device,
                                           uint8_t sel[12]) {
   uint8_t i;
@@ -519,6 +540,7 @@ int32_t adi_ad9083_rx_dformat_cic_sel_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_cic_sel_all_set(adi_ad9083_device_t *device,
                                               uint8_t enable) {
   int32_t err;
@@ -537,6 +559,7 @@ int32_t adi_ad9083_rx_dformat_cic_sel_all_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_fbw_sel_set(adi_ad9083_device_t *device,
                                           uint8_t sel[12]) {
   uint8_t i;
@@ -552,6 +575,7 @@ int32_t adi_ad9083_rx_dformat_fbw_sel_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_fbw_sel_all_set(adi_ad9083_device_t *device,
                                               uint8_t enable) {
   int32_t err;
@@ -570,6 +594,7 @@ int32_t adi_ad9083_rx_dformat_fbw_sel_all_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_average_sel_set(adi_ad9083_device_t *device,
                                               uint8_t sel[12]) {
   uint8_t i;
@@ -585,6 +610,7 @@ int32_t adi_ad9083_rx_dformat_average_sel_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_average_sel_all_set(adi_ad9083_device_t *device,
                                                   uint8_t enable) {
   int32_t err;
@@ -603,6 +629,7 @@ int32_t adi_ad9083_rx_dformat_average_sel_all_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_cic_div_sel_set(adi_ad9083_device_t *device,
                                               uint8_t sel) {
   int32_t err;
@@ -615,6 +642,7 @@ int32_t adi_ad9083_rx_dformat_cic_div_sel_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_fbw_div_sel_set(adi_ad9083_device_t *device,
                                               uint8_t sel) {
   int32_t err;
@@ -627,6 +655,7 @@ int32_t adi_ad9083_rx_dformat_fbw_div_sel_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_dformat_out_div_sel_set(adi_ad9083_device_t *device,
                                               uint8_t sel) {
   int32_t err;
@@ -639,6 +668,7 @@ int32_t adi_ad9083_rx_dformat_out_div_sel_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_enable_set(adi_ad9083_device_t *device,
                                      uint16_t adcs) {
   int32_t err;
@@ -652,6 +682,7 @@ int32_t adi_ad9083_rx_adc_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_pd_pin_mode_set(adi_ad9083_device_t *device,
                                           adi_ad9083_adc_pd_pin_mode_e mode) {
   int32_t err;
@@ -663,6 +694,7 @@ int32_t adi_ad9083_rx_adc_pd_pin_mode_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_reset_enable_set(adi_ad9083_device_t *device,
                                            uint8_t enable) {
   int32_t err;
@@ -674,6 +706,7 @@ int32_t adi_ad9083_rx_adc_reset_enable_set(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_term_res_set(adi_ad9083_device_t *device,
                                        adi_ad9083_adc_term_res_e res) {
   int32_t err;
@@ -696,6 +729,7 @@ int32_t adi_ad9083_rx_adc_clk_freq_get(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_reset_cal(adi_ad9083_device_t *device) {
   int32_t err;
   AD9083_NULL_POINTER_RETURN(device);
@@ -711,6 +745,7 @@ int32_t adi_ad9083_rx_adc_reset_cal(adi_ad9083_device_t *device) {
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_kvti_factor_fixed_get(adi_ad9083_device_t *device,
                                                 uint32_t orc1mode,
                                                 uint32_t backoff,
@@ -755,6 +790,7 @@ int32_t adi_ad9083_rx_adc_kvti_factor_fixed_get(adi_ad9083_device_t *device,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_adc_fscale_fixed_get(adi_ad9083_device_t *device,
                                            uint8_t bcenter_os,
                                            uint32_t *fscale) {
@@ -1027,6 +1063,7 @@ int32_t adi_ad9083_rx_adc_config_set(adi_ad9083_device_t *device, uint32_t vmax,
   return API_CMS_ERROR_OK;
 }
 
+static
 int32_t adi_ad9083_rx_get_num_tones(adi_ad9083_device_t *device,
                                     uint64_t nco_freq_hz[3],
                                     uint8_t *tone_nums) {
