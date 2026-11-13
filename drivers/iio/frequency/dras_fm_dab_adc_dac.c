@@ -683,8 +683,8 @@ static ssize_t dras_fm_dab_adc_dac_store(struct device *dev,
 			ret = -ENODEV;
 			break;
 		}
-		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) & ~(0xFFFF << 7);
-		temp32 += (u32)(((int16_t)val & 0xFFFF) << 7);
+		temp32 = dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) & ~(0x3 << 7);
+		temp32 += (u32)(((int16_t)val & 0x3) << 7);
 		dras_fm_dab_adc_dac_write(st, ADDR_TX_DAB_DDS_BI, temp32);
 		break;
 	case REG_DAB_AGC_TARGET_LEVEL:
@@ -1546,7 +1546,7 @@ static ssize_t dras_fm_dab_adc_dac_show(struct device *dev,
 		val = (int8_t)((dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_SYNC_SETTINGS) >> 24) & 0xFF);
 		break;
 	case REG_DAB_SYNC_FREQ_SCALAR:
-		val = (int16_t)((dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 7) & 0xFFFF);
+		val = (int16_t)((dras_fm_dab_adc_dac_read(st, ADDR_TX_DAB_DDS_BI) >> 7) & 0x3);
 		break;
 	case REG_DAB_AGC_TARGET_LEVEL:
 		val = (dras_fm_dab_adc_dac_read(st, ADDR_RX_DAB_AGC_SETTINGS) >> 16) & 0xFFFF;
